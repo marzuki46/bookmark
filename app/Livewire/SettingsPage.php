@@ -97,9 +97,6 @@ final class SettingsPage extends Component
         $this->currentPassword = '';
         $this->newPassword = '';
         $this->confirmPassword = '';
-
-        $this->statusMessage = 'Confirmation email sent. Check your inbox to approve the change.';
-        $this->statusType = 'success';
     }
 
     public function updatePin(): void
@@ -132,9 +129,6 @@ final class SettingsPage extends Component
         $this->currentPassword = '';
         $this->newPin = '';
         $this->confirmPin = '';
-
-        $this->statusMessage = 'Confirmation email sent. Check your inbox to approve the PIN change.';
-        $this->statusType = 'success';
     }
 
     public function clearStatusMessage(): void
