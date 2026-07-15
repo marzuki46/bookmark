@@ -16,7 +16,7 @@ final class WhatsAppService
     {
         $this->userId = $userId;
         $settings = $this->loadSettings();
-        $this->apiKey = $settings['wa_api_key'] ?? '';
+        $this->apiKey = $settings['api_key'] ?? '';
         $this->apiUrl = 'https://api.fonnte.com';
     }
 
@@ -27,7 +27,7 @@ final class WhatsAppService
     {
         $this->userId = $userId;
         $settings = $this->loadSettings();
-        $this->apiKey = $settings['wa_api_key'] ?? '';
+        $this->apiKey = $settings['api_key'] ?? '';
     }
 
     public function isConfigured(): bool
