@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 
 // WhatsApp Financial Webhook (no auth, Fonnte sends here)
-Route::post('/webhook/wa-finance', [FinancialWebhookController::class, 'handleIncoming']);
+// Fonnte requires POST and GET method support
+Route::match(['GET', 'POST'], '/webhook/wa-finance', [FinancialWebhookController::class, 'handleIncoming']);
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
