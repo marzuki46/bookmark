@@ -17,7 +17,7 @@ class ResendMailService
 
     public function __construct()
     {
-        $this->apiKey = config('services.resend.key', '');
+        $this->apiKey = config('services.resend.key') ?? '';
         $this->fromEmail = config('mail.from.address', 'ohmjuki@gmail.com');
         $this->fromName = config('mail.from.name', 'Knowledge Hub');
     }
