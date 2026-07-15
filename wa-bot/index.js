@@ -4,7 +4,7 @@ if (!globalThis.crypto) {
   globalThis.crypto = webcrypto;
 }
 
-const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const express = require('express');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
@@ -35,9 +35,10 @@ async function startBot() {
 
   try {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
+    const { version } = await fetchLatestBaileysVersion();
 
     sock = makeWASocket({
-      logger: pino({ level: 'error' }),
+      version,
       logger: pino({ level: 'error' }),
       printQRInTerminal: false,
       auth: state,
