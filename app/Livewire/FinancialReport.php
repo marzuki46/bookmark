@@ -179,7 +179,7 @@ final class FinancialReport extends Component
 
     public function getIncomeTotalProperty(): float
     {
-        return FinancialTransaction::where('user_id', auth()->id())
+        return (float) FinancialTransaction::where('user_id', auth()->id())
             ->where('type', 'income')
             ->thisYear()
             ->sum('amount');
@@ -187,7 +187,7 @@ final class FinancialReport extends Component
 
     public function getExpenseTotalProperty(): float
     {
-        return FinancialTransaction::where('user_id', auth()->id())
+        return (float) FinancialTransaction::where('user_id', auth()->id())
             ->where('type', 'expense')
             ->thisYear()
             ->sum('amount');
