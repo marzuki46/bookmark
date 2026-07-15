@@ -1,18 +1,10 @@
 chrome.runtime.onInstalled.addListener(() => {
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
   chrome.contextMenus.create({ id: 'save-bookmark', title: 'Save to Knowledge Hub', contexts: ['page'] });
   chrome.contextMenus.create({ id: 'save-highlight', title: 'Save Highlight to Hub', contexts: ['selection'] });
   chrome.contextMenus.create({ id: 'read-later', title: 'Read Later', contexts: ['page', 'link'] });
   chrome.contextMenus.create({ id: 'save-link', title: 'Save Link to Hub', contexts: ['link'] });
-});
-
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) return;
-  try {
-    await chrome.tabs.sendMessage(tab.id, { action: 'toggleOverlay' });
-  } catch {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['overlay.js'] });
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['overlay.css'] });
-  }
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {

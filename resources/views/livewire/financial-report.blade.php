@@ -647,4 +647,49 @@
             </div>
         </div>
     @endif
+
+    {{-- Webhook Debug --}}
+    @if($webhookLogs->isNotEmpty())
+    <div class="mt-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-[var(--color-border)]">
+            <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-[var(--amber-600)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span class="text-sm font-semibold text-[var(--text-primary)]">Webhook Debug ({{ $webhookLogs->count() }} log)</span>
+            </div>
+            <button wire:click="clearWebhookLogs" class="text-xs px-2 py-1 rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition text-[var(--text-tertiary)]">Clear</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+                <thead>
+                    <tr class="border-b border-[var(--color-border)] text-left text-[var(--text-tertiary)]">
+                        <th class="px-4 py-2 font-medium">Time</th>
+                        <th class="px-4 py-2 font-medium">From</th>
+                        <th class="px-4 py-2 font-medium">Message</th>
+                        <th class="px-4 py-2 font-medium">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($webhookLogs as $log)
+                    <tr class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)]">
+                        <td class="px-4 py-2 text-[var(--text-tertiary)] whitespace-nowrap">{{ $log->created_at->format('H:i:s d/m') }}</td>
+                        <td class="px-4 py-2">
+                            <span class="font-mono text-[var(--text-primary)]">{{ $log->sender ?: '-' }}</span>
+                        </td>
+                        <td class="px-4 py-2 max-w-[200px] truncate text-[var(--text-primary)]">{{ $log->message ?: '-' }}</td>
+                        <td class="px-4 py-2">
+                            @if($log->response_status === 200)
+                                <span class="px-1.5 py-0.5 rounded-full bg-[var(--emerald-50)] text-[var(--emerald-700)] text-[10px] font-medium">OK</span>
+                            @elseif($log->method === 'GET')
+                                <span class="px-1.5 py-0.5 rounded-full bg-[var(--blue-50)] text-[var(--blue-700)] text-[10px] font-medium">Verify</span>
+                            @else
+                                <span class="px-1.5 py-0.5 rounded-full bg-[var(--red-50)] text-[var(--red-700)] text-[10px] font-medium">Error</span>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 </div>

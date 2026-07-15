@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FinancialCategory;
 use App\Models\FinancialTransaction;
+use App\Models\WebhookLog;
 use App\Services\AIService;
 use App\Services\FinancialAIService;
 use App\Services\WhatsAppService;
@@ -22,6 +23,17 @@ final class FinancialWebhookController extends Controller
      */
     public function handleIncoming(Request $request): JsonResponse
     {
+        // Log EVERY incoming request to database for debugging
+        WebhookLog::create([
+            'source' => 'fonnte',
+            'method' => $request->method(),
+            'headers' => $request->headers->all(),
+            'raw_input' => json_encode($request->all()),
+            'sender' => $request->input('sender') ?? $request->input('data.sender'),
+            'message' => $request->input('message') ?? $request->input('data.message'),
+            'message_id' => $request->input('id') ?? $request->input('data.id'),
+        ]);
+
         // Log EVERYTHING for debugging - method, headers, content type, and data
         logger()->info('WA Webhook received', [
             'method' => $request->method(),

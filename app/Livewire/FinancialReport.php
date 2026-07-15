@@ -497,6 +497,20 @@ final class FinancialReport extends Component
         return 'Rp ' . number_format($amount, 0, ',', '.');
     }
 
+    // ─── Webhook Debug ───
+
+    public function getWebhookLogsProperty()
+    {
+        return \App\Models\WebhookLog::latest()->take(20)->get();
+    }
+
+    public function clearWebhookLogs(): void
+    {
+        \App\Models\WebhookLog::truncate();
+        $this->statusMessage = 'Webhook logs cleared';
+        $this->statusType = 'success';
+    }
+
     // ─── Render ───
 
     public function render()
@@ -510,6 +524,7 @@ final class FinancialReport extends Component
             'transactions' => $this->recentTransactions,
             'categories' => $this->categories,
             'isFirstTime' => $isFirstTime,
+            'webhookLogs' => $this->webhookLogs,
         ]);
     }
 
