@@ -177,7 +177,8 @@ Teks: "' . $text . '"';
         $totalExpense = 0;
         $txList = '';
         foreach ($transactions as $i => $tx) {
-            $txList .= ($i + 1) . ". [{$tx['date']}] {$tx['description']} - Rp " . number_format((float) $tx['amount'], 0, ',', '.') . " ({$tx['type']}, {$tx['category']})\n";
+            $catName = is_array($tx['category'] ?? null) ? ($tx['category']['name'] ?? 'Lainnya') : ($tx['category'] ?? 'Lainnya');
+            $txList .= ($i + 1) . ". [{$tx['date']}] {$tx['description']} - Rp " . number_format((float) $tx['amount'], 0, ',', '.') . " ({$tx['type']}, {$catName})\n";
             if ($tx['type'] === 'income') {
                 $totalIncome += (float) $tx['amount'];
             } else {

@@ -27,6 +27,11 @@ final class FinancialWebhookController extends Controller
         // Log incoming webhook for debugging
         logger()->info('WA Webhook received', $request->all());
 
+        // Handle GET requests — Fonnte sends GET to verify the endpoint
+        if ($request->isMethod('get')) {
+            return response()->json(['status' => true, 'message' => 'Webhook active']);
+        }
+
         $sender = $request->input('sender') ?? $request->input('data.sender');
         $message = $request->input('message') ?? $request->input('data.message');
         $messageId = $request->input('id') ?? $request->input('data.id');
@@ -121,6 +126,19 @@ final class FinancialWebhookController extends Controller
 
         // Send confirmation via WhatsApp
         $waService->sendTransactionConfirmation($sender, $transaction->toArray(), $category->name);
+
+        // Also send today's total summary
+        $todayTotal = FinancialTransaction::where('user_id', $userId)
+            ->whereDate('date', now()->format('Y-m-d'))
+            ->where('type', $parsed['type'])
+            ->sum('amount');
+
+        $typeLabel = $parsed['type'] === 'income' ? 'Pemasukan' : 'Pengeluaran';
+        $waService->sendMessage($sender,
+            "📊 *Ringkasan {$typeLabel} Hari Ini*\n\n" .
+            "💰 Total {$typeLabel}: Rp " . number_format((float) $todayTotal, 0, ',', '.') . "\n" .
+            "📅 Tanggal: " . now()->format('d/m/Y')
+        );
 
         return response()->json([
             'status' => true,
