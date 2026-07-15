@@ -1,5 +1,4 @@
 const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
-const { Boom } = require('@hapi/boom');
 const express = require('express');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
@@ -60,10 +59,10 @@ async function startBot() {
 
     if (connection === 'close') {
       connected = false;
-      const reason = new Boom(lastDisconnect?.error)?.output?.statusCode;
-      logger.warn('❌ Disconnected. Reason: ' + (reason || 'unknown'));
+      const statusCode = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.httpCode || 500;
+      logger.warn('❌ Disconnected. Reason: ' + (statusCode || 'unknown'));
 
-      if (reason === DisconnectReason.loggedOut || reason === 401) {
+      if (statusCode === 401 || statusCode === 403) {
         logger.error('Session expired. Delete auth/ folder and restart.');
         process.exit(1);
       }
