@@ -11,10 +11,14 @@ final class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::factory()->create([
-            'name' => 'Marzuki',
-            'email' => 'ohmjuki@gmail.com',
-            'password' => bcrypt('Sugihwara5'),
-        ]);
+        User::updateOrCreate(
+            ['email' => 'ohmjuki@gmail.com'],
+            [
+                'name' => 'Marzuki',
+                'password' => bcrypt('Sugihwara5'),
+                'setup_completed' => true,
+                'pin_hash' => bcrypt('123456'),
+            ]
+        );
     }
 }
