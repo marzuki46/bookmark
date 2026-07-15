@@ -597,46 +597,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: var(--wp-space-xl);
-    background: var(--wp-admin-bg);
-}
-
-.wp-login-form {
-    width: 100%;
-    max-width: 360px;
-    background: var(--wp-admin-surface);
-    border: 1px solid var(--wp-admin-border);
-    border-radius: var(--wp-radius-lg);
-    padding: var(--wp-space-2xl);
-    box-shadow: var(--wp-shadow-md);
-}
-
-.wp-login-header { text-align: center; margin-bottom: var(--wp-space-xl); }
-
-.wp-login-logo {
-    width: 84px;
-    height: 84px;
-    margin: 0 auto var(--wp-space-lg);
-    background: var(--wp-admin-blue);
-    border-radius: var(--wp-radius-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.wp-login-logo svg { width: 48px; height: 48px; color: #fff; }
-
-.wp-login-title { font-size: 20px; font-weight: 600; color: var(--wp-admin-text); margin: 0 0 var(--wp-space-xs); }
-.wp-login-subtitle { font-size: 13px; color: var(--wp-admin-text-muted); margin: 0; }
-
-.wp-login-error {
-    background: var(--wp-admin-red-light);
-    border: 1px solid var(--wp-admin-red);
-    color: var(--wp-admin-red);
-    padding: var(--wp-space-sm) var(--wp-space-md);
-    border-radius: var(--wp-radius-sm);
-    font-size: 13px;
-    margin-bottom: var(--wp-space-lg);
+    background: #ffffff;
 }
 
 .wp-form-group { margin-bottom: var(--wp-space-lg); }
