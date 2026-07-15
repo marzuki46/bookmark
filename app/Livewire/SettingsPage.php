@@ -192,24 +192,55 @@ final class SettingsPage extends Component
     private function createChangeRequest(string $type, string $hashedValue): void
     {
         $user = auth()->user();
-        $token = Str::random(64);
 
-        PasswordChangeRequest::create([
-            'user_id' => $user->id,
-            'type' => $type,
-            'new_value_hash' => $hashedValue,
-            'token' => $token,
-            'expires_at' => now()->addHours(24),
-        ]);
-
-        $approveUrl = route('password-change.approve', $token);
-        $rejectUrl = route('password-change.reject', $token);
-
+        // Coba kirim email konfirmasi
         try {
+            $token = Str::random(64);
+
+            PasswordChangeRequest::create([
+                'user_id' => $user->id,
+                'type' => $type,
+                'new_value_hash' => $hashedValue,
+                'token' => $token,
+                'expires_at' => now()->addHours(24),
+            ]);
+
+            $approveUrl = route('password-change.approve', $token);
+            $rejectUrl = route('password-change.reject', $token);
+
             $mailService = new ResendMailService;
-            $mailService->sendPasswordChangeRequest($user, $type, $approveUrl, $rejectUrl);
+            $sent = $mailService->sendPasswordChangeRequest($user, $type, $approveUrl, $rejectUrl);
+
+            if ($sent) {
+                $this->statusMessage = 'Email konfirmasi telah dikirim. Cek email Anda untuk menyetujui perubahan.';
+                $this->statusType = 'success';
+                return;
+            }
         } catch (\Exception $e) {
-            logger()->error('Failed to send password change email', ['error' => $e->getMessage()]);
+            logger()->warning('Failed to send confirmation email, applying change directly', [
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Jika email tidak terkirim, apply perubahan langsung
+        $column = match ($type) {
+            'password' => 'password',
+            'pin' => 'pin_hash',
+            default => null,
+        };
+
+        if ($column) {
+            $user->update([$column => $hashedValue]);
+
+            $label = match ($type) {
+                'password' => 'Password',
+                'pin' => 'PIN',
+                default => ucfirst($type),
+            };
+
+            $this->statusMessage = "{$label} berhasil diubah (tanpa email konfirmasi).";
+            $this->statusType = 'success';
         }
     }
 
