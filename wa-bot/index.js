@@ -1,4 +1,10 @@
-const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+// Polyfill Web Crypto for Node 16
+if (!globalThis.crypto) {
+  const webcrypto = require('crypto').webcrypto;
+  globalThis.crypto = webcrypto;
+}
+
+const { makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const express = require('express');
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
