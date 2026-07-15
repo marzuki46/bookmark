@@ -9,7 +9,7 @@ Panduan lengkap deploy **Knowledge Hub** (Laravel) ke hosting Indonesia seperti 
 Pastikan hosting Anda mendukung:
 - ✅ **PHP 8.2+** (cek di cPanel → Select PHP Version)
 - ✅ **MySQL 5.7+ / MariaDB 10.3+**
-- ✅ **mod_rewrite** (untuk pretty URL)
+- ✅ **mod_rewrite** (wajib untuk pretty URL — cek di cPanel → Select PHP Version → Extensions, pastikan `mod_rewrite` aktif)
 - ✅ **Composer** (bisa dijalankan via SSH atau terminal cPanel)
 - ✅ **Cron Job** (untuk scheduler & queue)
 - ✅ **SSL Gratis** (AutoSSL dari cPanel)
@@ -165,8 +165,10 @@ Di cPanel:
 ```
 4. Tambahkan cron job kedua untuk queue worker:
 ```bash
-/usr/local/bin/php /home/username/public_html/artisan queue:work --daemon --tries=3 --delay=5 >> /dev/null 2>&1
+/usr/local/bin/php /home/username/public_html/artisan queue:work --stop-when-empty --tries=3 --delay=5 >> /dev/null 2>&1
 ```
+
+> 💡 Flag `--stop-when-empty` memastikan queue worker memproses antrian lalu berhenti (lebih aman untuk shared hosting). Jangan gunakan `--daemon` karena sudah tidak didukung di Laravel 8+.
 
 > 💡 Ganti `username` dengan username cPanel Anda
 
