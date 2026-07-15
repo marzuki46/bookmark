@@ -8,106 +8,70 @@ use Illuminate\Support\Facades\Http;
 
 final class WhatsAppService
 {
-    private string $apiKey;
     private string $apiUrl;
     private ?int $userId = null;
 
     public function __construct(?int $userId = null)
     {
         $this->userId = $userId;
-        $settings = $this->loadSettings();
-        $this->apiKey = $settings['api_key'] ?? '';
-        $this->apiUrl = 'https://api.fonnte.com';
+        $this->apiUrl = config('services.baileys.url', 'http://localhost:3001');
     }
 
-    /**
-     * Reinitialize with a specific user context (for webhook usage).
-     */
     public function initializeForUser(int $userId): void
     {
         $this->userId = $userId;
-        $settings = $this->loadSettings();
-        $this->apiKey = $settings['api_key'] ?? '';
     }
 
     public function isConfigured(): bool
     {
-        return $this->apiKey !== '';
+        try {
+            $resp = Http::timeout(3)->get($this->apiUrl . '/health');
+            return $resp->successful() && ($resp->json('status') ?? '') === 'connected';
+        } catch (\Exception) {
+            return false;
+        }
     }
 
-    /**
-     * Send a message via Fonnte WhatsApp Gateway.
-     */
     public function sendMessage(string $target, string $message, ?string $schedule = null): array
     {
-        if (! $this->isConfigured()) {
-            return ['status' => false, 'error' => 'WA Gateway not configured'];
+        if ($schedule) {
+            logger()->warning('Baileys: schedule not supported, sending immediately');
         }
 
         try {
-            $payload = [
-                'target' => $target,
+            $response = Http::timeout(10)->post($this->apiUrl . '/send', [
+                'to' => $target,
                 'message' => $message,
-                'countryCode' => '62',
-            ];
-
-            if ($schedule) {
-                $payload['schedule'] = $schedule;
-            }
-
-            $response = Http::timeout(15)
-                ->withToken($this->apiKey)
-                ->asMultipart()
-                ->post($this->apiUrl . '/send', $payload);
+            ]);
 
             if (! $response->successful()) {
-                logger()->warning('Fonnte API error', [
+                logger()->warning('Baileys API error', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
                 return ['status' => false, 'error' => 'HTTP ' . $response->status()];
             }
 
-            $result = $response->json();
-            return [
-                'status' => ($result['status'] ?? false) === true,
-                'id' => $result['id'] ?? null,
-                'data' => $result,
-            ];
+            return ['status' => true, 'data' => $response->json()];
         } catch (\Exception $e) {
-            logger()->error('Fonnte send failed', ['error' => $e->getMessage()]);
+            logger()->error('Baileys send failed', ['error' => $e->getMessage()]);
             return ['status' => false, 'error' => $e->getMessage()];
         }
     }
 
-    /**
-     * Get device status from Fonnte.
-     */
     public function getDeviceStatus(): array
     {
-        if (! $this->isConfigured()) {
-            return ['status' => false, 'error' => 'Not configured'];
-        }
-
         try {
-            $response = Http::timeout(10)
-                ->withToken($this->apiKey)
-                ->asForm()
-                ->post($this->apiUrl . '/get-devices');
-
+            $response = Http::timeout(5)->get($this->apiUrl . '/health');
             if (! $response->successful()) {
                 return ['status' => false, 'error' => 'HTTP ' . $response->status()];
             }
-
             return $response->json();
         } catch (\Exception $e) {
             return ['status' => false, 'error' => $e->getMessage()];
         }
     }
 
-    /**
-     * Send a structured financial notification.
-     */
     public function sendTransactionConfirmation(string $target, array $transaction, string $categoryName): void
     {
         $icon = $transaction['type'] === 'income' ? '💵' : '💸';
@@ -119,17 +83,13 @@ final class WhatsAppService
             "🏷 {$categoryName}\n" .
             "💰 Rp " . number_format((float) $transaction['amount'], 0, ',', '.') . "\n" .
             "📅 " . now()->format('d/m/Y') . "\n\n" .
-            "Balas dengan format:\n" .
-            "• `tanya [pertanyaan]` untuk bertanya\n" .
-            "• `batal [id]` untuk menghapus transaksi terakhir\n" .
+            "Balas dengan:\n" .
+            "• `tanya [pertanyaan]`\n" .
             "• `laporan` untuk ringkasan";
 
         $this->sendMessage($target, $message);
     }
 
-    /**
-     * Send a financial report summary via WhatsApp.
-     */
     public function sendReport(string $target, array $summary): void
     {
         $message = "📊 *Laporan Keuangan*\n\n" .
@@ -141,21 +101,5 @@ final class WhatsAppService
             "🏷 *Top Kategori:* {$summary['top_category']}";
 
         $this->sendMessage($target, $message);
-    }
-
-    private function loadSettings(): array
-    {
-        $userId = $this->userId ?? auth()->id();
-        if (! $userId) {
-            return [];
-        }
-
-        $path = storage_path('app/user-settings-'.$userId.'.json');
-        if (file_exists($path)) {
-            $all = json_decode(file_get_contents($path), true) ?? [];
-            return $all['wa_gateway'] ?? [];
-        }
-
-        return [];
     }
 }

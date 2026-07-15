@@ -467,7 +467,7 @@
         </div>
     @endif
 
-    {{-- WA Gateway Modal --}}
+    {{-- WA Gateway Modal (Baileys) --}}
     @if($showWaModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/50" wire:click="$set('showWaModal', false)"></div>
@@ -476,7 +476,7 @@
                     <h3 class="text-lg font-semibold text-[var(--text-primary)]">
                         <span class="flex items-center gap-2">
                             <svg class="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                            WhatsApp Gateway
+                            WhatsApp Gateway (Baileys)
                         </span>
                     </h3>
                     <button wire:click="$set('showWaModal', false)" class="p-1 rounded hover:bg-[var(--color-bg)] transition text-[var(--text-quaternary)]">
@@ -495,7 +495,7 @@
                         </div>
                         <div>
                             <div class="text-sm font-medium {{ $waConnected ? 'text-emerald-700' : 'text-amber-700' }}">
-                                {{ $waConnected ? 'WhatsApp Gateway Terhubung' : 'Belum Terhubung' }}
+                                {{ $waConnected ? 'Baileys Terhubung' : 'Belum Terhubung' }}
                             </div>
                             @if($waStatus)
                                 <div class="text-xs {{ $waConnected ? 'text-emerald-600' : 'text-amber-600' }} mt-0.5">{{ $waStatus }}</div>
@@ -503,90 +503,55 @@
                         </div>
                     </div>
 
+                    {{-- Baileys URL --}}
                     <div>
-                        <label class="wp-form-label">API Key (Fonnte)</label>
-                        <input type="password" wire:model="waApiKey" class="wp-form-input font-mono" placeholder="Masukkan API Key dari dashboard Fonnte">
-                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Dapatkan dari <a href="https://docs.fonnte.com" target="_blank" class="text-[var(--indigo-600)] hover:underline">dashboard Fonnte</a></p>
-                    </div>
-
-                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <div class="flex items-start gap-2">
-                            <span class="text-lg">📱</span>
-                            <div>
-                                <p class="text-xs font-semibold text-amber-800">Nomor WA Anda HARUS didaftarkan!</p>
-                                <p class="text-xs text-amber-700 mt-0.5">Sistem hanya akan memproses pesan dari nomor yang terdaftar di sini. Gunakan format <strong>08xx</strong> (contoh: 08123456789).</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="wp-form-label">
-                            Nomor WhatsApp Anda *
-                            <span class="text-xs text-red-500 font-normal">(wajib diisi)</span>
-                        </label>
-                        <input type="text" wire:model="waPhoneNumber" class="wp-form-input" placeholder="08123456789" required>
-                        <p class="text-xs text-[var(--text-quaternary)] mt-1">
-                            🔑 Nomor ini digunakan untuk <strong>mencocokkan pesan masuk</strong> dari WhatsApp.
-                            Kirim pesan dari nomor ini ke bot WA, dan sistem akan mengenali akun Anda.
-                        </p>
-                        <p class="text-xs text-[var(--text-quaternary)] mt-0.5">
-                            💡 Format "><code>08xx</code> akan otomatis dikonversi ke <code>62xx</code> saat pencocokan.
-                        </p>
-                    </div>
-
-                    <div>
-                        <label class="wp-form-label">Nomor Alternatif <span class="text-xs text-[var(--text-quaternary)] font-normal">(opsional)</span></label>
-                        <input type="text" wire:model="waAltNumbers" class="wp-form-input" placeholder="08123456788, 08234567890">
-                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Pisahkan dengan koma jika lebih dari satu. Nomor-nomor ini juga bisa mengirim transaksi.</p>
+                        <label class="wp-form-label">Baileys Server URL</label>
+                        <input type="text" wire:model="waBaileysUrl" class="wp-form-input font-mono" placeholder="http://localhost:3001">
+                        <p class="text-xs text-[var(--text-quaternary)] mt-1">URL server Baileys bot (default: http://localhost:3001)</p>
                     </div>
 
                     {{-- Webhook URL --}}
                     <div class="bg-[var(--color-bg)] rounded-lg p-3 border border-[var(--color-border)]">
-                        <label class="wp-form-label">Webhook URL</label>
+                        <label class="wp-form-label">Webhook URL (untuk Baileys bot)</label>
                         <div class="flex items-center gap-2 mt-1">
                             <input type="text" value="{{ $this->webhookUrl }}" class="wp-form-input text-xs font-mono flex-1" readonly onclick="this.select()">
                             <button onclick="navigator.clipboard.writeText('{{ $this->webhookUrl }}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',1500)"
-                                class="px-2 py-1 text-xs font-medium rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition">Copy</button>
+                                class="px-2 py-1 text-xs font-medium rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition whitespace-nowrap">Copy</button>
                         </div>
-                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Setting URL ini di dashboard Fonnte → Webhook untuk menerima pesan otomatis</p>
+                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Set URL ini di file config Baileys bot (API_URL)</p>
                     </div>
 
-                    <div class="flex items-center gap-3 pt-2">
+                    <div class="flex gap-3 pt-2">
                         <button wire:click="saveWaSettings" class="btn-primary flex-1">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                            Simpan Pengaturan
+                            Simpan & Cek Koneksi
                         </button>
-                        @if($waConnected)
-                            <button wire:click="testWaConnection" class="btn-ghost">
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                                Test
-                            </button>
-                        @endif
+                        <button wire:click="$set('showWaModal', false)" class="btn-ghost">Tutup</button>
                     </div>
 
-                    {{-- How to Register --}}
-                    <div class="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-200">
-                        <h4 class="text-xs font-semibold text-emerald-800 mb-2">📋 Cara Menggunakan WhatsApp</h4>
-                        <div class="space-y-2 text-xs text-emerald-700">
+                    {{-- Setup Guide --}}
+                    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
+                        <h4 class="text-xs font-semibold text-indigo-800 mb-2">🚀 Cara Setup Baileys Bot</h4>
+                        <div class="space-y-2 text-xs text-indigo-700">
                             <div class="flex items-start gap-2">
-                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-200 flex items-center justify-center text-[10px] font-bold text-emerald-700">1</span>
-                                <span>Daftarkan <strong>Nomor WhatsApp</strong> Anda di atas (wajib)</span>
+                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">1</span>
+                                <span>Upload folder <code class="px-1 bg-indigo-100 rounded">wa-bot/</code> ke server</span>
                             </div>
                             <div class="flex items-start gap-2">
-                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-200 flex items-center justify-center text-[10px] font-bold text-emerald-700">2</span>
-                                <span>Isi <strong>API Key Fonnte</strong> dari dashboard Fonnte</span>
+                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">2</span>
+                                <span>Jalankan: <code class="px-1 bg-indigo-100 rounded">cd wa-bot && npm install && node index.js</code></span>
                             </div>
                             <div class="flex items-start gap-2">
-                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-200 flex items-center justify-center text-[10px] font-bold text-emerald-700">3</span>
-                                <span>Set <strong>Webhook URL</strong> di dashboard Fonnte → Webhook</span>
+                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">3</span>
+                                <span><strong>Scan QR code</strong> yang muncul di terminal dengan WhatsApp kamu</span>
                             </div>
                             <div class="flex items-start gap-2">
-                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-200 flex items-center justify-center text-[10px] font-bold text-emerald-700">4</span>
-                                <span>Klik <strong>Simpan</strong> lalu <strong>Test</strong> untuk verifikasi</span>
+                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">4</span>
+                                <span>Bot akan otomatis menghubungkan ke webhook Laravel</span>
                             </div>
                             <div class="flex items-start gap-2">
-                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-200 flex items-center justify-center text-[10px] font-bold text-emerald-700">5</span>
-                                <span>Kirim pesan ke bot WA, transaksi otomatis tercatat! 🎉</span>
+                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">5</span>
+                                <span>Kirim pesan <strong>"makan 30000"</strong> ke nomor WhatsApp kamu -> otomatis tercatat!</span>
                             </div>
                         </div>
                     </div>

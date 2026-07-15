@@ -43,4 +43,8 @@ return [
         'model' => env('AI_MODEL', 'gpt-4o-mini'),
     ],
 
+    'baileys' => [
+        'url' => env('BAILEYS_URL', 'http://localhost:3001'),
+    ],
+
 ];

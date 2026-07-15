@@ -45,11 +45,10 @@ final class FinancialReport extends Component
 
     // WA Gateway settings
     public bool $showWaModal = false;
-    public string $waApiKey = '';
-    public string $waPhoneNumber = '';
-    public string $waAltNumbers = '';
+    public string $waBaileysUrl = '';
     public bool $waConnected = false;
     public string $waStatus = '';
+    public ?string $waQrCode = null;
 
     // AI Query
     public bool $showAiModal = false;
@@ -388,61 +387,40 @@ final class FinancialReport extends Component
         $this->statusType = 'success';
     }
 
-    // ─── WA Gateway Settings ───
+    // ─── WA Gateway Settings (Baileys) ───
 
     public function loadWaSettings(): void
     {
         $settings = $this->getFinanceSettings();
         $wa = $settings['wa_gateway'] ?? [];
-        $this->waApiKey = $wa['api_key'] ?? '';
-        $this->waPhoneNumber = $wa['phone_number'] ?? '';
-        $this->waAltNumbers = isset($wa['alt_numbers']) ? implode(', ', $wa['alt_numbers']) : '';
-        $this->waConnected = ! empty($this->waApiKey);
+        $this->waBaileysUrl = $wa['baileys_url'] ?? 'http://localhost:3001';
+        $this->waConnected = false;
     }
 
     public function saveWaSettings(): void
     {
         $settings = $this->getFinanceSettings();
         $settings['wa_gateway'] = [
-            'api_key' => $this->waApiKey,
-            'phone_number' => $this->waPhoneNumber,
-            'alt_numbers' => array_filter(array_map('trim', explode(',', $this->waAltNumbers))),
+            'baileys_url' => $this->waBaileysUrl,
         ];
         $this->saveFinanceSettings($settings);
 
         $this->loadWaSettings();
-        $this->statusMessage = $this->waConnected
-            ? 'Pengaturan WhatsApp Gateway berhasil disimpan!'
-            : 'Pengaturan WhatsApp Gateway disimpan (belum terhubung).';
+        $this->statusMessage = 'Pengaturan Baileys berhasil disimpan!';
         $this->statusType = 'success';
 
-        // If key is set, test connection
-        if ($this->waConnected) {
-            $waService = new WhatsAppService;
-            $deviceStatus = $waService->getDeviceStatus();
-            $this->waStatus = isset($deviceStatus['status']) && $deviceStatus['status']
-                ? 'Terverifikasi - WA Gateway aktif'
-                : 'Tersimpan, tapi device tidak terhubung. Pastikan Anda sudah scan QR di dashboard Fonnte.';
-        }
+        // Test connection
+        $this->checkBaileysConnection();
     }
 
-    public function testWaConnection(): void
+    public function checkBaileysConnection(): void
     {
         $waService = new WhatsAppService;
-        if (! $waService->isConfigured()) {
-            $this->statusMessage = 'API Key tidak ditemukan. Simpan pengaturan dulu.';
-            $this->statusType = 'error';
-            return;
-        }
-
-        $result = $waService->sendMessage($this->waPhoneNumber, '🔗 *Test Koneksi*\n\nSelamat! WhatsApp Gateway Anda berhasil terhubung dengan Personal Knowledge Hub. 🎉');
-        if ($result['status']) {
-            $this->statusMessage = 'Pesan uji coba berhasil dikirim! Cek WhatsApp Anda.';
-            $this->waStatus = 'Terhubung & Aktif ✅';
-        } else {
-            $this->statusMessage = 'Gagal: ' . ($result['error'] ?? 'Unknown error');
-            $this->statusType = 'error';
-        }
+        $status = $waService->getDeviceStatus();
+        $this->waConnected = ($status['status'] ?? '') === 'connected';
+        $this->waStatus = $this->waConnected
+            ? 'Terhubung ✅'
+            : 'Tidak terhubung. Jalankan Baileys bot dan scan QR.';
     }
 
     public function getWebhookUrlProperty(): string

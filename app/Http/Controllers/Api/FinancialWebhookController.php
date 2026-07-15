@@ -17,15 +17,17 @@ use Illuminate\Http\Request;
 final class FinancialWebhookController extends Controller
 {
     /**
-     * Handle incoming WhatsApp message from Fonnte webhook.
+     * Handle incoming WhatsApp message from webhook (Baileys or others).
      *
-     * Fonnte sends: { "sender": "08123456789", "message": "makan 30000", "id": "..." }
+     * Expected: { "sender": "08123456789", "message": "makan 30000", "id": "...", "source": "baileys" }
      */
     public function handleIncoming(Request $request): JsonResponse
     {
+        $source = $request->input('source', 'baileys');
+
         // Log EVERY incoming request to database for debugging
         WebhookLog::create([
-            'source' => 'fonnte',
+            'source' => $source,
             'method' => $request->method(),
             'headers' => $request->headers->all(),
             'raw_input' => json_encode($request->all()),
@@ -36,6 +38,7 @@ final class FinancialWebhookController extends Controller
 
         // Log EVERYTHING for debugging - method, headers, content type, and data
         logger()->info('WA Webhook received', [
+            'source' => $source,
             'method' => $request->method(),
             'content_type' => $request->header('Content-Type'),
             'headers' => $request->headers->all(),
@@ -44,7 +47,7 @@ final class FinancialWebhookController extends Controller
             'server_ip' => $request->server('REMOTE_ADDR'),
         ]);
 
-        // Handle GET requests — Fonnte sends GET to verify the endpoint
+        // Handle GET requests — some gateways verify the endpoint via GET
         if ($request->isMethod('get')) {
             return response()->json(['status' => true, 'message' => 'Webhook active']);
         }
@@ -72,6 +75,8 @@ final class FinancialWebhookController extends Controller
         $message = trim($message);
         $lower = strtolower($message);
 
+        $isBaileys = $source === 'baileys';
+
         // Initialize services with the resolved userId
         $aiService = new AIService($userId);
         $waService = new WhatsAppService($userId);
@@ -79,16 +84,16 @@ final class FinancialWebhookController extends Controller
 
         // Handle special commands
         if (in_array($lower, ['laporan', 'report', 'summary', 'ringkasan'])) {
-            return $this->handleReportCommand($userId, $sender, $waService);
+            return $this->handleReportCommand($userId, $sender, $waService, $isBaileys);
         }
 
         if (str_starts_with($lower, 'tanya ') || str_starts_with($lower, '?') || str_starts_with($lower, 'query ')) {
             $question = preg_replace('/^(tanya |\?|query )/i', '', $message);
-            return $this->handleQueryCommand($userId, $sender, $question, $waService, $financialAi);
+            return $this->handleQueryCommand($userId, $sender, $question, $waService, $financialAi, $isBaileys);
         }
 
         // Default: parse as transaction
-        return $this->handleTransactionMessage($userId, $sender, $message, $waService, $financialAi);
+        return $this->handleTransactionMessage($userId, $sender, $message, $waService, $financialAi, $isBaileys);
     }
 
     /**
@@ -99,20 +104,26 @@ final class FinancialWebhookController extends Controller
         string $sender,
         string $message,
         WhatsAppService $waService,
-        FinancialAIService $aiService
+        FinancialAIService $aiService,
+        bool $isBaileys = false
     ): JsonResponse {
         // Parse the message with AI
         $parsed = $aiService->parseTransaction($message);
 
         if (! $parsed || $parsed['amount'] <= 0) {
-            $waService->sendMessage($sender,
+            $errorMsg =
                 "❌ Maaf, saya tidak bisa memahami transaksi ini.\n\n" .
                 "Contoh format:\n" .
                 "• `makan 30000`\n" .
                 "• `gaji 5jt`\n" .
                 "• `beli domain 200rb`\n" .
-                "• `tanya total pengeluaran bulan ini`"
-            );
+                "• `tanya total pengeluaran bulan ini`";
+
+            if ($isBaileys) {
+                return response()->json(['status' => true, 'reply' => $errorMsg, 'error' => 'Could not parse']);
+            }
+
+            $waService->sendMessage($sender, $errorMsg);
             return response()->json(['status' => true, 'error' => 'Could not parse']);
         }
 
@@ -141,21 +152,46 @@ final class FinancialWebhookController extends Controller
             'wa_sender' => $sender,
         ]);
 
-        // Send confirmation via WhatsApp
-        $waService->sendTransactionConfirmation($sender, $transaction->toArray(), $category->name);
+        $icon = $parsed['type'] === 'income' ? '💵' : '💸';
+        $typeLabel = $parsed['type'] === 'income' ? 'PEMASUKAN' : 'PENGELUARAN';
 
-        // Also send today's total summary
+        $confirmation = "✅ *Transaksi Tercatat!*\n\n" .
+            "{$icon} *{$typeLabel}*\n" .
+            "📝 {$parsed['description']}\n" .
+            "🏷 {$category->name}\n" .
+            "💰 Rp " . number_format((float) $parsed['amount'], 0, ',', '.') . "\n" .
+            "📅 " . now()->format('d/m/Y') . "\n\n" .
+            "Balas dengan:\n" .
+            "• `tanya [pertanyaan]`\n" .
+            "• `laporan` untuk ringkasan";
+
+        // Also compute today's total
         $todayTotal = FinancialTransaction::where('user_id', $userId)
             ->whereDate('date', now()->format('Y-m-d'))
             ->where('type', $parsed['type'])
             ->sum('amount');
 
-        $typeLabel = $parsed['type'] === 'income' ? 'Pemasukan' : 'Pengeluaran';
-        $waService->sendMessage($sender,
-            "📊 *Ringkasan {$typeLabel} Hari Ini*\n\n" .
+        $todaySummary = "📊 *Ringkasan {$typeLabel} Hari Ini*\n\n" .
             "💰 Total {$typeLabel}: Rp " . number_format((float) $todayTotal, 0, ',', '.') . "\n" .
-            "📅 Tanggal: " . now()->format('d/m/Y')
-        );
+            "📅 Tanggal: " . now()->format('d/m/Y');
+
+        if ($isBaileys) {
+            return response()->json([
+                'status' => true,
+                'reply' => $confirmation . "\n\n" . $todaySummary,
+                'transaction' => [
+                    'id' => $transaction->id,
+                    'type' => $transaction->type,
+                    'amount' => $transaction->amount,
+                    'description' => $transaction->description,
+                    'category' => $category->name,
+                ],
+            ]);
+        }
+
+        // Send via gateway (backward compatibility)
+        $waService->sendMessage($sender, $confirmation);
+        $waService->sendMessage($sender, $todaySummary);
 
         return response()->json([
             'status' => true,
@@ -172,7 +208,7 @@ final class FinancialWebhookController extends Controller
     /**
      * Handle a report command ("laporan", "report", etc.).
      */
-    private function handleReportCommand(int $userId, string $sender, WhatsAppService $waService): JsonResponse
+    private function handleReportCommand(int $userId, string $sender, WhatsAppService $waService, bool $isBaileys = false): JsonResponse
     {
         $transactions = FinancialTransaction::where('user_id', $userId)
             ->thisMonth()
@@ -190,6 +226,14 @@ final class FinancialWebhookController extends Controller
             ->with('category')
             ->first();
 
+        $summaryMsg = "📊 *Laporan Keuangan*\n\n" .
+            "📅 Periode: " . now()->format('F Y') . "\n\n" .
+            "💵 *Pemasukan:* Rp " . number_format($totalIncome, 0, ',', '.') . "\n" .
+            "💸 *Pengeluaran:* Rp " . number_format($totalExpense, 0, ',', '.') . "\n" .
+            "💰 *Saldo:* Rp " . number_format($totalIncome - $totalExpense, 0, ',', '.') . "\n\n" .
+            "📌 *Total Transaksi:* {$transactions->count()}\n" .
+            "🏷 *Top Kategori:* {$topCategory?->category?->name ?? '-'}";
+
         $summary = [
             'period' => now()->format('F Y'),
             'total_income' => $totalIncome,
@@ -199,9 +243,11 @@ final class FinancialWebhookController extends Controller
             'top_category' => $topCategory?->category?->name ?? '-',
         ];
 
-        // Send report via WhatsApp (sync, no cron job needed)
-        $waService->sendReport($sender, $summary);
+        if ($isBaileys) {
+            return response()->json(['status' => true, 'reply' => $summaryMsg, 'summary' => $summary]);
+        }
 
+        $waService->sendReport($sender, $summary);
         return response()->json(['status' => true, 'summary' => $summary]);
     }
 
@@ -213,9 +259,9 @@ final class FinancialWebhookController extends Controller
         string $sender,
         string $question,
         WhatsAppService $waService,
-        FinancialAIService $aiService
+        FinancialAIService $aiService,
+        bool $isBaileys = false
     ): JsonResponse {
-        // Get recent transactions for context
         $transactions = FinancialTransaction::where('user_id', $userId)
             ->with('category')
             ->latest()
@@ -225,9 +271,11 @@ final class FinancialWebhookController extends Controller
 
         $answer = $aiService->answerQuery($question, $transactions);
 
-        // Send answer via WhatsApp (sync, no cron job needed)
-        $waService->sendMessage($sender, $answer);
+        if ($isBaileys) {
+            return response()->json(['status' => true, 'reply' => $answer]);
+        }
 
+        $waService->sendMessage($sender, $answer);
         return response()->json(['status' => true, 'answer' => $answer]);
     }
 
