@@ -35,11 +35,9 @@ async function startBot() {
 
   try {
     const { state, saveCreds } = await useMultiFileAuthState(config.authDir);
-    // Use a fixed stable version instead of fetching latest
-    const version = [2, 2412, 2];
 
     sock = makeWASocket({
-      version,
+      logger: pino({ level: 'error' }),
       logger: pino({ level: 'error' }),
       printQRInTerminal: false,
       auth: state,
