@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Jobs\SendFinancialAnswer;
-use App\Jobs\SendFinancialReport;
 use App\Models\FinancialCategory;
 use App\Models\FinancialTransaction;
 use App\Services\AIService;
@@ -182,8 +180,8 @@ final class FinancialWebhookController extends Controller
             'top_category' => $topCategory?->category?->name ?? '-',
         ];
 
-        // Dispatch job to send report via WhatsApp (async)
-        SendFinancialReport::dispatch($userId, $sender, $summary);
+        // Send report via WhatsApp (sync, no cron job needed)
+        $waService->sendReport($sender, $summary);
 
         return response()->json(['status' => true, 'summary' => $summary]);
     }
@@ -208,8 +206,8 @@ final class FinancialWebhookController extends Controller
 
         $answer = $aiService->answerQuery($question, $transactions);
 
-        // Dispatch job to send answer via WhatsApp (async)
-        SendFinancialAnswer::dispatch($userId, $sender, $answer);
+        // Send answer via WhatsApp (sync, no cron job needed)
+        $waService->sendMessage($sender, $answer);
 
         return response()->json(['status' => true, 'answer' => $answer]);
     }
