@@ -92,7 +92,8 @@ final class WhatsAppService
         try {
             $response = Http::timeout(10)
                 ->withToken($this->apiKey)
-                ->get($this->apiUrl . '/device');
+                ->asForm()
+                ->post($this->apiUrl . '/get-devices');
 
             if (! $response->successful()) {
                 return ['status' => false, 'error' => 'HTTP ' . $response->status()];
