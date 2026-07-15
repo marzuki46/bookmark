@@ -22,17 +22,24 @@ final class FinancialWebhookController extends Controller
      */
     public function handleIncoming(Request $request): JsonResponse
     {
-        // Log incoming webhook for debugging
-        logger()->info('WA Webhook received', $request->all());
+        // Log EVERYTHING for debugging - method, headers, content type, and data
+        logger()->info('WA Webhook received', [
+            'method' => $request->method(),
+            'content_type' => $request->header('Content-Type'),
+            'headers' => $request->headers->all(),
+            'all_input' => $request->all(),
+            'json' => $request->json()->all(),
+            'server_ip' => $request->server('REMOTE_ADDR'),
+        ]);
 
         // Handle GET requests — Fonnte sends GET to verify the endpoint
         if ($request->isMethod('get')) {
             return response()->json(['status' => true, 'message' => 'Webhook active']);
         }
 
-        $sender = $request->input('sender') ?? $request->input('data.sender');
-        $message = $request->input('message') ?? $request->input('data.message');
-        $messageId = $request->input('id') ?? $request->input('data.id');
+        $sender = $request->input('sender') ?? $request->input('data.sender') ?? $request->json('sender');
+        $message = $request->input('message') ?? $request->input('data.message') ?? $request->json('message');
+        $messageId = $request->input('id') ?? $request->input('data.id') ?? $request->json('id');
 
         if (! $sender || ! $message) {
             logger()->warning('WA Webhook: missing sender or message', $request->all());
