@@ -18,6 +18,7 @@ final class DashboardController extends Controller
         return view('dashboard', [
             'totalBookmarks' => Item::where('user_id', $userId)->where('type', 'bookmark')->count(),
             'totalNotes' => Item::where('user_id', $userId)->where('type', 'note')->count(),
+            'totalWorksheets' => Item::where('user_id', $userId)->where('type', 'worksheet')->count(),
             'totalTags' => Tag::where('user_id', $userId)->count(),
             'totalCollections' => Collection::where('user_id', $userId)->count(),
             'recentBookmarks' => Item::with('tags')

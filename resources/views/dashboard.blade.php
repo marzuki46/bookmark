@@ -243,6 +243,7 @@
             $stats = [
                 ['label' => 'Bookmarks', 'value' => $totalBookmarks, 'icon' => 'bookmark', 'accentStart' => '#6366f1', 'accentEnd' => '#8b5cf6', 'trend' => '+12%', 'trendLabel' => 'this month'],
                 ['label' => 'Notes', 'value' => $totalNotes, 'icon' => 'note', 'accentStart' => '#10b981', 'accentEnd' => '#34d399', 'trend' => '+8%', 'trendLabel' => 'this month'],
+                ['label' => 'Worksheets', 'value' => $totalWorksheets, 'icon' => 'table', 'accentStart' => '#f59e0b', 'accentEnd' => '#fbbf24', 'trend' => '+0%', 'trendLabel' => 'this month'],
                 ['label' => 'Tags', 'value' => $totalTags, 'icon' => 'tag', 'accentStart' => '#f59e0b', 'accentEnd' => '#fbbf24', 'trend' => '+5%', 'trendLabel' => 'this month'],
                 ['label' => 'Collections', 'value' => $totalCollections, 'icon' => 'folder', 'accentStart' => '#8b5cf6', 'accentEnd' => '#a78bfa', 'trend' => '+3%', 'trendLabel' => 'this month'],
             ];
@@ -251,6 +252,7 @@
                 'note' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>',
                 'tag' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>',
                 'folder' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>',
+                'table' => '<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>',
             ];
         @endphp
 
