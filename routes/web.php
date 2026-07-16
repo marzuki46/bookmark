@@ -77,6 +77,38 @@ Route::middleware('auth')->group(function (): void {
 
         abort(500, 'Failed to create extension package.');
     })->name('extension.download');
+    Route::get('/ai-debug', function () {
+        $userId = auth()->id();
+        $path = storage_path('app/user-settings-'.$userId.'.json');
+        $exists = file_exists($path);
+        $raw = $exists ? file_get_contents($path) : 'FILE NOT FOUND';
+        $data = $exists ? json_decode($raw, true) : null;
+        $ai = $data['ai'] ?? null;
+        $configured = !empty($ai['api_key']);
+
+        $testResult = null;
+        if ($configured) {
+            try {
+                $svc = new \App\Services\AIService($userId);
+                $testResult = $svc->askRaw('Reply with exactly: OK', 'ping', 10);
+            } catch (\Exception $e) {
+                $testResult = 'ERROR: ' . $e->getMessage();
+            }
+        }
+
+        return response()->json([
+            'user_id' => $userId,
+            'file_exists' => $exists,
+            'file_path' => $path,
+            'ai_config' => $ai ? [
+                'api_url' => $ai['api_url'] ?? null,
+                'api_key_set' => !empty($ai['api_key']),
+                'model' => $ai['model'] ?? null,
+            ] : null,
+            'is_configured' => $configured,
+            'ai_test_result' => $testResult,
+        ]);
+    })->middleware('auth')->name('ai.debug');
     Route::view('/settings', 'pages.settings')->name('settings');
     Route::get('/export', ExportController::class)->name('export');
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
