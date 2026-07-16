@@ -467,7 +467,7 @@
         </div>
     @endif
 
-    {{-- WA Gateway Modal (Baileys) --}}
+    {{-- WA Gateway Modal (Cloud API) --}}
     @if($showWaModal)
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="fixed inset-0 bg-black/50" wire:click="$set('showWaModal', false)"></div>
@@ -476,7 +476,7 @@
                     <h3 class="text-lg font-semibold text-[var(--text-primary)]">
                         <span class="flex items-center gap-2">
                             <svg class="w-5 h-5 text-green-500" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                            WhatsApp Gateway (Baileys)
+                            WhatsApp Cloud API
                         </span>
                     </h3>
                     <button wire:click="$set('showWaModal', false)" class="p-1 rounded hover:bg-[var(--color-bg)] transition text-[var(--text-quaternary)]">
@@ -495,7 +495,7 @@
                         </div>
                         <div>
                             <div class="text-sm font-medium {{ $waConnected ? 'text-emerald-700' : 'text-amber-700' }}">
-                                {{ $waConnected ? 'Baileys Terhubung' : 'Belum Terhubung' }}
+                                {{ $waConnected ? 'Cloud API Terhubung' : 'Belum Terhubung' }}
                             </div>
                             @if($waStatus)
                                 <div class="text-xs {{ $waConnected ? 'text-emerald-600' : 'text-amber-600' }} mt-0.5">{{ $waStatus }}</div>
@@ -503,22 +503,40 @@
                         </div>
                     </div>
 
-                    {{-- Baileys URL --}}
+                    {{-- Access Token --}}
                     <div>
-                        <label class="wp-form-label">Baileys Server URL</label>
-                        <input type="text" wire:model="waBaileysUrl" class="wp-form-input font-mono" placeholder="http://localhost:3001">
-                        <p class="text-xs text-[var(--text-quaternary)] mt-1">URL server Baileys bot (default: http://localhost:3001)</p>
+                        <label class="wp-form-label">Access Token</label>
+                        <input type="password" wire:model="waAccessToken" class="wp-form-input font-mono text-xs" placeholder="EAAG...">
+                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Permanent token dari Meta Business > System Users</p>
                     </div>
 
-                    {{-- Webhook URL --}}
+                    {{-- Phone Number ID --}}
+                    <div>
+                        <label class="wp-form-label">Phone Number ID</label>
+                        <input type="text" wire:model="waPhoneNumberId" class="wp-form-input font-mono text-xs" placeholder="1216895661504974">
+                        <p class="text-xs text-[var(--text-quaternary)] mt-1">ID dari WhatsApp > Getting Started > Phone Numbers</p>
+                    </div>
+
+                    {{-- Webhook URL for Meta --}}
                     <div class="bg-[var(--color-bg)] rounded-lg p-3 border border-[var(--color-border)]">
-                        <label class="wp-form-label">Webhook URL (untuk Baileys bot)</label>
+                        <label class="wp-form-label">Callback URL (untuk Meta Webhook)</label>
                         <div class="flex items-center gap-2 mt-1">
-                            <input type="text" value="{{ $this->webhookUrl }}" class="wp-form-input text-xs font-mono flex-1" readonly onclick="this.select()">
-                            <button onclick="navigator.clipboard.writeText('{{ $this->webhookUrl }}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',1500)"
+                            <input type="text" value="{{ url('/api/webhook/wa-finance') }}" class="wp-form-input text-xs font-mono flex-1" readonly onclick="this.select()">
+                            <button onclick="navigator.clipboard.writeText('{{ url('/api/webhook/wa-finance') }}'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',1500)"
                                 class="px-2 py-1 text-xs font-medium rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition whitespace-nowrap">Copy</button>
                         </div>
-                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Set URL ini di file config Baileys bot (API_URL)</p>
+                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Paste di Meta for Developers > WhatsApp > Configuration > Webhook</p>
+                    </div>
+
+                    {{-- Verify Token --}}
+                    <div class="bg-[var(--color-bg)] rounded-lg p-3 border border-[var(--color-border)]">
+                        <label class="wp-form-label">Verify Token</label>
+                        <div class="flex items-center gap-2 mt-1">
+                            <input type="text" value="knowledge-hub-webhook" class="wp-form-input text-xs font-mono flex-1" readonly onclick="this.select()">
+                            <button onclick="navigator.clipboard.writeText('knowledge-hub-webhook'); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy',1500)"
+                                class="px-2 py-1 text-xs font-medium rounded border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition whitespace-nowrap">Copy</button>
+                        </div>
+                        <p class="text-xs text-[var(--text-quaternary)] mt-1">Masukkan di Meta Webhook > Verify Token</p>
                     </div>
 
                     <div class="flex gap-3 pt-2">
@@ -531,27 +549,27 @@
 
                     {{-- Setup Guide --}}
                     <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-200">
-                        <h4 class="text-xs font-semibold text-indigo-800 mb-2">🚀 Cara Setup Baileys Bot</h4>
+                        <h4 class="text-xs font-semibold text-indigo-800 mb-2">🚀 Cara Setup WhatsApp Cloud API</h4>
                         <div class="space-y-2 text-xs text-indigo-700">
                             <div class="flex items-start gap-2">
                                 <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">1</span>
-                                <span>Upload folder <code class="px-1 bg-indigo-100 rounded">wa-bot/</code> ke server</span>
+                                <span>Buka <strong>developers.facebook.com</strong> > My Apps > Create App (Business)</span>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">2</span>
-                                <span>Jalankan: <code class="px-1 bg-indigo-100 rounded">cd wa-bot && npm install && node index.js</code></span>
+                                <span>Tambah product <strong>WhatsApp</strong> > Setup</span>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">3</span>
-                                <span><strong>Scan QR code</strong> yang muncul di terminal dengan WhatsApp kamu</span>
+                                <span>Generate <strong>Permanent Token</strong> di Business > System Users</span>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">4</span>
-                                <span>Bot akan otomatis menghubungkan ke webhook Laravel</span>
+                                <span>Copy <strong>Phone Number ID</strong> dari WhatsApp > Getting Started</span>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-200 flex items-center justify-center text-[10px] font-bold text-indigo-700">5</span>
-                                <span>Kirim pesan <strong>"makan 30000"</strong> ke nomor WhatsApp kamu -> otomatis tercatat!</span>
+                                <span>Isi data di atas, lalu <strong>Complete Business Verification</strong> untuk kirim pesan ke nomor Indonesia</span>
                             </div>
                         </div>
                     </div>
