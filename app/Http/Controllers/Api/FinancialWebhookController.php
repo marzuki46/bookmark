@@ -240,13 +240,15 @@ final class FinancialWebhookController extends Controller
             ->with('category')
             ->first();
 
+        $topCategoryName = $topCategory->category->name ?? '-';
+
         $summaryMsg = "📊 *Laporan Keuangan*\n\n" .
             "📅 Periode: " . now()->format('F Y') . "\n\n" .
             "💵 *Pemasukan:* Rp " . number_format($totalIncome, 0, ',', '.') . "\n" .
             "💸 *Pengeluaran:* Rp " . number_format($totalExpense, 0, ',', '.') . "\n" .
             "💰 *Saldo:* Rp " . number_format($totalIncome - $totalExpense, 0, ',', '.') . "\n\n" .
             "📌 *Total Transaksi:* {$transactions->count()}\n" .
-            "🏷 *Top Kategori:* {$topCategory?->category?->name ?? '-'}";
+            "🏷 *Top Kategori:* {$topCategoryName}";
 
         $waService->sendMessage($sender, $summaryMsg);
 
