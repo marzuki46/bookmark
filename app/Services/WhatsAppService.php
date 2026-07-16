@@ -17,6 +17,10 @@ final class WhatsAppService
         $this->graphUrl = config('services.whatsapp_cloud.graph_url', 'https://graph.facebook.com/v21.0');
         $this->phoneNumberId = config('services.whatsapp_cloud.phone_number_id', '');
         $this->accessToken = config('services.whatsapp_cloud.access_token', '');
+
+        if ($userId !== null) {
+            $this->initializeForUser($userId);
+        }
     }
 
     public function initializeForUser(int $userId): void
