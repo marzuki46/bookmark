@@ -26,6 +26,20 @@ final class CollectionList extends Component
 
     public string $formDescription = '';
 
+    public bool $showItemsModal = false;
+
+    public ?int $viewingCollectionId = null;
+
+    public string $viewingCollectionName = '';
+
+    public string $assignSearch = '';
+
+    public array $assignableItems = [];
+
+    public string $statusMessage = '';
+
+    public string $statusType = 'success';
+
     protected string $paginationTheme = 'tailwind';
 
     public function rules(): array
@@ -92,6 +106,86 @@ final class CollectionList extends Component
         $collection->delete();
     }
 
+    public function viewItems(int $collectionId): void
+    {
+        $collection = Collection::where('user_id', auth()->id())->findOrFail($collectionId);
+        $this->viewingCollectionId = $collectionId;
+        $this->viewingCollectionName = $collection->name;
+        $this->assignSearch = '';
+        $this->loadAssignableItems();
+        $this->showItemsModal = true;
+    }
+
+    public function closeItemsModal(): void
+    {
+        $this->showItemsModal = false;
+        $this->viewingCollectionId = null;
+        $this->viewingCollectionName = '';
+        $this->assignableItems = [];
+    }
+
+    public function updatedAssignSearch(): void
+    {
+        $this->loadAssignableItems();
+    }
+
+    public function attachItem(int $itemId): void
+    {
+        if (! $this->viewingCollectionId) {
+            return;
+        }
+
+        $collection = Collection::where('user_id', auth()->id())->findOrFail($this->viewingCollectionId);
+        $item = Item::where('user_id', auth()->id())->findOrFail($itemId);
+
+        if (! $collection->items()->where('item_id', $itemId)->exists()) {
+            $collection->items()->attach($itemId);
+            $this->statusMessage = "Item \"{$item->title}\" added to \"{$collection->name}\".";
+            $this->statusType = 'success';
+        }
+
+        $this->loadAssignableItems();
+    }
+
+    public function detachItem(int $itemId): void
+    {
+        if (! $this->viewingCollectionId) {
+            return;
+        }
+
+        $collection = Collection::where('user_id', auth()->id())->findOrFail($this->viewingCollectionId);
+        $item = Item::where('user_id', auth()->id())->findOrFail($itemId);
+        $collection->items()->detach($itemId);
+
+        $this->statusMessage = "Item \"{$item->title}\" removed from \"{$collection->name}\".";
+        $this->statusType = 'success';
+        $this->loadAssignableItems();
+    }
+
+    public function clearStatusMessage(): void
+    {
+        $this->statusMessage = '';
+    }
+
+    private function loadAssignableItems(): void
+    {
+        if (! $this->viewingCollectionId) {
+            return;
+        }
+
+        $query = Item::where('user_id', auth()->id())
+            ->where('type', '!=', 'file');
+
+        if ($this->assignSearch !== '') {
+            $query->where(function ($q) {
+                $q->where('title', 'like', '%'.$this->assignSearch.'%')
+                    ->orWhere('content', 'like', '%'.$this->assignSearch.'%');
+            });
+        }
+
+        $this->assignableItems = $query->latest()->take(50)->get()->toArray();
+    }
+
     public function render()
     {
         $query = Collection::withCount('items')
@@ -111,7 +205,15 @@ final class CollectionList extends Component
             'totalItems' => Item::where('user_id', auth()->id())->count(),
         ];
 
-        return view('livewire.collection-list', compact('collections', 'stats'));
+        $viewingCollectionItems = [];
+        if ($this->viewingCollectionId) {
+            $collection = Collection::with('items')->where('user_id', auth()->id())->find($this->viewingCollectionId);
+            if ($collection) {
+                $viewingCollectionItems = $collection->items->toArray();
+            }
+        }
+
+        return view('livewire.collection-list', compact('collections', 'stats', 'viewingCollectionItems'));
     }
 
     private function resetForm(): void
