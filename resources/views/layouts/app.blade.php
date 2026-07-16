@@ -62,6 +62,7 @@
                                     'label' => 'AI Center',
                                     'items' => [
                                         ['route' => 'ai', 'label' => 'AI Dashboard', 'icon' => 'brain', 'active' => request()->routeIs('ai')],
+                                        ['route' => 'notulensi', 'label' => 'Notulensi AI', 'icon' => 'note', 'active' => request()->routeIs('notulensi')],
                                         ['route' => 'search', 'label' => 'Search', 'icon' => 'search', 'active' => request()->routeIs('search')],
                                     ]
                                 ],
@@ -213,6 +214,9 @@
 
         <!-- Mobile Overlay -->
         <div id="wp-sidebar-overlay" class="wp-sidebar-overlay" hidden aria-hidden="true"></div>
+
+        <!-- AI Chat Widget -->
+        <livewire:ai-chat-widget />
     </div>
     @endauth
 

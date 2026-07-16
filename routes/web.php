@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function (): void {
     Route::view('/files', 'pages.files')->name('files');
     Route::view('/secrets', 'pages.secrets')->name('secrets');
     Route::get('/ai', AiCenterController::class)->name('ai');
+    Route::view('/notulensi', 'pages.notulensi')->name('notulensi');
     Route::view('/search', 'pages.search')->name('search');
     Route::view('/activity', 'pages.activity')->name('activity');
     Route::view('/backup', 'pages.backup')->name('backup');

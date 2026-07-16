@@ -273,6 +273,9 @@
         @endforeach
     </div>
 
+    <!-- AI Insight -->
+    <livewire:dashboard-insight />
+
     <!-- Main Grid -->
     <div class="main-grid">
         <!-- Sidebar: Quick Actions + Insights -->
