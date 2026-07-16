@@ -94,6 +94,10 @@ final class FinancialWebhookController extends Controller
         $userId = $this->resolveUserIdFromSender($sender);
         if (! $userId) {
             logger()->info('WA Webhook: unknown sender', ['sender' => $sender]);
+            $unknownMsg = "Nomor {$sender} belum terdaftar. Silakan daftarkan nomor WhatsApp kamu di aplikasi Knowledge Hub.";
+            if ($source === 'baileys') {
+                return response()->json(['status' => true, 'message' => 'Unknown sender', 'reply' => $unknownMsg]);
+            }
             return response()->json(['status' => true, 'message' => 'Unknown sender']);
         }
 
@@ -176,8 +180,10 @@ final class FinancialWebhookController extends Controller
                 "• `beli domain 200rb`\n" .
                 "• `tanya total pengeluaran bulan ini`";
 
-            $waService->sendMessage($sender, $errorMsg);
-            return response()->json(['status' => true, 'error' => 'Could not parse']);
+            if ($isCloud) {
+                $waService->sendMessage($sender, $errorMsg);
+            }
+            return response()->json(['status' => true, 'error' => 'Could not parse', 'reply' => $errorMsg]);
         }
 
         $category = FinancialCategory::firstOrCreate(
@@ -225,10 +231,15 @@ final class FinancialWebhookController extends Controller
             "💰 Total {$typeLabel}: Rp " . number_format((float) $todayTotal, 0, ',', '.') . "\n" .
             "📅 Tanggal: " . now()->format('d/m/Y');
 
-        $waService->sendMessage($sender, $confirmation . "\n\n" . $todaySummary);
+        $fullReply = $confirmation . "\n\n" . $todaySummary;
+
+        if ($isCloud) {
+            $waService->sendMessage($sender, $fullReply);
+        }
 
         return response()->json([
             'status' => true,
+            'reply' => $fullReply,
             'transaction' => [
                 'id' => $transaction->id,
                 'type' => $transaction->type,
@@ -267,9 +278,11 @@ final class FinancialWebhookController extends Controller
             "📌 *Total Transaksi:* {$transactions->count()}\n" .
             "🏷 *Top Kategori:* {$topCategoryName}";
 
-        $waService->sendMessage($sender, $summaryMsg);
+        if ($isCloud) {
+            $waService->sendMessage($sender, $summaryMsg);
+        }
 
-        return response()->json(['status' => true]);
+        return response()->json(['status' => true, 'reply' => $summaryMsg]);
     }
 
     private function handleQueryCommand(
@@ -289,9 +302,11 @@ final class FinancialWebhookController extends Controller
 
         $answer = $aiService->answerQuery($question, $transactions);
 
-        $waService->sendMessage($sender, $answer);
+        if ($isCloud) {
+            $waService->sendMessage($sender, $answer);
+        }
 
-        return response()->json(['status' => true]);
+        return response()->json(['status' => true, 'reply' => $answer]);
     }
 
     private function normalizePhoneNumber(string $number): string
