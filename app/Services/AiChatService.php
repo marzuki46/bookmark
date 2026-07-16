@@ -53,45 +53,24 @@ final class AiChatService
         $context = $this->buildContext();
 
         $systemPrompt = "You are Knowledge Hub AI assistant. You help the user manage their knowledge base.
-You have access to ALL their data: bookmarks, notes, snippets, worksheets, and tags.
+You have access to ALL their data: bookmarks, notes, snippets, worksheets, todos, and tags.
 Answer in the same language the user uses (Indonesian or English).
-Be concise, helpful, and reference specific items from their data when relevant.
-If the user asks about something not in their data, you can use web search by prefixing your internal note with [SEARCH].";
+Be concise, helpful, and reference specific items from their data when relevant.";
 
-        $fullMessage = "User's knowledge base context:\n{$context}\n\nUser question: {$message}";
-
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-        ];
+        $messages = [];
 
         foreach ($history as $msg) {
-            $messages[] = [
-                'role' => $msg['role'] ?? 'user',
-                'content' => $msg['content'] ?? '',
-            ];
+            $messages[] = ($msg['role'] ?? 'user').': '.($msg['content'] ?? '');
         }
 
-        $messages[] = ['role' => 'user', 'content' => $fullMessage];
+        $historyText = ! empty($messages) ? "\n\nPrevious conversation:\n".implode("\n", $messages) : '';
+
+        $fullMessage = "User's knowledge base context:\n{$context}{$historyText}\n\nUser question: {$message}";
 
         try {
-            $url = rtrim($this->ai->getSettings()['api_url'] ?? '', '/').'/chat/completions';
-            $apiKey = $this->ai->getSettings()['api_key'] ?? '';
-            $model = $this->ai->getSettings()['model'] ?? 'gpt-4o-mini';
+            $reply = $this->ai->askRaw($systemPrompt, $fullMessage, 1000);
 
-            $response = \Illuminate\Support\Facades\Http::timeout(30)
-                ->withToken($apiKey)
-                ->post($url, [
-                    'model' => $model,
-                    'messages' => $messages,
-                    'max_tokens' => 1000,
-                    'temperature' => 0.7,
-                ]);
-
-            if (! $response->successful()) {
-                return 'AI error: '.$response->status();
-            }
-
-            return $response->json('choices.0.message.content') ?? 'Tidak ada response dari AI.';
+            return $reply ?? 'Tidak ada response dari AI. Coba lagi atau cek Settings.';
         } catch (\Exception $e) {
             return 'Error: '.$e->getMessage();
         }
@@ -101,18 +80,15 @@ If the user asks about something not in their data, you can use web search by pr
     {
         $results = $this->search->search($query, 5);
 
-        if (empty($results)) {
-            return "Tidak ditemukan hasil untuk: {$query}";
-        }
-
-        $context = "Web search results for: {$query}\n\n";
-        foreach ($results as $i => $r) {
-            $context .= ($i + 1).". {$r['title']}\n   {$r['url']}\n   {$r['snippet']}\n\n";
-        }
-
         $kbContext = $this->buildContext();
 
-        $prompt = "Based on these web search results AND the user's knowledge base, answer the question: {$query}
+        if (! empty($results)) {
+            $context = "Web search results for: {$query}\n\n";
+            foreach ($results as $i => $r) {
+                $context .= ($i + 1).". {$r['title']}\n   {$r['url']}\n   {$r['snippet']}\n\n";
+            }
+
+            $prompt = "Based on these web search results AND the user's knowledge base, answer the question: {$query}
 
 Web search results:
 {$context}
@@ -122,7 +98,19 @@ User's knowledge base:
 
 Provide a comprehensive answer combining web results and personal data. Be concise.";
 
-        return $this->ai->askRaw($prompt, $query, 800) ?? 'Gagal generate jawaban.';
+            return $this->ai->askRaw($prompt, $query, 800) ?? 'Gagal generate jawaban.';
+        }
+
+        $prompt = "The user asked to search for: {$query}
+
+Based on the user's knowledge base below, provide the best answer you can. If the knowledge base doesn't contain relevant info, say so honestly.
+
+User's knowledge base:
+{$kbContext}
+
+Be concise and helpful.";
+
+        return $this->ai->askRaw($prompt, $query, 800) ?? 'Gagal generate jawaban. Pastikan AI sudah dikonfigurasi di Settings.';
     }
 
     private function generateOverview(): string

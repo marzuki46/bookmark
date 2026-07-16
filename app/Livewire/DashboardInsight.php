@@ -16,12 +16,22 @@ final class DashboardInsight extends Component
 
     public bool $generated = false;
 
+    public int $timeout = 120;
+
     public function generateInsight(): void
     {
         $this->loading = true;
 
-        $chatService = new AiChatService(auth()->id());
-        $this->insight = $chatService->chat('Buat ringkasan insight dari semua data knowledge hub saya. Sertakan: topik utama, pola data, suggestion untuk organizir lebih baik, dan hal menarik yang ditemukan. Jawab dalam Bahasa Indonesia yang singkat dan actionable.');
+        try {
+            $chatService = new AiChatService(auth()->id());
+            $this->insight = $chatService->chat('Buat ringkasan insight dari semua data knowledge hub saya. Sertakan: topik utama, pola data, suggestion untuk organizir lebih baik, dan hal menarik yang ditemukan. Jawab dalam Bahasa Indonesia yang singkat dan actionable.');
+
+            if (str_starts_with($this->insight, 'AI belum dikonfigurasi')) {
+                $this->insight = '';
+            }
+        } catch (\Exception $e) {
+            $this->insight = '';
+        }
 
         $this->generated = true;
         $this->loading = false;

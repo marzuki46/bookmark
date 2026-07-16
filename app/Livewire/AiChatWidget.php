@@ -17,6 +17,8 @@ final class AiChatWidget extends Component
 
     public bool $loading = false;
 
+    public int $timeout = 120;
+
     public function toggle(): void
     {
         $this->open = ! $this->open;

@@ -168,6 +168,7 @@ Reply as valid JSON array only, no markdown. Each item: {"id": <number>, "catego
                     ],
                     'max_tokens' => $maxTokens,
                     'temperature' => 0.3,
+                    'stream' => false,
                 ]);
 
             if (! $response->successful()) {

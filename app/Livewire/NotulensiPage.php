@@ -24,6 +24,8 @@ final class NotulensiPage extends Component
 
     public string $statusType = 'success';
 
+    public int $timeout = 120;
+
     public function generate(): void
     {
         $text = trim($this->meetingText);
