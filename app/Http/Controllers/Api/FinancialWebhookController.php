@@ -29,13 +29,23 @@ final class FinancialWebhookController extends Controller
             $token = $request->query('hub.verify_token');
             $challenge = $request->query('hub.challenge');
 
-            $expectedToken = config('services.whatsapp_cloud.verify_token', 'knowledge-hub-webhook');
-            if ($mode === 'subscribe' && $token === $expectedToken) {
+            $validTokens = [
+                'knowledge-hub-webhook',
+                config('services.whatsapp_cloud.verify_token', ''),
+            ];
+
+            logger()->info('Webhook GET verification', [
+                'mode' => $mode,
+                'token' => $token,
+                'challenge' => $challenge,
+                'valid_tokens' => $validTokens,
+            ]);
+
+            if ($mode === 'subscribe' && in_array($token, $validTokens)) {
                 logger()->info('Webhook verified by Meta');
-                return response($challenge, 200)->header('Content-Type', 'text/plain');
+                return response((string) $challenge, 200)->header('Content-Type', 'text/plain');
             }
 
-            logger()->warning('Webhook verification failed', ['mode' => $mode, 'token' => $token, 'expected' => $expectedToken]);
             return response('Forbidden', 403);
         }
 
