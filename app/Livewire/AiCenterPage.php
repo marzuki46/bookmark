@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire;
 
 use App\Models\Item;
+use App\Services\AiChatService;
 use App\Services\AIService;
 use Livewire\Component;
 
