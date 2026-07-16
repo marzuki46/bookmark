@@ -23,6 +23,13 @@ final class FinancialWebhookController extends Controller
      */
     public function handleIncoming(Request $request): JsonResponse|Response
     {
+        logger()->info('Webhook hit', [
+            'method' => $request->method(),
+            'url' => $request->url(),
+            'content_type' => $request->header('Content-Type'),
+            'input_keys' => array_keys($request->input()),
+        ]);
+
         // ─── Meta Webhook Verification (GET) ───
         if ($request->isMethod('get')) {
             $mode = $request->query('hub_mode') ?? $request->query('hub.mode');
