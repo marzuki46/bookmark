@@ -39,6 +39,9 @@ final class FinancialWebhookController extends Controller
                 'token' => $token,
                 'challenge' => $challenge,
                 'valid_tokens' => $validTokens,
+                'php_get' => $_GET ?? [],
+                'query_string' => $_SERVER['QUERY_STRING'] ?? 'N/A',
+                'request_uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
             ]);
 
             if ($mode === 'subscribe' && in_array($token, $validTokens)) {
