@@ -128,7 +128,7 @@
     @if($showModal)
         <div class="fixed inset-0 z-50 flex items-start justify-center p-4 pt-16 overflow-y-auto" x-data>
             <div class="fixed inset-0 bg-black/50" wire:click="closeModal"></div>
-            <div class="relative bg-[var(--color-surface)] rounded-xl shadow-xl w-full max-w-4xl border border-[var(--color-border)] mb-8">
+            <div class="relative bg-[var(--color-surface)] rounded-xl shadow-xl w-full max-w-2xl border border-[var(--color-border)] mb-8 max-h-[85vh] overflow-y-auto">
                 <div class="flex items-center justify-between px-6 py-4 border-b border-[var(--color-border)]">
                     <h3 class="text-lg font-semibold text-[var(--text-primary)]">{{ $editMode ? 'Edit Worksheet' : 'Add Worksheet' }}</h3>
                     <button wire:click="closeModal" class="p-1 rounded hover:bg-[var(--color-bg)] transition text-[var(--text-quaternary)]">
@@ -247,10 +247,9 @@
                                 @forelse($formChecklist as $i => $item)
                                     <div class="flex items-center gap-3 group">
                                         <input type="checkbox" {{ $item['checked'] ? 'checked' : '' }}
-                                            wire:click="toggleChecklistItem({{ $i }})"
+                                            x-on:click.prevent="$wire.toggleChecklistItem({{ $i }})"
                                             class="rounded border-[var(--color-border)]">
-                                        <input type="text" value="{{ $item['text'] }}"
-                                            wire:change="updateChecklistText({{ $i }}, $event.target.value)"
+                                        <input type="text" wire:model.live="formChecklist.{{ $i }}.text"
                                             class="flex-1 px-2 py-1 text-sm bg-transparent border-0 border-b border-[var(--color-border)] focus:border-[var(--indigo-500)] focus:outline-none"
                                             placeholder="Task description...">
                                         <button type="button" wire:click="removeChecklistItem({{ $i }})"
