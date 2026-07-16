@@ -13,101 +13,141 @@ use App\Services\FinancialAIService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 final class FinancialWebhookController extends Controller
 {
     /**
-     * Handle incoming WhatsApp message from webhook (Baileys or others).
-     *
-     * Expected: { "sender": "08123456789", "message": "makan 30000", "id": "...", "source": "baileys" }
+     * Handle incoming WhatsApp message from webhook.
+     * Supports both Cloud API (Meta) and Baileys formats.
      */
-    public function handleIncoming(Request $request): JsonResponse
+    public function handleIncoming(Request $request): JsonResponse|Response
     {
-        $source = $request->input('source', 'baileys');
+        // ─── Meta Webhook Verification (GET) ───
+        if ($request->isMethod('get')) {
+            $mode = $request->query('hub.mode');
+            $token = $request->query('hub.verify_token');
+            $challenge = $request->query('hub.challenge');
 
-        // Log EVERY incoming request to database for debugging
+            if ($mode === 'subscribe' && $token === config('services.whatsapp_cloud.verify_token')) {
+                logger()->info('Webhook verified by Meta');
+                return response($challenge, 200)->header('Content-Type', 'text/plain');
+            }
+
+            logger()->warning('Webhook verification failed', ['mode' => $mode, 'token' => $token]);
+            return response('Forbidden', 403);
+        }
+
+        $payload = $request->all();
+        $source = 'whatsapp_cloud';
+
+        // ─── Detect source ───
+        if (isset($payload['source']) || isset($payload['sender'])) {
+            $source = $payload['source'] ?? 'baileys';
+        }
+
+        // ─── Log ───
+        $parsedMessage = $this->parseWebhookPayload($payload);
+
         WebhookLog::create([
             'source' => $source,
             'method' => $request->method(),
             'headers' => $request->headers->all(),
-            'raw_input' => json_encode($request->all()),
-            'sender' => $request->input('sender') ?? $request->input('data.sender'),
-            'message' => $request->input('message') ?? $request->input('data.message'),
-            'message_id' => $request->input('id') ?? $request->input('data.id'),
+            'raw_input' => json_encode($payload),
+            'sender' => $parsedMessage['sender'] ?? null,
+            'message' => $parsedMessage['message'] ?? null,
+            'message_id' => $parsedMessage['message_id'] ?? null,
         ]);
 
-        // Log EVERYTHING for debugging - method, headers, content type, and data
         logger()->info('WA Webhook received', [
             'source' => $source,
-            'method' => $request->method(),
-            'content_type' => $request->header('Content-Type'),
-            'headers' => $request->headers->all(),
-            'all_input' => $request->all(),
-            'json' => $request->json()->all(),
-            'server_ip' => $request->server('REMOTE_ADDR'),
+            'sender' => $parsedMessage['sender'] ?? null,
+            'message' => $parsedMessage['message'] ?? null,
         ]);
 
-        // Handle GET requests — some gateways verify the endpoint via GET
-        if ($request->isMethod('get')) {
-            return response()->json(['status' => true, 'message' => 'Webhook active']);
-        }
-
-        $sender = $request->input('sender') ?? $request->input('data.sender') ?? $request->json('sender');
-        $message = $request->input('message') ?? $request->input('data.message') ?? $request->json('message');
-        $messageId = $request->input('id') ?? $request->input('data.id') ?? $request->json('id');
+        $sender = $parsedMessage['sender'] ?? null;
+        $message = $parsedMessage['message'] ?? null;
 
         if (! $sender || ! $message) {
-            logger()->warning('WA Webhook: missing sender or message', $request->all());
-            return response()->json(['status' => false, 'error' => 'Missing sender or message'], 200);
+            logger()->warning('WA Webhook: no message content', ['source' => $source]);
+            return response()->json(['status' => true, 'message' => 'No message content']);
         }
 
-        // Find which user this sender belongs to
+        // ─── Resolve user ───
         $userId = $this->resolveUserIdFromSender($sender);
         if (! $userId) {
-            logger()->info('WA Webhook: unknown sender - number not registered in any account', [
-                'sender' => $sender,
-                'hint' => 'User must register this number in Financial Report → WA Gateway settings first',
-            ]);
+            logger()->info('WA Webhook: unknown sender', ['sender' => $sender]);
             return response()->json(['status' => true, 'message' => 'Unknown sender']);
         }
 
-        // Process the message
         $message = trim($message);
         $lower = strtolower($message);
 
-        $isBaileys = $source === 'baileys';
-
-        // Initialize services with the resolved userId
-        $aiService = new AIService($userId);
+        $isCloud = $source === 'whatsapp_cloud';
         $waService = new WhatsAppService($userId);
+        $aiService = new AIService($userId);
         $financialAi = new FinancialAIService($aiService);
 
-        // Handle special commands
+        // ─── Commands ───
         if (in_array($lower, ['laporan', 'report', 'summary', 'ringkasan'])) {
-            return $this->handleReportCommand($userId, $sender, $waService, $isBaileys);
+            return $this->handleReportCommand($userId, $sender, $waService, $isCloud);
         }
 
         if (str_starts_with($lower, 'tanya ') || str_starts_with($lower, '?') || str_starts_with($lower, 'query ')) {
             $question = preg_replace('/^(tanya |\?|query )/i', '', $message);
-            return $this->handleQueryCommand($userId, $sender, $question, $waService, $financialAi, $isBaileys);
+            return $this->handleQueryCommand($userId, $sender, $question, $waService, $financialAi, $isCloud);
         }
 
-        // Default: parse as transaction
-        return $this->handleTransactionMessage($userId, $sender, $message, $waService, $financialAi, $isBaileys);
+        // ─── Default: parse as transaction ───
+        return $this->handleTransactionMessage($userId, $sender, $message, $waService, $financialAi, $isCloud);
     }
 
     /**
-     * Handle a transaction message (e.g., "makan 30000").
+     * Parse Cloud API or Baileys webhook payload into sender/message/id.
      */
+    private function parseWebhookPayload(array $payload): array
+    {
+        // Cloud API format
+        if (isset($payload['object']) && $payload['object'] === 'whatsapp_business_account') {
+            $entry = $payload['entry'][0] ?? [];
+            $change = $entry['changes'][0] ?? [];
+            $value = $change['value'] ?? [];
+
+            $messages = $value['messages'] ?? [];
+            if (empty($messages)) {
+                return ['sender' => null, 'message' => null, 'message_id' => null];
+            }
+
+            $msg = $messages[0];
+            $sender = $msg['from'] ?? null;
+            $messageId = $msg['id'] ?? null;
+
+            $text = '';
+            if (($msg['type'] ?? '') === 'text') {
+                $text = $msg['text']['body'] ?? '';
+            } elseif (($msg['type'] ?? '') === 'button') {
+                $text = $msg['button']['text'] ?? '';
+            }
+
+            return ['sender' => $sender, 'message' => $text, 'message_id' => $messageId];
+        }
+
+        // Baileys format (legacy)
+        return [
+            'sender' => $payload['sender'] ?? null,
+            'message' => $payload['message'] ?? null,
+            'message_id' => $payload['id'] ?? null,
+        ];
+    }
+
     private function handleTransactionMessage(
         int $userId,
         string $sender,
         string $message,
         WhatsAppService $waService,
         FinancialAIService $aiService,
-        bool $isBaileys = false
+        bool $isCloud = false
     ): JsonResponse {
-        // Parse the message with AI
         $parsed = $aiService->parseTransaction($message);
 
         if (! $parsed || $parsed['amount'] <= 0) {
@@ -119,15 +159,10 @@ final class FinancialWebhookController extends Controller
                 "• `beli domain 200rb`\n" .
                 "• `tanya total pengeluaran bulan ini`";
 
-            if ($isBaileys) {
-                return response()->json(['status' => true, 'reply' => $errorMsg, 'error' => 'Could not parse']);
-            }
-
             $waService->sendMessage($sender, $errorMsg);
             return response()->json(['status' => true, 'error' => 'Could not parse']);
         }
 
-        // Find or create category
         $category = FinancialCategory::firstOrCreate(
             ['user_id' => $userId, 'name' => $parsed['category'], 'type' => $parsed['type']],
             [
@@ -140,7 +175,6 @@ final class FinancialWebhookController extends Controller
             ]
         );
 
-        // Save transaction
         $transaction = FinancialTransaction::create([
             'user_id' => $userId,
             'category_id' => $category->id,
@@ -165,7 +199,6 @@ final class FinancialWebhookController extends Controller
             "• `tanya [pertanyaan]`\n" .
             "• `laporan` untuk ringkasan";
 
-        // Also compute today's total
         $todayTotal = FinancialTransaction::where('user_id', $userId)
             ->whereDate('date', now()->format('Y-m-d'))
             ->where('type', $parsed['type'])
@@ -175,23 +208,7 @@ final class FinancialWebhookController extends Controller
             "💰 Total {$typeLabel}: Rp " . number_format((float) $todayTotal, 0, ',', '.') . "\n" .
             "📅 Tanggal: " . now()->format('d/m/Y');
 
-        if ($isBaileys) {
-            return response()->json([
-                'status' => true,
-                'reply' => $confirmation . "\n\n" . $todaySummary,
-                'transaction' => [
-                    'id' => $transaction->id,
-                    'type' => $transaction->type,
-                    'amount' => $transaction->amount,
-                    'description' => $transaction->description,
-                    'category' => $category->name,
-                ],
-            ]);
-        }
-
-        // Send via gateway (backward compatibility)
-        $waService->sendMessage($sender, $confirmation);
-        $waService->sendMessage($sender, $todaySummary);
+        $waService->sendMessage($sender, $confirmation . "\n\n" . $todaySummary);
 
         return response()->json([
             'status' => true,
@@ -205,10 +222,7 @@ final class FinancialWebhookController extends Controller
         ]);
     }
 
-    /**
-     * Handle a report command ("laporan", "report", etc.).
-     */
-    private function handleReportCommand(int $userId, string $sender, WhatsAppService $waService, bool $isBaileys = false): JsonResponse
+    private function handleReportCommand(int $userId, string $sender, WhatsAppService $waService, bool $isCloud = false): JsonResponse
     {
         $transactions = FinancialTransaction::where('user_id', $userId)
             ->thisMonth()
@@ -234,33 +248,18 @@ final class FinancialWebhookController extends Controller
             "📌 *Total Transaksi:* {$transactions->count()}\n" .
             "🏷 *Top Kategori:* {$topCategory?->category?->name ?? '-'}";
 
-        $summary = [
-            'period' => now()->format('F Y'),
-            'total_income' => $totalIncome,
-            'total_expense' => $totalExpense,
-            'balance' => $totalIncome - $totalExpense,
-            'count' => $transactions->count(),
-            'top_category' => $topCategory?->category?->name ?? '-',
-        ];
+        $waService->sendMessage($sender, $summaryMsg);
 
-        if ($isBaileys) {
-            return response()->json(['status' => true, 'reply' => $summaryMsg, 'summary' => $summary]);
-        }
-
-        $waService->sendReport($sender, $summary);
-        return response()->json(['status' => true, 'summary' => $summary]);
+        return response()->json(['status' => true]);
     }
 
-    /**
-     * Handle a query command ("tanya ...", "? ...").
-     */
     private function handleQueryCommand(
         int $userId,
         string $sender,
         string $question,
         WhatsAppService $waService,
         FinancialAIService $aiService,
-        bool $isBaileys = false
+        bool $isCloud = false
     ): JsonResponse {
         $transactions = FinancialTransaction::where('user_id', $userId)
             ->with('category')
@@ -271,24 +270,15 @@ final class FinancialWebhookController extends Controller
 
         $answer = $aiService->answerQuery($question, $transactions);
 
-        if ($isBaileys) {
-            return response()->json(['status' => true, 'reply' => $answer]);
-        }
-
         $waService->sendMessage($sender, $answer);
-        return response()->json(['status' => true, 'answer' => $answer]);
+
+        return response()->json(['status' => true]);
     }
 
-    /**
-     * Normalize a phone number to international format (62xxx) for consistent matching.
-     * Handles: 08123456789, +628123456789, 628123456789, 0812-3456-789, etc.
-     */
     private function normalizePhoneNumber(string $number): string
     {
-        // Strip all non-digit characters (handles +, -, spaces, etc.)
         $number = preg_replace('/[^0-9]/', '', $number);
 
-        // Convert local prefix (0xxx) to international (62xxx)
         if (strlen($number) > 0 && $number[0] === '0') {
             $number = '62' . substr($number, 1);
         }
@@ -296,24 +286,14 @@ final class FinancialWebhookController extends Controller
         return $number;
     }
 
-    /**
-     * Resolve user_id from WhatsApp sender number.
-     * Check settings for mapped phone numbers.
-     *
-     * Users MUST register their WhatsApp number in the system settings
-     * (Financial Report → WA Gateway) before the system can accept
-     * their incoming messages.
-     */
     private function resolveUserIdFromSender(string $sender): ?int
     {
-        // Normalize sender number to international format (62xxx)
         $sender = $this->normalizePhoneNumber($sender);
 
         if (empty($sender)) {
             return null;
         }
 
-        // Check all user settings files for WA gateway config
         $storagePath = storage_path('app');
         $files = glob($storagePath . '/user-settings-*.json');
 
@@ -321,14 +301,12 @@ final class FinancialWebhookController extends Controller
             $settings = json_decode(file_get_contents($file), true) ?? [];
             $waConfig = $settings['wa_gateway'] ?? [];
 
-            // Check primary phone number
             $waPhone = $this->normalizePhoneNumber($waConfig['phone_number'] ?? '');
             if ($waPhone !== '' && $this->phoneNumbersMatch($sender, $waPhone)) {
                 preg_match('/user-settings-(\d+)\.json/', $file, $matches);
                 return (int) ($matches[1] ?? 0);
             }
 
-            // Also check alternative numbers
             $altNumbers = $waConfig['alt_numbers'] ?? [];
             foreach ($altNumbers as $alt) {
                 $altNormalized = $this->normalizePhoneNumber($alt);
@@ -342,20 +320,12 @@ final class FinancialWebhookController extends Controller
         return null;
     }
 
-    /**
-     * Check if two phone numbers match, considering:
-     * - The sender may include extra prefixes (e.g., "628123456789" vs "628123456789")
-     * - We check both directions: does one contain the other?
-     * - We also check the last 10+ digits to handle edge cases
-     */
     private function phoneNumbersMatch(string $normalizedSender, string $normalizedStored): bool
     {
-        // Exact match
         if ($normalizedSender === $normalizedStored) {
             return true;
         }
 
-        // One contains the other (handles cases where extra digits are present)
         if (str_contains($normalizedSender, $normalizedStored)) {
             return true;
         }
@@ -363,7 +333,6 @@ final class FinancialWebhookController extends Controller
             return true;
         }
 
-        // Compare last 10 digits (handles edge cases with different prefixes)
         $last10Sender = substr($normalizedSender, -10);
         $last10Stored = substr($normalizedStored, -10);
         if (strlen($last10Sender) >= 10 && $last10Sender === $last10Stored) {

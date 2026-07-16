@@ -8,44 +8,57 @@ use Illuminate\Support\Facades\Http;
 
 final class WhatsAppService
 {
-    private string $apiUrl;
-    private ?int $userId = null;
+    private string $graphUrl;
+    private string $phoneNumberId;
+    private string $accessToken;
 
     public function __construct(?int $userId = null)
     {
-        $this->userId = $userId;
-        $this->apiUrl = config('services.baileys.url', 'http://localhost:3001');
+        $this->graphUrl = config('services.whatsapp_cloud.graph_url', 'https://graph.facebook.com/v21.0');
+        $this->phoneNumberId = config('services.whatsapp_cloud.phone_number_id', '');
+        $this->accessToken = config('services.whatsapp_cloud.access_token', '');
     }
 
     public function initializeForUser(int $userId): void
     {
-        $this->userId = $userId;
+        $settings = json_decode(
+            file_get_contents(storage_path("app/user-settings-{$userId}.json")),
+            true
+        ) ?? [];
+
+        $wa = $settings['wa_gateway'] ?? [];
+        $this->phoneNumberId = $wa['phone_number_id'] ?? $this->phoneNumberId;
+        $this->accessToken = $wa['access_token'] ?? $this->accessToken;
     }
 
     public function isConfigured(): bool
     {
-        try {
-            $resp = Http::timeout(3)->get($this->apiUrl . '/health');
-            return $resp->successful() && ($resp->json('status') ?? '') === 'connected';
-        } catch (\Exception) {
-            return false;
-        }
+        return $this->phoneNumberId !== '' && $this->accessToken !== '';
     }
 
     public function sendMessage(string $target, string $message, ?string $schedule = null): array
     {
         if ($schedule) {
-            logger()->warning('Baileys: schedule not supported, sending immediately');
+            logger()->warning('WhatsApp Cloud: schedule not supported, sending immediately');
         }
 
+        $target = $this->normalizePhoneNumber($target);
+
         try {
-            $response = Http::timeout(10)->post($this->apiUrl . '/send', [
-                'to' => $target,
-                'message' => $message,
-            ]);
+            $response = Http::timeout(15)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $this->accessToken,
+                    'Content-Type' => 'application/json',
+                ])
+                ->post("{$this->graphUrl}/{$this->phoneNumberId}/messages", [
+                    'messaging_product' => 'whatsapp',
+                    'to' => $target,
+                    'type' => 'text',
+                    'text' => ['body' => $message],
+                ]);
 
             if (! $response->successful()) {
-                logger()->warning('Baileys API error', [
+                logger()->warning('WhatsApp Cloud API error', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
@@ -54,22 +67,47 @@ final class WhatsAppService
 
             return ['status' => true, 'data' => $response->json()];
         } catch (\Exception $e) {
-            logger()->error('Baileys send failed', ['error' => $e->getMessage()]);
+            logger()->error('WhatsApp Cloud send failed', ['error' => $e->getMessage()]);
             return ['status' => false, 'error' => $e->getMessage()];
         }
     }
 
     public function getDeviceStatus(): array
     {
-        try {
-            $response = Http::timeout(5)->get($this->apiUrl . '/health');
-            if (! $response->successful()) {
-                return ['status' => false, 'error' => 'HTTP ' . $response->status()];
-            }
-            return $response->json();
-        } catch (\Exception $e) {
-            return ['status' => false, 'error' => $e->getMessage()];
+        if (! $this->isConfigured()) {
+            return ['status' => 'not_configured', 'message' => 'Cloud API belum dikonfigurasi'];
         }
+
+        try {
+            $response = Http::timeout(5)
+                ->withHeaders(['Authorization' => 'Bearer ' . $this->accessToken])
+                ->get("{$this->graphUrl}/{$this->phoneNumberId}");
+
+            if (! $response->successful()) {
+                return ['status' => 'error', 'error' => 'HTTP ' . $response->status()];
+            }
+
+            $data = $response->json();
+            return [
+                'status' => 'connected',
+                'phone_number' => $data['display_phone_number'] ?? '',
+                'quality_rating' => $data['quality_rating'] ?? '',
+                'platform' => 'WhatsApp Cloud API',
+            ];
+        } catch (\Exception $e) {
+            return ['status' => 'error', 'error' => $e->getMessage()];
+        }
+    }
+
+    private function normalizePhoneNumber(string $number): string
+    {
+        $number = preg_replace('/[^0-9]/', '', $number);
+
+        if (strlen($number) > 0 && $number[0] === '0') {
+            $number = '62' . substr($number, 1);
+        }
+
+        return $number;
     }
 
     public function sendTransactionConfirmation(string $target, array $transaction, string $categoryName): void

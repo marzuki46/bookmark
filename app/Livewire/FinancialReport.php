@@ -43,12 +43,13 @@ final class FinancialReport extends Component
     public string $catFormIcon = '💳';
     public string $catFormColor = '#6366f1';
 
-    // WA Gateway settings
+    // WA Gateway settings (Cloud API)
     public bool $showWaModal = false;
-    public string $waBaileysUrl = '';
+    public string $waAccessToken = '';
+    public string $waPhoneNumberId = '';
     public bool $waConnected = false;
     public string $waStatus = '';
-    public ?string $waQrCode = null;
+    public ?string $waPhoneNumber = null;
 
     // AI Query
     public bool $showAiModal = false;
@@ -387,40 +388,51 @@ final class FinancialReport extends Component
         $this->statusType = 'success';
     }
 
-    // ─── WA Gateway Settings (Baileys) ───
+    // ─── WA Gateway Settings (Cloud API) ───
 
     public function loadWaSettings(): void
     {
         $settings = $this->getFinanceSettings();
         $wa = $settings['wa_gateway'] ?? [];
-        $this->waBaileysUrl = $wa['baileys_url'] ?? 'http://localhost:3001';
+        $this->waAccessToken = $wa['access_token'] ?? '';
+        $this->waPhoneNumberId = $wa['phone_number_id'] ?? '';
         $this->waConnected = false;
+        $this->checkCloudApiConnection();
     }
 
     public function saveWaSettings(): void
     {
         $settings = $this->getFinanceSettings();
         $settings['wa_gateway'] = [
-            'baileys_url' => $this->waBaileysUrl,
+            'access_token' => $this->waAccessToken,
+            'phone_number_id' => $this->waPhoneNumberId,
+            'provider' => 'whatsapp_cloud',
         ];
         $this->saveFinanceSettings($settings);
 
         $this->loadWaSettings();
-        $this->statusMessage = 'Pengaturan Baileys berhasil disimpan!';
+        $this->statusMessage = 'Pengaturan WhatsApp Cloud API berhasil disimpan!';
         $this->statusType = 'success';
 
-        // Test connection
-        $this->checkBaileysConnection();
+        $this->checkCloudApiConnection();
     }
 
-    public function checkBaileysConnection(): void
+    public function checkCloudApiConnection(): void
     {
+        if (empty($this->waAccessToken) || empty($this->waPhoneNumberId)) {
+            $this->waConnected = false;
+            $this->waStatus = 'Belum dikonfigurasi. Isi Access Token dan Phone Number ID.';
+            return;
+        }
+
         $waService = new WhatsAppService;
+        $waService->initializeForUser(auth()->id());
         $status = $waService->getDeviceStatus();
         $this->waConnected = ($status['status'] ?? '') === 'connected';
+        $this->waPhoneNumber = $status['phone_number'] ?? null;
         $this->waStatus = $this->waConnected
-            ? 'Terhubung ✅'
-            : 'Tidak terhubung. Jalankan Baileys bot dan scan QR.';
+            ? "Terhubung ✅ ({$status['phone_number']})"
+            : 'Gagal koneksi. Periksa Token dan Phone Number ID.';
     }
 
     public function getWebhookUrlProperty(): string

@@ -43,8 +43,11 @@ return [
         'model' => env('AI_MODEL', 'gpt-4o-mini'),
     ],
 
-    'baileys' => [
-        'url' => env('BAILEYS_URL', 'http://localhost:3001'),
+    'whatsapp_cloud' => [
+        'graph_url' => env('WHATSAPP_GRAPH_URL', 'https://graph.facebook.com/v21.0'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID', ''),
+        'access_token' => env('WHATSAPP_ACCESS_TOKEN', ''),
+        'verify_token' => env('WHATSAPP_VERIFY_TOKEN', 'knowledge-hub-webhook'),
     ],
 
 ];
