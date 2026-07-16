@@ -87,12 +87,33 @@ Route::middleware('auth')->group(function (): void {
         $configured = !empty($ai['api_key']);
 
         $testResult = null;
+        $testError = null;
+        $testStatus = null;
+        $testBody = null;
         if ($configured) {
             try {
-                $svc = new \App\Services\AIService($userId);
-                $testResult = $svc->askRaw('Reply with exactly: OK', 'ping', 10);
+                $url = rtrim($ai['api_url'] ?? '', '/') . '/chat/completions';
+                $response = \Illuminate\Support\Facades\Http::timeout(30)
+                    ->withToken($ai['api_key'])
+                    ->post($url, [
+                        'model' => $ai['model'],
+                        'messages' => [
+                            ['role' => 'system', 'content' => 'Reply with exactly: OK'],
+                            ['role' => 'user', 'content' => 'ping'],
+                        ],
+                        'max_tokens' => 10,
+                        'temperature' => 0.3,
+                        'stream' => false,
+                    ]);
+                $testStatus = $response->status();
+                $testBody = mb_substr($response->body(), 0, 500);
+                if ($response->successful()) {
+                    $testResult = $response->json('choices.0.message.content');
+                } else {
+                    $testError = 'HTTP ' . $testStatus;
+                }
             } catch (\Exception $e) {
-                $testResult = 'ERROR: ' . $e->getMessage();
+                $testError = get_class($e) . ': ' . $e->getMessage();
             }
         }
 
@@ -107,6 +128,9 @@ Route::middleware('auth')->group(function (): void {
             ] : null,
             'is_configured' => $configured,
             'ai_test_result' => $testResult,
+            'ai_test_error' => $testError,
+            'ai_test_http_status' => $testStatus,
+            'ai_test_response_body' => $testBody,
         ]);
     })->middleware('auth')->name('ai.debug');
     Route::view('/settings', 'pages.settings')->name('settings');
