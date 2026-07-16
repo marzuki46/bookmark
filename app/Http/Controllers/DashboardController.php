@@ -19,6 +19,8 @@ final class DashboardController extends Controller
             'totalBookmarks' => Item::where('user_id', $userId)->where('type', 'bookmark')->count(),
             'totalNotes' => Item::where('user_id', $userId)->where('type', 'note')->count(),
             'totalWorksheets' => Item::where('user_id', $userId)->where('type', 'worksheet')->count(),
+            'totalTodos' => Item::where('user_id', $userId)->where('type', 'todo')->count(),
+            'pendingTodos' => Item::where('user_id', $userId)->where('type', 'todo')->whereJsonContains('metadata->completed', false)->count(),
             'totalTags' => Tag::where('user_id', $userId)->count(),
             'totalCollections' => Collection::where('user_id', $userId)->count(),
             'recentBookmarks' => Item::with('tags')

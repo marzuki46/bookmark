@@ -43,6 +43,8 @@ final class BackupImport extends Component
 
     public int $statsWorksheets = 0;
 
+    public int $statsTodos = 0;
+
     public int $statsTags = 0;
 
     public int $statsCollections = 0;
@@ -64,6 +66,7 @@ final class BackupImport extends Component
         $this->statsFiles = Item::where('user_id', $userId)->where('type', 'file')->count();
         $this->statsSecrets = Item::where('user_id', $userId)->where('type', 'secret')->count();
         $this->statsWorksheets = Item::where('user_id', $userId)->where('type', 'worksheet')->count();
+        $this->statsTodos = Item::where('user_id', $userId)->where('type', 'todo')->count();
         $this->statsTags = Tag::where('user_id', $userId)->count();
         $this->statsCollections = Collection::where('user_id', $userId)->count();
     }

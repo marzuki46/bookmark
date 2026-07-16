@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function (): void {
     Route::view('/prompts', 'pages.prompts')->name('prompts');
     Route::view('/snippets', 'pages.snippets')->name('snippets');
     Route::view('/worksheets', 'pages.worksheets')->name('worksheets');
+    Route::view('/todos', 'pages.todos')->name('todos');
     Route::view('/files', 'pages.files')->name('files');
     Route::view('/secrets', 'pages.secrets')->name('secrets');
     Route::get('/ai', AiCenterController::class)->name('ai');

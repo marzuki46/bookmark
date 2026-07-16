@@ -6,6 +6,13 @@
         </div>
     </div>
 
+    @if($statusMessage)
+        <div class="mb-4 px-4 py-3 rounded-lg text-sm font-medium {{ $statusType === 'success' ? 'bg-[var(--emerald-50)] text-[var(--emerald-700)] border border-[var(--emerald-200)]' : 'bg-red-50 text-red-700 border border-red-200' }}"
+            x-data x-init="setTimeout(() => $wire.clearStatusMessage(), 5000)">
+            {{ $statusMessage }}
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {{-- Input --}}
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
@@ -35,9 +42,9 @@ Semakin detail teks, semakin bagus notulensi yang dihasilkan."></textarea>
                             Generate Notulensi
                         @endif
                     </button>
-                    @if($meetingText)
-                        <button wire:click="$set('meetingText', '')" class="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition">
-                            Clear
+                    @if($meetingText || $result)
+                        <button wire:click="clearAll" class="px-4 py-2 text-sm font-medium text-[var(--text-secondary)] rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition">
+                            Clear All
                         </button>
                     @endif
                 </div>
@@ -50,15 +57,31 @@ Semakin detail teks, semakin bagus notulensi yang dihasilkan."></textarea>
                 <h2 class="text-sm font-semibold text-[var(--text-primary)]">Hasil Notulensi</h2>
                 @if($result)
                     <button wire:click="saveAsNote" {{ $saved ? 'disabled' : '' }}
-                        class="text-xs font-medium {{ $saved ? 'text-[var(--emerald-600)]' : 'text-[var(--indigo-600)] hover:text-[var(--indigo-700)]' }} transition">
+                        class="px-3 py-1.5 text-xs font-medium rounded-lg transition
+                            {{ $saved
+                                ? 'bg-[var(--emerald-50)] text-[var(--emerald-700)] border border-[var(--emerald-200)]'
+                                : 'bg-[var(--indigo-600)] text-white hover:bg-[var(--indigo-700)]' }}">
                         @if($saved)
-                            ✓ Saved as Note
+                            <span class="flex items-center gap-1">
+                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                                Saved
+                            </span>
                         @else
-                            Save as Note
+                            <span class="flex items-center gap-1">
+                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                Save as Note
+                            </span>
                         @endif
                     </button>
                 @endif
             </div>
+
+            @if($result)
+                <div class="px-5 py-3 border-b border-[var(--color-border)]">
+                    <input type="text" wire:model="noteTitle" class="wp-form-input text-sm" placeholder="Judul note (opsional, default: Notulensi - [tanggal])">
+                </div>
+            @endif
+
             <div class="p-5 min-h-[400px]">
                 @if($result)
                     <div class="prose prose-sm max-w-none text-[var(--text-primary)] leading-relaxed whitespace-pre-wrap">{{ $result }}</div>

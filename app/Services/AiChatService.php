@@ -190,13 +190,16 @@ Be thorough but concise.";
             ->select('id', 'title', 'metadata')->latest()->take(10)->get();
         $prompts = Item::where('user_id', $userId)->where('type', 'prompt')
             ->select('id', 'title', 'content')->latest()->take(10)->get();
+        $todos = Item::where('user_id', $userId)->where('type', 'todo')
+            ->select('id', 'title', 'content', 'metadata')->latest()->take(20)->get();
 
         $ctx = "=== KNOWLEDGE BASE SUMMARY ===\n";
         $ctx .= "Bookmarks: {$bookmarks->count()} items\n";
         $ctx .= "Notes: {$notes->count()} items\n";
         $ctx .= "Snippets: {$snippets->count()} items\n";
         $ctx .= "Worksheets: {$worksheets->count()} items\n";
-        $ctx .= "Prompts: {$prompts->count()} items\n\n";
+        $ctx .= "Prompts: {$prompts->count()} items\n";
+        $ctx .= "Todos: {$todos->count()} items\n\n";
 
         if ($bookmarks->isNotEmpty()) {
             $ctx .= "--- BOOKMARKS ---\n";
@@ -254,6 +257,21 @@ Be thorough but concise.";
                 $ctx .= "[{$p->id}] {$p->title}";
                 if ($p->content) {
                     $ctx .= ' — '.mb_substr($p->content, 0, 100);
+                }
+                $ctx .= "\n";
+            }
+        }
+
+        if ($todos->isNotEmpty()) {
+            $ctx .= "\n--- TODOS ---\n";
+            foreach ($todos as $t) {
+                $meta = $t->metadata ?? [];
+                $status = ($meta['completed'] ?? false) ? 'DONE' : 'PENDING';
+                $priority = $meta['priority'] ?? 'medium';
+                $due = $meta['due_date'] ?? 'no due date';
+                $ctx .= "[{$t->id}] [{$status}] [{$priority}] {$t->title} (due: {$due})";
+                if ($t->content) {
+                    $ctx .= ' — '.mb_substr($t->content, 0, 80);
                 }
                 $ctx .= "\n";
             }

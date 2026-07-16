@@ -64,6 +64,7 @@ final class GlobalSearch extends Component
             'file' => Item::where('user_id', auth()->id())->where('type', 'file')->count(),
             'secret' => Item::where('user_id', auth()->id())->where('type', 'secret')->count(),
             'worksheet' => Item::where('user_id', auth()->id())->where('type', 'worksheet')->count(),
+            'todo' => Item::where('user_id', auth()->id())->where('type', 'todo')->count(),
         ];
 
         return view('livewire.global-search', compact('counts'));

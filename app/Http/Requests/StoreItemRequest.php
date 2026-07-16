@@ -16,7 +16,7 @@ final class StoreItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => 'required|string|in:bookmark,note,prompt,snippet,file,secret,worksheet',
+            'type' => 'required|string|in:bookmark,note,prompt,snippet,file,secret,worksheet,todo',
             'title' => 'nullable|string|max:255',
             'url' => 'nullable|url|max:2048',
             'content' => 'nullable|string',

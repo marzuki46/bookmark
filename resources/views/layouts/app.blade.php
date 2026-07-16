@@ -42,6 +42,7 @@
                                         ['route' => 'prompts', 'label' => 'AI Prompts', 'icon' => 'sparkles', 'active' => request()->routeIs('prompts')],
                                         ['route' => 'snippets', 'label' => 'Code Snippets', 'icon' => 'code', 'active' => request()->routeIs('snippets')],
                                         ['route' => 'worksheets', 'label' => 'Worksheets', 'icon' => 'table', 'active' => request()->routeIs('worksheets'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'worksheet')->count()],
+                                        ['route' => 'todos', 'label' => 'To-Do List', 'icon' => 'check', 'active' => request()->routeIs('todos'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'todo')->whereJsonContains('metadata->completed', false)->count()],
                                     ]
                                 ],
                                 'organize' => [
@@ -136,6 +137,7 @@
                                                             'shield' => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
                                                             'bar-chart' => '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>',
                                                             'table' => '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>',
+                                                            'check' => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
                                                         ];
                                                         $iconSvg = $icons[$iconName] ?? $icons['file'];
                                                     @endphp

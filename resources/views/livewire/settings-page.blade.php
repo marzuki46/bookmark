@@ -219,6 +219,14 @@
                         <span class="text-[var(--text-tertiary)]">AI Model</span>
                         <span class="font-medium text-[var(--text-primary)]">{{ $aiModel ?: '(not set)' }}</span>
                     </div>
+                    <hr class="border-[var(--color-border)]">
+                    <button wire:click="clearCache" class="w-full px-4 py-2.5 text-sm font-medium rounded-lg border border-[var(--color-border)] hover:bg-[var(--color-bg)] transition flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                        Clear All Cache
+                    </button>
+                    @if($cacheStatus)
+                        <p class="text-xs text-[var(--emerald-600)] text-center">{{ $cacheStatus }}</p>
+                    @endif
                 </div>
             </div>
         </div>

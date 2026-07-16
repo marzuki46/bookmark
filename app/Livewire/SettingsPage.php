@@ -6,6 +6,8 @@ namespace App\Livewire;
 
 use App\Models\PasswordChangeRequest;
 use App\Services\ResendMailService;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -43,6 +45,8 @@ final class SettingsPage extends Component
     public string $statusMessage = '';
 
     public string $statusType = 'success';
+
+    public string $cacheStatus = '';
 
     public function mount(): void
     {
@@ -134,6 +138,25 @@ final class SettingsPage extends Component
     public function clearStatusMessage(): void
     {
         $this->statusMessage = '';
+    }
+
+    public function clearCache(): void
+    {
+        try {
+            Artisan::call('cache:clear');
+            Artisan::call('config:clear');
+            Artisan::call('view:clear');
+            Artisan::call('route:clear');
+            Artisan::call('event:clear');
+
+            $this->cacheStatus = 'Cache cleared successfully at '.now()->format('H:i:s');
+            $this->statusMessage = 'All caches cleared (config, views, routes, events, cache).';
+            $this->statusType = 'success';
+        } catch (\Exception $e) {
+            $this->cacheStatus = 'Failed: '.$e->getMessage();
+            $this->statusMessage = 'Failed to clear cache: '.$e->getMessage();
+            $this->statusType = 'error';
+        }
     }
 
     public function updateEmail(): void
