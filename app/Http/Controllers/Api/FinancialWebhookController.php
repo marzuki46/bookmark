@@ -25,9 +25,9 @@ final class FinancialWebhookController extends Controller
     {
         // ─── Meta Webhook Verification (GET) ───
         if ($request->isMethod('get')) {
-            $mode = $request->query('hub.mode');
-            $token = $request->query('hub.verify_token');
-            $challenge = $request->query('hub.challenge');
+            $mode = $request->query('hub_mode') ?? $request->query('hub.mode');
+            $token = $request->query('hub_verify_token') ?? $request->query('hub.verify_token');
+            $challenge = $request->query('hub_challenge') ?? $request->query('hub.challenge');
 
             $validTokens = [
                 'knowledge-hub-webhook',
@@ -38,10 +38,6 @@ final class FinancialWebhookController extends Controller
                 'mode' => $mode,
                 'token' => $token,
                 'challenge' => $challenge,
-                'valid_tokens' => $validTokens,
-                'php_get' => $_GET ?? [],
-                'query_string' => $_SERVER['QUERY_STRING'] ?? 'N/A',
-                'request_uri' => $_SERVER['REQUEST_URI'] ?? 'N/A',
             ]);
 
             if ($mode === 'subscribe' && in_array($token, $validTokens)) {
