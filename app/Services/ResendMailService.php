@@ -19,7 +19,7 @@ class ResendMailService
     {
         $this->apiKey = config('services.resend.key') ?? '';
         $this->fromEmail = config('mail.from.address', 'ohmjuki@gmail.com');
-        $this->fromName = config('mail.from.name', 'Knowledge Hub');
+        $this->fromName = config('mail.from.name', 'Clips');
     }
 
     public function send(string $to, string $subject, string $htmlBody): bool
@@ -60,7 +60,7 @@ class ResendMailService
 
     public function sendFailedLoginAlert(string $email, string $ip, string $userAgent, int $attemptCount): bool
     {
-        $subject = "[Knowledge Hub] Login Gagal #{$attemptCount} terdeteksi";
+        $subject = "[Clips] Login Gagal #{$attemptCount} terdeteksi";
 
         $html = $this->buildFailedLoginAlertHtml($email, $ip, $userAgent, $attemptCount);
 
@@ -69,7 +69,7 @@ class ResendMailService
 
     public function sendIpBlockedAlert(string $email, string $ip, string $reason): bool
     {
-        $subject = "[Knowledge Hub] IP {$ip} telah diblokir";
+        $subject = "[Clips] IP {$ip} telah diblokir";
 
         $html = $this->buildIpBlockedAlertHtml($email, $ip, $reason);
 
@@ -85,7 +85,7 @@ class ResendMailService
             default => ucfirst($type),
         };
 
-        $subject = "[Knowledge Hub] Konfirmasi Perubahan {$typeLabel}";
+        $subject = "[Clips] Konfirmasi Perubahan {$typeLabel}";
         $html = $this->buildPasswordChangeRequestHtml($user, $type, $typeLabel, $approveUrl, $rejectUrl);
 
         return $this->send($toEmail ?? $user->email, $subject, $html);
@@ -112,7 +112,7 @@ class ResendMailService
     </div>
     <div style="padding: 32px;">
       <p style="color: #334155; font-size: 15px; margin: 0 0 16px;">Hai <strong>'.e($user->name).'</strong>,</p>
-      <p style="color: #334155; font-size: 15px; margin: 0 0 16px;">Kamu meminta perubahan <span style="display: inline-block; background: '.$typeBadgeColor.'; color: #fff; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 12px;">'.$typeLabel.'</span> pada akun Knowledge Hub kamu.</p>
+      <p style="color: #334155; font-size: 15px; margin: 0 0 16px;">Kamu meminta perubahan <span style="display: inline-block; background: '.$typeBadgeColor.'; color: #fff; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 12px;">'.$typeLabel.'</span> pada akun Clips kamu.</p>
 
       <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin: 20px 0;">
         <p style="color: #64748b; font-size: 13px; margin: 0;">Email: <strong style="color: #1e293b;">'.e($user->email).'</strong></p>
@@ -129,7 +129,7 @@ class ResendMailService
       </div>
     </div>
     <div style="background: #f8fafc; padding: 16px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
-      <p style="color: #94a3b8; font-size: 12px; margin: 0;">Knowledge Hub &mdash; Security Confirmation</p>
+      <p style="color: #94a3b8; font-size: 12px; margin: 0;">Clips &mdash; Security Confirmation</p>
     </div>
   </div>
 </body>
@@ -160,7 +160,7 @@ class ResendMailService
       </div>
     </div>
     <div style="background: #f8fafc; padding: 16px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
-      <p style="color: #94a3b8; font-size: 12px; margin: 0;">Knowledge Hub &mdash; Auto-generated security alert</p>
+      <p style="color: #94a3b8; font-size: 12px; margin: 0;">Clips &mdash; Auto-generated security alert</p>
     </div>
   </div>
 </body>
@@ -188,7 +188,7 @@ class ResendMailService
       </table>
     </div>
     <div style="background: #f8fafc; padding: 16px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
-      <p style="color: #94a3b8; font-size: 12px; margin: 0;">Knowledge Hub &mdash; Auto-generated security alert</p>
+      <p style="color: #94a3b8; font-size: 12px; margin: 0;">Clips &mdash; Auto-generated security alert</p>
     </div>
   </div>
 </body>

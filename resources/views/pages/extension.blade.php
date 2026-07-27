@@ -61,7 +61,7 @@
                     <svg class="w-8 h-8 text-[var(--indigo-600)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
                 </div>
                 <div class="flex-1">
-                    <h3 class="font-semibold text-[var(--text-primary)] mb-1">Personal Knowledge Hub Extension</h3>
+                    <h3 class="font-semibold text-[var(--text-primary)] mb-1">Clips Extension</h3>
                     <p class="text-sm text-[var(--text-tertiary)] mb-4">Floating overlay panel on any webpage. Save bookmarks, notes, AI render, search, and highlights — all without leaving the page.</p>
                     <a href="{{ route('extension.download') }}" class="btn-primary inline-flex">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -81,7 +81,7 @@
                 <div class="w-8 h-8 rounded-full bg-[var(--indigo-600)] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">1</div>
                 <div class="flex-1">
                     <h3 class="font-medium text-sm text-[var(--text-primary)] mb-1">Download & Extract</h3>
-                    <p class="text-xs text-[var(--text-tertiary)]">Click download above. Extract the ZIP to a folder (e.g. <code class="bg-[var(--color-bg)] px-1 rounded">C:\Extensions\knowledge-hub</code>).</p>
+                    <p class="text-xs text-[var(--text-tertiary)]">Click download above. Extract the ZIP to a folder (e.g. <code class="bg-[var(--color-bg)] px-1 rounded">C:\Extensions\clips</code>).</p>
                 </div>
             </div>
             <div class="flex gap-4">
@@ -119,7 +119,7 @@
                         <svg class="w-4 h-4 text-[var(--indigo-600)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                     </div>
                     <div>
-                        <div class="text-sm font-medium text-[var(--text-primary)]">Quick Bookmark</div>
+                        <div class="text-sm font-medium text-[var(--text-primary)]">Quick Clip</div>
                         <div class="text-xs text-[var(--text-tertiary)]">One-click save current page with auto-title and URL</div>
                     </div>
                 </div>

@@ -24,7 +24,7 @@ final class DashboardInsight extends Component
 
         try {
             $chatService = new AiChatService(auth()->id());
-            $this->insight = $chatService->chat('Buat ringkasan insight dari semua data knowledge hub saya. Sertakan: topik utama, pola data, suggestion untuk organizir lebih baik, dan hal menarik yang ditemukan. Jawab dalam Bahasa Indonesia yang singkat dan actionable.');
+            $this->insight = $chatService->chat('Buat ringkasan insight dari semua data clips saya. Sertakan: topik utama, pola data, suggestion untuk organizir lebih baik, dan hal menarik yang ditemukan. Jawab dalam Bahasa Indonesia yang singkat dan actionable.');
 
             if (str_starts_with($this->insight, 'AI belum dikonfigurasi')) {
                 $this->insight = '';

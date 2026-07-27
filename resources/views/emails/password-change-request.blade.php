@@ -29,7 +29,7 @@
     <div class="card">
       <div class="logo">K</div>
       <h1>Confirm {{ ucfirst($type) }} Change</h1>
-      <p class="subtitle">You requested to change your {{ $type }} on Knowledge Hub</p>
+      <p class="subtitle">You requested to change your {{ $type }} on Clips</p>
 
       <div class="detail">
         <div class="detail-row">

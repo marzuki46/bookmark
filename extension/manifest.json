@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Personal Knowledge Hub",
+  "name": "Clips",
   "version": "2.1.0",
-  "description": "Save bookmarks, notes, highlights, and more to your Personal Knowledge Hub",
+  "description": "Save clips, notes, highlights, and more to your Clips",
   "permissions": [
     "storage",
     "activeTab",

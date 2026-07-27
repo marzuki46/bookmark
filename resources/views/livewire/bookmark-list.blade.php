@@ -1,8 +1,8 @@
 <div>
     <div class="flex items-center justify-between mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-[var(--text-primary)]">Bookmarks</h1>
-            <p class="text-sm text-[var(--text-tertiary)] mt-1">{{ $stats['total'] }} bookmarks saved</p>
+            <h1 class="text-2xl font-bold text-[var(--text-primary)]">Clips</h1>
+            <p class="text-sm text-[var(--text-tertiary)] mt-1">{{ $stats['total'] }} clips saved</p>
         </div>
         <div class="flex items-center gap-2">
             <button wire:click="openImport" class="btn-secondary">
@@ -11,7 +11,7 @@
             </button>
             <button wire:click="openCreate" class="btn-primary">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add Bookmark
+                Add Clip
             </button>
         </div>
     </div>
@@ -19,7 +19,7 @@
     <div class="flex flex-wrap items-center gap-3 mb-5">
         <div class="relative flex-1 min-w-[200px] max-w-md">
             <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-quaternary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search bookmarks..."
+            <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search clips..."
                 class="wp-form-input !pl-9 !py-2">
         </div>
         <div class="flex gap-1 bg-[var(--color-bg)] p-1 rounded-lg border border-[var(--color-border)]">
@@ -42,10 +42,10 @@
                 <div class="empty-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                 </div>
-                <div class="empty-title">No bookmarks yet</div>
+                <div class="empty-title">No clips yet</div>
                 <div class="empty-desc">Start saving your favorite links and organize them with tags.</div>
                 <div class="empty-action">
-                    <button wire:click="openCreate" class="btn-primary">Add Your First Bookmark</button>
+                    <button wire:click="openCreate" class="btn-primary">Add Your First Clip</button>
                 </div>
             </div>
         @elseif($viewMode === 'list')

@@ -1,7 +1,7 @@
 {
-  "name": "knowledge-hub-wa-bot",
+  "name": "clips-wa-bot",
   "version": "1.0.0",
-  "description": "Baileys WhatsApp bot for Knowledge Hub financial reports",
+  "description": "Baileys WhatsApp bot for Clips financial reports",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

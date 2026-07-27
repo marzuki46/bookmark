@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Setup - Knowledge Hub</title>
+  <title>Setup - Clips</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0f172a; min-height: 100vh; }
@@ -42,7 +42,7 @@
   <div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;">
     <div class="setup-card">
       <div class="setup-logo">K</div>
-      <h1 style="text-align: center; font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">Welcome to Knowledge Hub</h1>
+      <h1 style="text-align: center; font-size: 24px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">Welcome to Clips</h1>
       <p style="text-align: center; font-size: 14px; color: #64748b; margin-bottom: 8px;">Let's set up your personal knowledge base</p>
 
       <div class="step-indicator">

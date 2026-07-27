@@ -1,10 +1,10 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-  chrome.contextMenus.create({ id: 'save-bookmark', title: 'Save to Knowledge Hub', contexts: ['page'] });
-  chrome.contextMenus.create({ id: 'save-highlight', title: 'Save Highlight to Hub', contexts: ['selection'] });
+  chrome.contextMenus.create({ id: 'save-bookmark', title: 'Save to Clips', contexts: ['page'] });
+  chrome.contextMenus.create({ id: 'save-highlight', title: 'Save Highlight to Clips', contexts: ['selection'] });
   chrome.contextMenus.create({ id: 'read-later', title: 'Read Later', contexts: ['page', 'link'] });
-  chrome.contextMenus.create({ id: 'save-link', title: 'Save Link to Hub', contexts: ['link'] });
+  chrome.contextMenus.create({ id: 'save-link', title: 'Save Link to Clips', contexts: ['link'] });
 });
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {

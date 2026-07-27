@@ -40,7 +40,7 @@
                     <div class="flex items-center gap-2 mb-3">
                         <input type="text" wire:model="batchInput" wire:keydown.enter="generateFromInput"
                             class="flex-1 px-3 py-2 text-sm bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg focus:outline-none focus:border-[var(--indigo-500)]"
-                            placeholder="Ask AI anything about your data... (e.g. 'Ringkas semua bookmark saya')">
+                            placeholder="Ask AI anything about your data... (e.g. 'Ringkas semua clip saya')">
                         <button wire:click="generateFromInput" {{ $processing ? 'disabled' : '' }}
                             class="btn-primary text-sm {{ $processing ? 'opacity-50' : '' }}">
                             @if($processing)
@@ -52,7 +52,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <button wire:click="$set('batchInput', 'Ringkasan semua data saya'); $wire.generateFromInput()" class="text-xs px-3 py-1.5 rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] hover:bg-[var(--indigo-50)] hover:border-[var(--indigo-300)] transition">Overview</button>
-                        <button wire:click="$set('batchInput', 'Apa saja bookmark terbaru saya?'); $wire.generateFromInput()" class="text-xs px-3 py-1.5 rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] hover:bg-[var(--indigo-50)] hover:border-[var(--indigo-300)] transition">Recent Bookmarks</button>
+                        <button wire:click="$set('batchInput', 'Apa saja clip terbaru saya?'); $wire.generateFromInput()" class="text-xs px-3 py-1.5 rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] hover:bg-[var(--indigo-50)] hover:border-[var(--indigo-300)] transition">Recent Clips</button>
                         <button wire:click="$set('batchInput', 'Saran organisasi untuk knowledge base saya'); $wire.generateFromInput()" class="text-xs px-3 py-1.5 rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] hover:bg-[var(--indigo-50)] hover:border-[var(--indigo-300)] transition">Organization Tips</button>
                         <button wire:click="$set('batchInput', 'Apa todo yang belum selesai?'); $wire.generateFromInput()" class="text-xs px-3 py-1.5 rounded-full bg-[var(--color-bg)] border border-[var(--color-border)] hover:bg-[var(--indigo-50)] hover:border-[var(--indigo-300)] transition">Pending Tasks</button>
                     </div>

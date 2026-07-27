@@ -17,8 +17,8 @@
       <div class="kh-sidebar">
         <button class="kh-close" id="kh-close">&times;</button>
         <div class="kh-brand">
-          <div class="kh-logo">K</div>
-          <div><div class="kh-brand-text">Knowledge Hub</div><div class="kh-brand-sub">${location.hostname}</div></div>
+          <div class="kh-logo">C</div>
+          <div><div class="kh-brand-text">Clips</div><div class="kh-brand-sub">${location.hostname}</div></div>
         </div>
         <div class="kh-nav">
           <button class="kh-nav-btn active" data-view="save"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>Save</button>
@@ -80,8 +80,8 @@
         </div>
         <div id="kh-view-config" class="kh-hidden">
           <div class="kh-config"><div class="kh-config-card">
-            <div class="kh-config-logo">K</div><h2>Knowledge Hub</h2><p class="kh-sub">Enter API credentials</p>
-            <div class="kh-form-group"><label class="kh-form-label">API URL</label><input type="text" class="kh-input" id="kh-cfg-url" placeholder="http://bookmark.test/api"></div>
+            <div class="kh-config-logo">C</div><h2>Clips</h2><p class="kh-sub">Enter API credentials</p>
+            <div class="kh-form-group"><label class="kh-form-label">API URL</label><input type="text" class="kh-input" id="kh-cfg-url" placeholder="http://clips.test/api"></div>
             <div class="kh-form-group"><label class="kh-form-label">API Token</label><input type="password" class="kh-input" id="kh-cfg-token" placeholder="Paste token"></div>
             <button class="kh-btn kh-btn-primary" id="kh-cfg-save" style="width:100%">Connect</button>
           </div></div>

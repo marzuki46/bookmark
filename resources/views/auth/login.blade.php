@@ -10,11 +10,11 @@
                 <div class="md:w-[280px] bg-gradient-to-br from-indigo-600 to-indigo-700 p-8 flex flex-col justify-center">
                     <div class="inline-flex items-center justify-center w-12 h-12 bg-white/15 backdrop-blur rounded-xl mb-4">
                         <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
                         </svg>
                     </div>
-                    <h2 class="text-lg font-bold text-white">Knowledge Hub</h2>
-                    <p class="text-[13px] text-indigo-200 mt-1.5 leading-relaxed">Your personal knowledge base for bookmarks, notes, and more.</p>
+                    <h2 class="text-lg font-bold text-white">Clips</h2>
+                    <p class="text-[13px] text-indigo-200 mt-1.5 leading-relaxed">Your personal knowledge base for clips, notes, and more.</p>
                 </div>
                 <div class="flex-1 p-8">
                     <div class="mb-6">
@@ -49,7 +49,7 @@
                 </div>
             </div>
         </div>
-        <p class="text-center text-[12px] text-slate-400 mt-6">&copy; {{ date('Y') }} Knowledge Hub</p>
+        <p class="text-center text-[12px] text-slate-400 mt-6">&copy; {{ date('Y') }} Clips</p>
     </div>
 </div>
 @endsection

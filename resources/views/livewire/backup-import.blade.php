@@ -30,7 +30,7 @@
                 <div class="text-xs font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Data Summary</div>
                 <div class="grid grid-cols-2 gap-2">
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-[var(--text-secondary)]">Bookmarks</span>
+                        <span class="text-[var(--text-secondary)]">Clips</span>
                         <span class="font-medium text-[var(--text-primary)]">{{ $statsBookmarks }}</span>
                     </div>
                     <div class="flex items-center justify-between text-sm">

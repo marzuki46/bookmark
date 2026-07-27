@@ -241,7 +241,7 @@
     <div class="stats-grid">
         @php
             $stats = [
-                ['label' => 'Bookmarks', 'value' => $totalBookmarks, 'icon' => 'bookmark', 'accentStart' => '#6366f1', 'accentEnd' => '#8b5cf6', 'trend' => '+12%', 'trendLabel' => 'this month'],
+                                ['label' => 'Clips', 'value' => $totalBookmarks, 'icon' => 'bookmark', 'accentStart' => '#6366f1', 'accentEnd' => '#8b5cf6', 'trend' => '+12%', 'trendLabel' => 'this month'],
                 ['label' => 'Notes', 'value' => $totalNotes, 'icon' => 'note', 'accentStart' => '#10b981', 'accentEnd' => '#34d399', 'trend' => '+8%', 'trendLabel' => 'this month'],
                 ['label' => 'Worksheets', 'value' => $totalWorksheets, 'icon' => 'table', 'accentStart' => '#f59e0b', 'accentEnd' => '#fbbf24', 'trend' => '+0%', 'trendLabel' => 'this month'],
                 ['label' => 'Todos', 'value' => $totalTodos, 'icon' => 'check', 'accentStart' => '#06b6d4', 'accentEnd' => '#22d3ee', 'trend' => $pendingTodos.' pending', 'trendLabel' => '', 'trendColor' => $pendingTodos > 0 ? '#f59e0b' : '#10b981'],
@@ -249,7 +249,7 @@
                 ['label' => 'Collections', 'value' => $totalCollections, 'icon' => 'folder', 'accentStart' => '#8b5cf6', 'accentEnd' => '#a78bfa', 'trend' => '+3%', 'trendLabel' => 'this month'],
             ];
             $icons = [
-                'bookmark' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>',
+                                'bookmark' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>',
                 'note' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>',
                 'tag' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>',
                 'folder' => '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>',
@@ -291,7 +291,7 @@
                     <nav class="action-list">
                         @php
                             $actions = [
-                                ['label' => 'Save Bookmark', 'desc' => 'Add URL, note, or snippet', 'icon' => 'plus', 'href' => route('bookmarks')],
+                                ['label' => 'Save Clip', 'desc' => 'Add URL, note, or snippet', 'icon' => 'plus', 'href' => route('bookmarks')],
                                 ['label' => 'Create Note', 'desc' => 'Write a new note', 'icon' => 'pencil', 'href' => route('notes')],
                                 ['label' => 'New Collection', 'desc' => 'Organize your items', 'icon' => 'folder-plus', 'href' => route('collections')],
                                 ['label' => 'AI Summarize', 'desc' => 'Generate summary with AI', 'icon' => 'sparkles', 'href' => route('ai')],
@@ -359,20 +359,20 @@
         <!-- Main: Recent Bookmarks -->
         <section class="panel">
             <header class="panel-header">
-                <h2 class="panel-title">Recent Bookmarks</h2>
+                <h2 class="panel-title">Recent Clips</h2>
                 <a href="{{ route('bookmarks') }}" class="section-link">View all</a>
             </header>
             <div class="bookmark-list">
                 @if($recentBookmarks->isEmpty())
                     <div class="empty-state">
                         <div class="empty-icon">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
                         </div>
-                        <h3 class="empty-title">No bookmarks yet</h3>
-                        <p class="empty-desc">Start building your knowledge hub by saving your first bookmark, note, or code snippet.</p>
+                        <h3 class="empty-title">No clips yet</h3>
+                        <p class="empty-desc">Start building your knowledge base by saving your first clip, note, or code snippet.</p>
                         <a href="{{ route('bookmarks') }}" class="empty-action btn-primary">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-                            Add Bookmark
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
+                            Add Clip
                         </a>
                     </div>
                 @else

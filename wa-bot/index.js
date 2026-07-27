@@ -42,7 +42,7 @@ async function startBot() {
       logger: pino({ level: 'error' }),
       printQRInTerminal: false,
       auth: state,
-      browser: ['Knowledge Hub', 'Chrome', '3.0'],
+      browser: ['Clips', 'Chrome', '3.0'],
       syncFullHistory: false,
       markOnlineOnConnect: true,
       connectTimeoutMs: 30000,

@@ -49,7 +49,7 @@ Route::middleware('auth')->group(function (): void {
     Route::view('/companies', 'pages.companies')->name('companies');
     Route::view('/extension', 'pages.extension')->name('extension');
     Route::get('/extension/download', function () {
-        $zipFile = storage_path('app/knowledge-hub-extension.zip');
+        $zipFile = storage_path('app/clips-extension.zip');
 
         if (! file_exists($zipFile) || (time() - filemtime($zipFile)) > 3600) {
             $zip = new ZipArchive;
@@ -73,7 +73,7 @@ Route::middleware('auth')->group(function (): void {
         }
 
         if (file_exists($zipFile)) {
-            return response()->download($zipFile, 'knowledge-hub-extension.zip')->deleteFileAfterSend(true);
+            return response()->download($zipFile, 'clips-extension.zip')->deleteFileAfterSend(true);
         }
 
         abort(500, 'Failed to create extension package.');

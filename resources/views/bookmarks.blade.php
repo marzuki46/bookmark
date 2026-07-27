@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Bookmarks')
+@section('title', 'Clips')
 
 @section('content')
 <div class="space-y-6">

@@ -53,10 +53,10 @@ final class AiChatService
 
         $context = $this->buildContext();
 
-        $systemPrompt = "Anda adalah Knowledge Hub AI, asisten ahli manajemen pengetahuan pribadi.
+        $systemPrompt = "Anda adalah Clips AI, asisten ahli manajemen pengetahuan pribadi.
 
 IDENTITAS:
-- Nama: Knowledge Hub AI
+- Nama: Clips AI
 - Peran: Asisten pribadi yang membantu mengelola knowledge base pengguna
 - Bahasa: Selalu jawab dalam bahasa yang sama dengan yang digunakan pengguna (Indonesia/English)
 
@@ -232,7 +232,7 @@ Format wajib:
 (poin tambahan jika ada)
 
 ---
-*Dicatat oleh: Knowledge Hub AI*
+*Dicatat oleh: Clips AI*
 
 Buatlah notulensi yang terstruktur, mudah dibaca, dan actionable. Gunakan Bahasa Indonesia.";
 
@@ -264,7 +264,7 @@ Buatlah notulensi yang terstruktur, mudah dibaca, dan actionable. Gunakan Bahasa
             $ctx .= "\n";
 
             if (isset($items['bookmark']) && $items['bookmark']->isNotEmpty()) {
-                $ctx .= "--- BOOKMARKS ---\n";
+                $ctx .= "--- CLIPS ---\n";
                 foreach ($items['bookmark']->take(30) as $b) {
                     $ctx .= "[ID {$b->id}] {$b->title}";
                     if ($b->url) {

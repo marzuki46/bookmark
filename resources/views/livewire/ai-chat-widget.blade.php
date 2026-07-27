@@ -26,7 +26,7 @@
                     <path d="M15 12a1 1 0 01-1 1h-2a1 1 0 00-1 1v3a1 1 0 001 1h2a1 1 0 001-1v-3a1 1 0 011-1"/>
                 </svg>
                 <div>
-                    <div class="text-sm font-semibold">Knowledge Hub AI</div>
+                    <div class="text-sm font-semibold">Clips AI</div>
                     <div class="text-[10px] opacity-80">Ask anything about your data</div>
                 </div>
             </div>

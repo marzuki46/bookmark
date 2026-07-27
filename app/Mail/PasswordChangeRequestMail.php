@@ -25,7 +25,7 @@ final class PasswordChangeRequestMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Knowledge Hub - Confirm '.ucfirst($this->type).' Change',
+            subject: 'Clips - Confirm '.ucfirst($this->type).' Change',
         );
     }
 

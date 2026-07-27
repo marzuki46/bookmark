@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name', 'Knowledge Hub') }} - @yield('title', 'Dashboard')</title>
+    <title>{{ config('app.name', 'Clips') }} - @yield('title', 'Dashboard')</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @stack('head')
 </head>
@@ -15,11 +15,11 @@
             <div class="wp-sidebar-inner">
                 <!-- Brand -->
                 <div class="wp-sidebar-brand">
-                    <a href="{{ route('dashboard') }}" class="wp-brand-link" aria-label="Knowledge Hub Home">
+                    <a href="{{ route('dashboard') }}" class="wp-brand-link" aria-label="Clips Home">
                         <svg class="wp-brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                            <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
                         </svg>
-                        <span class="wp-brand-text">Knowledge Hub</span>
+                        <span class="wp-brand-text">Clips</span>
                     </a>
                     <button id="wp-sidebar-toggle" class="wp-sidebar-toggle" aria-label="Collapse menu" aria-expanded="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -53,7 +53,7 @@
                                     'label' => 'Content',
                                     'items' => [
                                         ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'active' => request()->routeIs('dashboard')],
-                                        ['route' => 'bookmarks', 'label' => 'Bookmarks', 'icon' => 'bookmark', 'active' => request()->routeIs('bookmarks'), 'count' => $sidebarCounts['bookmark'] ?? 0],
+                                        ['route' => 'bookmarks', 'label' => 'Clips', 'icon' => 'bookmark', 'active' => request()->routeIs('bookmarks'), 'count' => $sidebarCounts['bookmark'] ?? 0],
                                         ['route' => 'notes', 'label' => 'Notes', 'icon' => 'note', 'active' => request()->routeIs('notes'), 'count' => $sidebarCounts['note'] ?? 0],
                                         ['route' => 'quick-notepad', 'label' => 'Quick Notepad', 'icon' => 'note', 'active' => request()->routeIs('quick-notepad')],
                                         ['route' => 'prompts', 'label' => 'AI Prompts', 'icon' => 'sparkles', 'active' => request()->routeIs('prompts')],
