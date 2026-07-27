@@ -8,7 +8,7 @@ Save what matters. Find it instantly.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/php-8.2+-purple.svg)](https://php.net)
-[![Laravel](https://img.shields.io/badge/laravel-11-red.svg)](https://laravel.com)
+[![Laravel](https://img.shields.io/badge/laravel-13-red.svg)](https://laravel.com)
 
 </div>
 
@@ -66,7 +66,7 @@ Berbeda dari bookmark manager biasa, Clips hadir dengan **AI assistant built-in*
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Laravel 11, PHP 8.2+ |
+| Backend | Laravel 13, PHP 8.2+ |
 | Frontend | Livewire 3, Tailwind CSS |
 | Database | MySQL 8+ / MariaDB |
 | Cache | Redis / File cache |
