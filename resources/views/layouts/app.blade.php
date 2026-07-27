@@ -32,18 +32,34 @@
                 <nav class="wp-sidebar-nav">
                     <ul id="wp-admin-menu" class="wp-admin-menu" role="menubar">
                         @php
+                            $userId = auth()->id();
+                            $sidebarCounts = \Illuminate\Support\Facades\Cache::remember("sidebar_counts_{$userId}", 300, function () use ($userId) {
+                                $typeCounts = App\Models\Item::where('user_id', $userId)
+                                    ->selectRaw("type, COUNT(*) as cnt")
+                                    ->groupBy('type')
+                                    ->pluck('cnt', 'type')
+                                    ->toArray();
+
+                                $pendingTodos = App\Models\Item::where('user_id', $userId)
+                                    ->where('type', 'todo')
+                                    ->whereJsonContains('metadata->completed', false)
+                                    ->count();
+
+                                return array_merge($typeCounts, ['pending_todos' => $pendingTodos]);
+                            });
+
                             $menuGroups = [
                                 'content' => [
                                     'label' => 'Content',
                                     'items' => [
                                         ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'active' => request()->routeIs('dashboard')],
-                                        ['route' => 'bookmarks', 'label' => 'Bookmarks', 'icon' => 'bookmark', 'active' => request()->routeIs('bookmarks'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'bookmark')->count()],
-                                        ['route' => 'notes', 'label' => 'Notes', 'icon' => 'note', 'active' => request()->routeIs('notes'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'note')->count()],
+                                        ['route' => 'bookmarks', 'label' => 'Bookmarks', 'icon' => 'bookmark', 'active' => request()->routeIs('bookmarks'), 'count' => $sidebarCounts['bookmark'] ?? 0],
+                                        ['route' => 'notes', 'label' => 'Notes', 'icon' => 'note', 'active' => request()->routeIs('notes'), 'count' => $sidebarCounts['note'] ?? 0],
                                         ['route' => 'quick-notepad', 'label' => 'Quick Notepad', 'icon' => 'note', 'active' => request()->routeIs('quick-notepad')],
                                         ['route' => 'prompts', 'label' => 'AI Prompts', 'icon' => 'sparkles', 'active' => request()->routeIs('prompts')],
                                         ['route' => 'snippets', 'label' => 'Code Snippets', 'icon' => 'code', 'active' => request()->routeIs('snippets')],
-                                        ['route' => 'worksheets', 'label' => 'Worksheets', 'icon' => 'table', 'active' => request()->routeIs('worksheets'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'worksheet')->count()],
-                                        ['route' => 'todos', 'label' => 'To-Do List', 'icon' => 'check', 'active' => request()->routeIs('todos'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'todo')->whereJsonContains('metadata->completed', false)->count()],
+                                        ['route' => 'worksheets', 'label' => 'Worksheets', 'icon' => 'table', 'active' => request()->routeIs('worksheets'), 'count' => $sidebarCounts['worksheet'] ?? 0],
+                                        ['route' => 'todos', 'label' => 'To-Do List', 'icon' => 'check', 'active' => request()->routeIs('todos'), 'count' => $sidebarCounts['pending_todos'] ?? 0],
                                     ]
                                 ],
                                 'organize' => [
