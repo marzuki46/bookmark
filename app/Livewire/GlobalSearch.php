@@ -55,17 +55,17 @@ final class GlobalSearch extends Component
 
     public function render()
     {
-        $counts = [
-            'all' => Item::where('user_id', auth()->id())->count(),
-            'bookmark' => Item::where('user_id', auth()->id())->where('type', 'bookmark')->count(),
-            'note' => Item::where('user_id', auth()->id())->where('type', 'note')->count(),
-            'prompt' => Item::where('user_id', auth()->id())->where('type', 'prompt')->count(),
-            'snippet' => Item::where('user_id', auth()->id())->where('type', 'snippet')->count(),
-            'file' => Item::where('user_id', auth()->id())->where('type', 'file')->count(),
-            'secret' => Item::where('user_id', auth()->id())->where('type', 'secret')->count(),
-            'worksheet' => Item::where('user_id', auth()->id())->where('type', 'worksheet')->count(),
-            'todo' => Item::where('user_id', auth()->id())->where('type', 'todo')->count(),
-        ];
+        $userId = auth()->id();
+        $typeCounts = Item::where('user_id', $userId)
+            ->selectRaw("type, COUNT(*) as cnt")
+            ->groupBy('type')
+            ->pluck('cnt', 'type')
+            ->toArray();
+
+        $counts = array_merge(
+            ['all' => array_sum($typeCounts)],
+            $typeCounts
+        );
 
         return view('livewire.global-search', compact('counts'));
     }

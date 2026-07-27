@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 final class AIService
@@ -14,21 +15,22 @@ final class AIService
 
     private string $model;
 
+    private int $userId;
+
     public function __construct(?int $userId = null)
     {
-        $settings = $this->loadUserSettings($userId);
+        $this->userId = $userId ?? auth()->id();
+        $settings = $this->loadUserSettings();
 
         $this->apiUrl = $settings['api_url'] ?? config('services.ai.api_url', 'https://api.openai.com/v1');
         $this->apiKey = $settings['api_key'] ?? config('services.ai.api_key', '');
         $this->model = $settings['model'] ?? config('services.ai.model', 'gpt-4o-mini');
     }
 
-    /**
-     * Reinitialize with a specific user context (for webhook usage).
-     */
     public function initializeForUser(int $userId): void
     {
-        $settings = $this->loadUserSettings($userId);
+        $this->userId = $userId;
+        $settings = $this->loadUserSettings();
         $this->apiUrl = $settings['api_url'] ?? config('services.ai.api_url', 'https://api.openai.com/v1');
         $this->apiKey = $settings['api_key'] ?? config('services.ai.api_key', '');
         $this->model = $settings['model'] ?? config('services.ai.model', 'gpt-4o-mini');
@@ -41,49 +43,100 @@ final class AIService
 
     public function summarize(string $content): ?string
     {
-        $prompt = 'Summarize the following content in 2-3 sentences. Be concise and focus on the main points:';
+        $prompt = "Anda adalah asisten pengetahuan ahli. Ringkas konten berikut dalam 2-3 kalimat.
+Fokus pada poin utama yang paling berharga.
+Gunakan Bahasa Indonesia yang ringkas dan jelas.
+Jangan tambahkan informasi yang tidak ada di konten asli.";
 
-        return $this->ask($prompt, $content);
+        return $this->ask($prompt, $content, 500);
     }
 
     public function categorize(string $title, ?string $content): ?string
     {
-        $text = $title.($content ? "\n\n".$content : '');
-        $prompt = 'Categorize this content into exactly one category from: Technology, Science, Design, Business, Health, Education, Entertainment, News, Reference, Other. Reply with only the category name.';
+        $text = "Judul: {$title}";
+        if ($content) {
+            $text .= "\n\nKonten:\n".mb_substr($content, 0, 3000);
+        }
 
-        return $this->ask($prompt, $text);
+        $prompt = "Analisis konten berikut dan tentukan SATU kategori yang paling tepat.
+
+Kategori yang tersedia: Technology, Science, Design, Business, Health, Education, Entertainment, News, Reference, Other.
+
+Panduan memilih kategori:
+- Technology: Pemrograman, software, hardware, AI, blockchain, gadgets
+- Science: Penelitian, sains, kedokteran, lingkungan
+- Design: UI/UX, grafis, arsitektur, branding
+- Business: Marketing, startup, keuangan, manajemen
+- Health: Kesehatan, olahraga, nutrisi, psikologi
+- Education: Pembelajaran, kursus, tutorial, akademik
+- Entertainment: Film, musik, game, hiburan
+- News: Berita terkini, politik, sosial
+- Reference: Dokumentasi, referensi, kamus, panduan
+
+Balas HANYA nama kategori, tanpa penjelasan tambahan.";
+
+        return $this->ask($prompt, $text, 50);
     }
 
     public function suggestTags(string $title, ?string $content): array
     {
-        $text = $title.($content ? "\n\n".$content : '');
-        $prompt = 'Generate 3-5 relevant tags for this content. Reply with only the tags separated by commas, no numbers or bullet points.';
-        $result = $this->ask($prompt, $text);
+        $text = "Judul: {$title}";
+        if ($content) {
+            $text .= "\n\nKonten:\n".mb_substr($content, 0, 3000);
+        }
+
+        $prompt = "Buatkan 3-5 tag yang relevan untuk konten ini.
+
+Aturan:
+- Tag harus spesifik dan deskriptif
+- Gunakan lowercase
+- Pisahkan dengan koma
+- Jangan gunakan tag yang terlalu umum seperti 'internet' atau 'website'
+- Contoh bagus: 'laravel', 'react', 'seo', 'machine-learning'
+
+Balas HANYA tag yang dipisahkan koma, tanpa nomor atau bullet.";
+
+        $result = $this->ask($prompt, $text, 150);
 
         if ($result === null) {
             return [];
         }
 
         return array_map(
-            fn (string $tag) => trim($tag),
+            fn (string $tag) => trim(strtolower($tag)),
             array_filter(explode(',', $result))
         );
     }
 
     public function renderPage(string $title, string $url, ?string $content = null): ?string
     {
-        $text = "Title: {$title}\nURL: {$url}";
+        $text = "Judul: {$title}\nURL: {$url}";
         if ($content) {
-            $text .= "\n\nContent:\n".mb_substr($content, 0, 8000);
+            $text .= "\n\nKonten:\n".mb_substr($content, 0, 8000);
         }
 
-        $prompt = 'You are a knowledge assistant. Analyze the following web page and create a comprehensive note. Include:
-1. A brief summary (2-3 sentences)
-2. Key points (bullet list)
-3. Important details (names, dates, numbers, links mentioned)
-4. Your assessment of the page value
+        $prompt = "Anda adalah asisten pengetahuan ahli. Analisis halaman web berikut dan buat catatan komprehensif.
 
-Format your response in clean markdown. Be thorough but concise.';
+Format output dalam Markdown yang bersih:
+
+## Ringkasan
+(2-3 kalimat tentang apa halaman ini)
+
+## Poin-Poin Utama
+- (poin 1)
+- (poin 2)
+- (poin 3)
+
+## Detail Penting
+- Nama, tanggal, angka, atau link yang disebutkan
+- Konteks atau latar belakang yang relevan
+
+## Evaluasi
+- Seberapa berguna konten ini (1-5 bintang)
+- Siapa yang cocok membaca ini
+- Rekomendasi tindakan lanjutan
+
+Jadilah detail namun ringkas. Gunakan Bahasa Indonesia.";
 
         return $this->ask($prompt, $text, 800);
     }
@@ -99,12 +152,13 @@ Format your response in clean markdown. Be thorough but concise.';
             $list .= ($i + 1).". [{$b['title']}] {$b['url']}\n";
         }
 
-        $prompt = 'You are a bookmark organizer. Analyze these bookmarks and for EACH one (by number), suggest:
-- category: one of Technology, SEO, Business, Marketing, Design, Education, News, Entertainment, Reference, Other
-- tags: 2-4 relevant tags as comma-separated
-- action: "keep" if the bookmark is useful, "remove" if it seems like spam/dead/low-quality
+        $prompt = "Anda adalah bookmark organizer ahli. Analisis bookmark berikut dan untuk SETIAP satu (berdasarkan nomor), berikan:
+- category: salah satu dari Technology, SEO, Business, Marketing, Design, Education, News, Entertainment, Reference, Other
+- tags: 2-4 tag relevan dipisahkan koma
+- action: keep jika bookmark berguna, remove jika spam/dead/low-quality
+- summary: ringkasan singkat 1 kalimat
 
-Reply as valid JSON array only, no markdown. Each item: {"id": <number>, "category": "...", "tags": "...", "action": "keep"|"remove"}';
+Balas sebagai JSON array valid saja, tanpa markdown. Setiap item: {\"id\": <number>, \"category\": \"...\", \"tags\": \"...\", \"action\": \"keep\"|\"remove\", \"summary\": \"...\"}";
 
         $result = $this->ask($prompt, $list, 1500);
 
@@ -141,9 +195,6 @@ Reply as valid JSON array only, no markdown. Each item: {"id": <number>, "catego
         return $this->loadUserSettings();
     }
 
-    /**
-     * Public wrapper for AI chat. Used by FinancialAIService and others.
-     */
     public function askRaw(string $systemPrompt, string $content, int $maxTokens = 300): ?string
     {
         return $this->ask($systemPrompt, $content, $maxTokens);
@@ -159,6 +210,7 @@ Reply as valid JSON array only, no markdown. Each item: {"id": <number>, "catego
             $url = rtrim($this->apiUrl, '/').'/chat/completions';
 
             $response = Http::timeout(30)
+                ->connectTimeout(5)
                 ->withToken($this->apiKey)
                 ->post($url, [
                     'model' => $this->model,
@@ -190,22 +242,20 @@ Reply as valid JSON array only, no markdown. Each item: {"id": <number>, "catego
         }
     }
 
-    private function loadUserSettings(?int $userId = null): array
+    private function loadUserSettings(): array
     {
-        $userId = $userId ?? auth()->id();
+        $cacheKey = "ai_settings_{$this->userId}";
 
-        if (! $userId) {
+        return Cache::remember($cacheKey, 300, function () {
+            $path = storage_path("app/user-settings-{$this->userId}.json");
+
+            if (file_exists($path)) {
+                $all = json_decode(file_get_contents($path), true) ?? [];
+
+                return $all['ai'] ?? [];
+            }
+
             return [];
-        }
-
-        $path = storage_path('app/user-settings-'.$userId.'.json');
-
-        if (file_exists($path)) {
-            $all = json_decode(file_get_contents($path), true) ?? [];
-
-            return $all['ai'] ?? [];
-        }
-
-        return [];
+        });
     }
 }

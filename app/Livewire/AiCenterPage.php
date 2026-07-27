@@ -167,14 +167,20 @@ final class AiCenterPage extends Component
     {
         $userId = auth()->id();
 
+        $typeCounts = Item::where('user_id', $userId)
+            ->selectRaw("type, COUNT(*) as cnt")
+            ->groupBy('type')
+            ->pluck('cnt', 'type')
+            ->toArray();
+
         $stats = [
-            'totalItems' => Item::where('user_id', $userId)->count(),
-            'bookmarks' => Item::where('user_id', $userId)->where('type', 'bookmark')->count(),
-            'notes' => Item::where('user_id', $userId)->where('type', 'note')->count(),
-            'prompts' => Item::where('user_id', $userId)->where('type', 'prompt')->count(),
-            'snippets' => Item::where('user_id', $userId)->where('type', 'snippet')->count(),
-            'worksheets' => Item::where('user_id', $userId)->where('type', 'worksheet')->count(),
-            'todos' => Item::where('user_id', $userId)->where('type', 'todo')->count(),
+            'totalItems' => array_sum($typeCounts),
+            'bookmarks' => $typeCounts['bookmark'] ?? 0,
+            'notes' => $typeCounts['note'] ?? 0,
+            'prompts' => $typeCounts['prompt'] ?? 0,
+            'snippets' => $typeCounts['snippet'] ?? 0,
+            'worksheets' => $typeCounts['worksheet'] ?? 0,
+            'todos' => $typeCounts['todo'] ?? 0,
         ];
 
         $recentItems = Item::where('user_id', $userId)

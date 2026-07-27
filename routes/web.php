@@ -24,6 +24,7 @@ Route::middleware('auth')->group(function (): void {
     })->name('files.download');
     Route::view('/bookmarks', 'bookmarks')->name('bookmarks');
     Route::view('/notes', 'pages.notes')->name('notes');
+    Route::view('/quick-notepad', 'pages.quick-notepad')->name('quick-notepad');
     Route::view('/collections', 'pages.collections')->name('collections');
     Route::view('/tags', 'pages.tags')->name('tags');
     Route::view('/prompts', 'pages.prompts')->name('prompts');

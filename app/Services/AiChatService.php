@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Item;
+use Illuminate\Support\Facades\Cache;
 
 final class AiChatService
 {
@@ -52,23 +53,58 @@ final class AiChatService
 
         $context = $this->buildContext();
 
-        $systemPrompt = "You are Knowledge Hub AI assistant. You help the user manage their knowledge base.
-You have access to ALL their data: bookmarks, notes, snippets, worksheets, todos, and tags.
-Answer in the same language the user uses (Indonesian or English).
-Be concise, helpful, and reference specific items from their data when relevant.";
+        $systemPrompt = "Anda adalah Knowledge Hub AI, asisten ahli manajemen pengetahuan pribadi.
 
-        $messages = [];
+IDENTITAS:
+- Nama: Knowledge Hub AI
+- Peran: Asisten pribadi yang membantu mengelola knowledge base pengguna
+- Bahasa: Selalu jawab dalam bahasa yang sama dengan yang digunakan pengguna (Indonesia/English)
 
-        foreach ($history as $msg) {
-            $messages[] = ($msg['role'] ?? 'user').': '.($msg['content'] ?? '');
-        }
+KEMAMPUAN:
+1. Menganalisis bookmark, catatan, snippet, worksheet, todo, dan prompt pengguna
+2. Menjawab pertanyaan tentang data yang tersimpan
+3. Memberikan sorganisasi dan produktivitas
+4. Mencari informasi di web jika diminta (prefix search atau cari)
+5. Membuat ringkasan meeting/notulensi
 
-        $historyText = ! empty($messages) ? "\n\nPrevious conversation:\n".implode("\n", $messages) : '';
+ATURAN:
+- Jawab dengan ringkas, langsung ke inti
+- Rujuk item spesifik dari data pengguna jika relevan (sebutkan ID atau judul)
+- Jika tidak tahu, katakan jangan mengarang
+- Gunakan bullet points untuk daftar
+- Format markdown untuk respons panjang
 
-        $fullMessage = "User's knowledge base context:\n{$context}{$historyText}\n\nUser question: {$message}";
+CONTOH RESPONS YANG BAIK:
+User: Apa bookmark tentang programming?
+AI: Anda memiliki 5 bookmark programming:
+1. [ID 12] Laravel Documentation - url
+2. [ID 15] React Hooks Guide - url
+...
+Mau saya bantu filter lebih spesifik?
+
+User: Ringkas semua data saya
+AI: 📊 Ringkasan Knowledge Base Anda:
+• 45 Bookmarks (12 favorites)
+• 23 Notes
+• 8 Snippets
+• 12 Todos (5 selesai)
+
+Topik utama: Web Development, AI/ML, Design
+Saran: Pertimbangkan untuk menambah tag pada 15 bookmark yang belum punya tag.";
+
+$historyText = '';
+if (! empty($history)) {
+    $historyText = "\n\nRiwayat percakapan:\n";
+    foreach (array_slice($history, -8) as $msg) {
+        $role = $msg['role'] === 'user' ? 'Pengguna' : 'AI';
+        $historyText .= "{$role}: {$msg['content']}\n";
+    }
+}
+
+$fullMessage = "Konteks knowledge base pengguna:\n{$context}{$historyText}\n\nPertanyaan pengguna: {$message}";
 
         try {
-            $reply = $this->ai->askRaw($systemPrompt, $fullMessage, 1000);
+            $reply = $this->ai->askRaw($systemPrompt, $fullMessage, 1200);
 
             return $reply ?? 'Tidak ada response dari AI. Coba lagi atau cek Settings.';
         } catch (\Exception $e) {
@@ -83,49 +119,75 @@ Be concise, helpful, and reference specific items from their data when relevant.
         $kbContext = $this->buildContext();
 
         if (! empty($results)) {
-            $context = "Web search results for: {$query}\n\n";
+            $context = "Hasil pencarian web untuk: {$query}\n\n";
             foreach ($results as $i => $r) {
-                $context .= ($i + 1).". {$r['title']}\n   {$r['url']}\n   {$r['snippet']}\n\n";
+                $context .= ($i + 1).". {$r['title']}\n   URL: {$r['url']}\n   Ringkasan: {$r['snippet']}\n\n";
             }
 
-            $prompt = "Based on these web search results AND the user's knowledge base, answer the question: {$query}
+            $prompt = "Berdasarkan hasil pencarian web DAN knowledge base pengguna, jawab pertanyaan ini: {$query}
 
-Web search results:
+ATURAN:
+1. Gabungkan informasi dari web dan knowledge base
+2. Prioritaskan informasi terbaru dan relevan
+3. Sebutkan sumber (web atau knowledge base)
+4. Jawab dalam bahasa yang sama dengan pertanyaan
+5. Format dengan markdown yang rapi
+
+Hasil pencarian web:
 {$context}
 
-User's knowledge base:
+Knowledge base pengguna:
 {$kbContext}
 
-Provide a comprehensive answer combining web results and personal data. Be concise.";
+Buatlah jawaban komprehensif yang menggabungkan kedua sumber. Gunakan heading untuk struktur yang jelas.";
 
-            return $this->ai->askRaw($prompt, $query, 800) ?? 'Gagal generate jawaban.';
+            return $this->ai->askRaw($prompt, $query, 1000) ?? 'Gagal generate jawaban.';
         }
 
-        $prompt = "The user asked to search for: {$query}
+        $prompt = "Pengguna bertanya: {$query}
 
-Based on the user's knowledge base below, provide the best answer you can. If the knowledge base doesn't contain relevant info, say so honestly.
+Berdasarkan knowledge base pengguna di bawah, berikan jawaban terbaik yang bisa Anda berikan.
+Jika knowledge base tidak mengandung informasi yang relevan, katakan dengan jujur.
 
-User's knowledge base:
+ATURAN:
+1. Jawab dalam bahasa yang sama dengan pertanyaan
+2. Rujuk item spesifik jika ada yang relevan
+3. Berikan saran action items jika memungkinkan
+4. Gunakan markdown untuk struktur yang jelas
+
+Knowledge base pengguna:
 {$kbContext}
 
-Be concise and helpful.";
+Berdasarkan data di atas, berikan jawaban yang paling membantu.";
 
-        return $this->ai->askRaw($prompt, $query, 800) ?? 'Gagal generate jawaban. Pastikan AI sudah dikonfigurasi di Settings.';
+        return $this->ai->askRaw($prompt, $query, 1000) ?? 'Gagal generate jawaban. Pastikan AI sudah dikonfigurasi di Settings.';
     }
 
     private function generateOverview(): string
     {
         $context = $this->buildContext();
 
-        $prompt = "You are a knowledge management assistant. Analyze the user's knowledge base and provide:
-1. A brief overview of what they have (counts by type)
-2. Key themes and topics
-3. Suggestions for organization
-4. Any notable patterns
+        $prompt = "Anda adalah asisten manajemen pengetahuan. Analisis knowledge base pengguna dan berikan:
 
-Be concise and actionable.";
+📊 **Ringkasan Data**
+- Jumlah item per kategori
+- Pertumbuhan/aktifitas terkini
 
-        return $this->ai->askRaw($prompt, $context, 600) ?? 'Gagal generate overview.';
+🎯 **Topik Utama**
+- Tema-tema yang paling banyak dibahas
+- Pola content yang menarik
+
+💡 **Saran Organisasi**
+- Bagaimana cara mengorganisir lebih baik
+- Tag atau kategori yang perlu ditambahkan
+
+🔍 **Temuan Menarik**
+- Pattern atau insight yang ditemukan
+- Item yang mungkin perlu di-update
+
+Gunakan emoji untuk visual yang menarik. Format markdown. Jawab dalam Bahasa Indonesia. Bersifat actionable dan spesifik.";
+
+        return $this->ai->askRaw($prompt, $context, 800) ?? 'Gagal generate overview.';
     }
 
     private function generateNotulensi(string $meetingText): string
@@ -134,32 +196,45 @@ Be concise and actionable.";
             return 'Mohon masukkan teks notulensi/rapat. Contoh: notulensi [paste teks rapat]';
         }
 
-        $prompt = "You are a meeting notes assistant. Convert this raw meeting text into structured notulensi in Indonesian:
+        $prompt = "Anda adalah asisten notulensi rapat ahli. Konversi teks mentah rapat berikut menjadi notulensi terstruktur.
 
-Format:
-📋 **Notulensi Rapat**
+Format wajib:
 
-**Peserta:** (extract names if mentioned)
-**Tanggal:** (extract date if mentioned, or use today)
-**Topik:** (main topic)
+📋 **NOTULENSI RAPAT**
+
+**Tanggal:** (ekstrak tanggal jika disebut, atau gunakan hari ini)
+**Peserta:** (ekstrak nama jika disebutkan)
+**Topik Utama:** (topik utama rapat)
+
+---
+
+**Ringkasan Eksekutif**
+(1-2 kalimat tentang hasil rapat)
 
 **Poin Pembahasan:**
-1. (topic 1)
+1. **[Judul Topik 1]**
    - Detail: ...
-2. (topic 2)
-   - Detail: ...
+   - Poin penting: ...
 
-**Keputusan:**
-- (decision 1)
-- (decision 2)
+2. **[Judul Topik 2]**
+   - Detail: ...
+   - Poin penting: ...
+
+**Keputusan yang Diambil:**
+- ✅ (keputusan 1)
+- ✅ (keputusan 2)
 
 **Action Items:**
-- [ ] (task 1) — Responsible: (name)
-- [ ] (task 2) — Responsible: (name)
+- [ ] (tugas 1) — Responsible: (nama) — Deadline: (tanggal)
+- [ ] (tugas 2) — Responsible: (nama) — Deadline: (tanggal)
 
-**Catatan Tambahan:** (any other notes)
+**Catatan Tambahan:**
+(poin tambahan jika ada)
 
-Be thorough but concise.";
+---
+*Dicatat oleh: Knowledge Hub AI*
+
+Buatlah notulensi yang terstruktur, mudah dibaca, dan actionable. Gunakan Bahasa Indonesia.";
 
         return $this->ai->askRaw($prompt, $meetingText, 1500) ?? 'Gagal generate notulensi.';
     }
@@ -168,103 +243,103 @@ Be thorough but concise.";
     {
         $userId = $this->userId;
 
-        $bookmarks = Item::where('user_id', $userId)->where('type', 'bookmark')
-            ->select('id', 'title', 'url', 'content')->latest()->take(30)->get();
-        $notes = Item::where('user_id', $userId)->where('type', 'note')
-            ->select('id', 'title', 'content')->latest()->take(20)->get();
-        $snippets = Item::where('user_id', $userId)->where('type', 'snippet')
-            ->select('id', 'title', 'content')->latest()->take(10)->get();
-        $worksheets = Item::where('user_id', $userId)->where('type', 'worksheet')
-            ->select('id', 'title', 'metadata')->latest()->take(10)->get();
-        $prompts = Item::where('user_id', $userId)->where('type', 'prompt')
-            ->select('id', 'title', 'content')->latest()->take(10)->get();
-        $todos = Item::where('user_id', $userId)->where('type', 'todo')
-            ->select('id', 'title', 'content', 'metadata')->latest()->take(20)->get();
+        $cacheKey = "ai_context_{$userId}";
 
-        $ctx = "=== KNOWLEDGE BASE SUMMARY ===\n";
-        $ctx .= "Bookmarks: {$bookmarks->count()} items\n";
-        $ctx .= "Notes: {$notes->count()} items\n";
-        $ctx .= "Snippets: {$snippets->count()} items\n";
-        $ctx .= "Worksheets: {$worksheets->count()} items\n";
-        $ctx .= "Prompts: {$prompts->count()} items\n";
-        $ctx .= "Todos: {$todos->count()} items\n\n";
+        return Cache::remember($cacheKey, 300, function () use ($userId) {
+            $items = Item::where('user_id', $userId)
+                ->select('id', 'type', 'title', 'url', 'content', 'metadata')
+                ->latest()
+                ->get()
+                ->groupBy('type');
 
-        if ($bookmarks->isNotEmpty()) {
-            $ctx .= "--- BOOKMARKS ---\n";
-            foreach ($bookmarks as $b) {
-                $ctx .= "[{$b->id}] {$b->title}";
-                if ($b->url) {
-                    $ctx .= " ({$b->url})";
-                }
-                if ($b->content) {
-                    $ctx .= ' — '.mb_substr($b->content, 0, 100);
-                }
-                $ctx .= "\n";
+            $ctx = "=== KNOWLEDGE BASE SUMMARY ===\n";
+            $counts = [];
+            foreach ($items as $type => $typeItems) {
+                $counts[$type] = $typeItems->count();
+            }
+            $ctx .= "Total: ".array_sum($counts)." items\n";
+            foreach ($counts as $type => $count) {
+                $ctx .= ucfirst($type).": {$count} items\n";
             }
             $ctx .= "\n";
-        }
 
-        if ($notes->isNotEmpty()) {
-            $ctx .= "--- NOTES ---\n";
-            foreach ($notes as $n) {
-                $ctx .= "[{$n->id}] {$n->title}";
-                if ($n->content) {
-                    $ctx .= ' — '.mb_substr($n->content, 0, 150);
+            if (isset($items['bookmark']) && $items['bookmark']->isNotEmpty()) {
+                $ctx .= "--- BOOKMARKS ---\n";
+                foreach ($items['bookmark']->take(30) as $b) {
+                    $ctx .= "[ID {$b->id}] {$b->title}";
+                    if ($b->url) {
+                        $ctx .= " ({$b->url})";
+                    }
+                    if ($b->content) {
+                        $ctx .= ' — '.mb_substr($b->content, 0, 100);
+                    }
+                    $ctx .= "\n";
                 }
                 $ctx .= "\n";
             }
-            $ctx .= "\n";
-        }
 
-        if ($snippets->isNotEmpty()) {
-            $ctx .= "--- CODE SNIPPETS ---\n";
-            foreach ($snippets as $s) {
-                $ctx .= "[{$s->id}] {$s->title}";
-                if ($s->content) {
-                    $ctx .= ' — '.mb_substr($s->content, 0, 100);
+            if (isset($items['note']) && $items['note']->isNotEmpty()) {
+                $ctx .= "--- NOTES ---\n";
+                foreach ($items['note']->take(20) as $n) {
+                    $ctx .= "[ID {$n->id}] {$n->title}";
+                    if ($n->content) {
+                        $ctx .= ' — '.mb_substr($n->content, 0, 150);
+                    }
+                    $ctx .= "\n";
                 }
                 $ctx .= "\n";
             }
-            $ctx .= "\n";
-        }
 
-        if ($worksheets->isNotEmpty()) {
-            $ctx .= "--- WORKSHEETS ---\n";
-            foreach ($worksheets as $w) {
-                $meta = $w->metadata ?? [];
-                $rows = count($meta['rows'] ?? []);
-                $checklist = count($meta['checklist'] ?? []);
-                $ctx .= "[{$w->id}] {$w->title} ({$rows} rows, {$checklist} checklist items)\n";
-            }
-            $ctx .= "\n";
-        }
-
-        if ($prompts->isNotEmpty()) {
-            $ctx .= "--- AI PROMPTS ---\n";
-            foreach ($prompts as $p) {
-                $ctx .= "[{$p->id}] {$p->title}";
-                if ($p->content) {
-                    $ctx .= ' — '.mb_substr($p->content, 0, 100);
+            if (isset($items['snippet']) && $items['snippet']->isNotEmpty()) {
+                $ctx .= "--- CODE SNIPPETS ---\n";
+                foreach ($items['snippet']->take(10) as $s) {
+                    $ctx .= "[ID {$s->id}] {$s->title}";
+                    if ($s->content) {
+                        $ctx .= ' — '.mb_substr($s->content, 0, 100);
+                    }
+                    $ctx .= "\n";
                 }
                 $ctx .= "\n";
             }
-        }
 
-        if ($todos->isNotEmpty()) {
-            $ctx .= "\n--- TODOS ---\n";
-            foreach ($todos as $t) {
-                $meta = $t->metadata ?? [];
-                $status = ($meta['completed'] ?? false) ? 'DONE' : 'PENDING';
-                $priority = $meta['priority'] ?? 'medium';
-                $due = $meta['due_date'] ?? 'no due date';
-                $ctx .= "[{$t->id}] [{$status}] [{$priority}] {$t->title} (due: {$due})";
-                if ($t->content) {
-                    $ctx .= ' — '.mb_substr($t->content, 0, 80);
+            if (isset($items['worksheet']) && $items['worksheet']->isNotEmpty()) {
+                $ctx .= "--- WORKSHEETS ---\n";
+                foreach ($items['worksheet']->take(10) as $w) {
+                    $meta = $w->metadata ?? [];
+                    $rows = count($meta['rows'] ?? []);
+                    $checklist = count($meta['checklist'] ?? []);
+                    $ctx .= "[ID {$w->id}] {$w->title} ({$rows} rows, {$checklist} checklist items)\n";
                 }
                 $ctx .= "\n";
             }
-        }
 
-        return $ctx;
+            if (isset($items['prompt']) && $items['prompt']->isNotEmpty()) {
+                $ctx .= "--- AI PROMPTS ---\n";
+                foreach ($items['prompt']->take(10) as $p) {
+                    $ctx .= "[ID {$p->id}] {$p->title}";
+                    if ($p->content) {
+                        $ctx .= ' — '.mb_substr($p->content, 0, 100);
+                    }
+                    $ctx .= "\n";
+                }
+            }
+
+            if (isset($items['todo']) && $items['todo']->isNotEmpty()) {
+                $ctx .= "\n--- TODOS ---\n";
+                foreach ($items['todo']->take(20) as $t) {
+                    $meta = $t->metadata ?? [];
+                    $status = ($meta['completed'] ?? false) ? 'DONE' : 'PENDING';
+                    $priority = $meta['priority'] ?? 'medium';
+                    $due = $meta['due_date'] ?? 'no due date';
+                    $ctx .= "[ID {$t->id}] [{$status}] [{$priority}] {$t->title} (due: {$due})";
+                    if ($t->content) {
+                        $ctx .= ' — '.mb_substr($t->content, 0, 80);
+                    }
+                    $ctx .= "\n";
+                }
+            }
+
+            return $ctx;
+        });
     }
 }

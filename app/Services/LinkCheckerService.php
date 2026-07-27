@@ -16,7 +16,8 @@ final class LinkCheckerService
         }
 
         try {
-            $response = Http::timeout(10)
+            $response = Http::timeout(5)
+                ->connectTimeout(2)
                 ->withHeaders([
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
                     'Accept' => 'text/html,application/xhtml+xml,*/*',
@@ -40,7 +41,7 @@ final class LinkCheckerService
 
             return ['status' => 'error', 'code' => $code, 'message' => 'HTTP '.$code];
         } catch (ConnectionException $e) {
-            return ['status' => 'timeout', 'code' => 0, 'message' => 'Connection timeout (10s)'];
+            return ['status' => 'timeout', 'code' => 0, 'message' => 'Connection timeout (5s)'];
         } catch (\Exception $e) {
             return ['status' => 'error', 'code' => 0, 'message' => mb_substr($e->getMessage(), 0, 100)];
         }

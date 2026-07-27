@@ -133,11 +133,12 @@ final class NoteList extends Component
 
         $notes = $query->latest()->paginate(12);
 
-        $stats = [
-            'total' => Item::where('user_id', auth()->id())->where('type', 'note')->whereNull('archived_at')->count(),
-            'favorites' => Item::where('user_id', auth()->id())->where('type', 'note')->where('favorite', true)->count(),
-            'archived' => Item::where('user_id', auth()->id())->where('type', 'note')->whereNotNull('archived_at')->count(),
-        ];
+        $userId = auth()->id();
+        $stats = Item::where('user_id', $userId)
+            ->where('type', 'note')
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN favorite = 1 THEN 1 ELSE 0 END) as favorites, SUM(CASE WHEN archived_at IS NOT NULL THEN 1 ELSE 0 END) as archived')
+            ->first()
+            ->toArray();
 
         return view('livewire.note-list', compact('notes', 'stats'));
     }

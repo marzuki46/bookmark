@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 final class WebSearchService
@@ -26,6 +27,15 @@ final class WebSearchService
     }
 
     public function search(string $query, int $maxResults = 5): array
+    {
+        $cacheKey = 'search_'.md5($query).'_'.$maxResults;
+
+        return Cache::remember($cacheKey, 3600, function () use ($query, $maxResults) {
+            return $this->searchFresh($query, $maxResults);
+        });
+    }
+
+    private function searchFresh(string $query, int $maxResults): array
     {
         if (! $this->isConfigured()) {
             return [];
@@ -52,11 +62,17 @@ final class WebSearchService
             $searchUrl = rtrim($this->apiUrl, '/').'/search';
 
             $response = Http::timeout(15)
+                ->connectTimeout(3)
+                ->withHeaders([
+                    'Content-Type' => 'application/json',
+                ])
                 ->withToken($this->apiKey)
                 ->post($searchUrl, [
-                    'model' => 'tavily',
                     'query' => $query,
                     'max_results' => $maxResults,
+                    'search_depth' => 'basic',
+                    'include_answer' => true,
+                    'include_raw_content' => false,
                 ]);
 
             if (! $response->successful()) {
@@ -64,14 +80,32 @@ final class WebSearchService
             }
 
             $data = $response->json();
-            $results = $data['results'] ?? [];
 
-            return array_map(fn ($r) => [
-                'title' => $r['title'] ?? '',
-                'url' => $r['url'] ?? '',
-                'snippet' => $r['snippet'] ?? '',
-            ], $results);
+            $results = [];
+
+            if (! empty($data['answer'])) {
+                $results[] = [
+                    'title' => "Answer for: {$query}",
+                    'url' => $data['results'][0]['url'] ?? '',
+                    'snippet' => $data['answer'],
+                ];
+            }
+
+            foreach (($data['results'] ?? []) as $r) {
+                if (count($results) >= $maxResults) {
+                    break;
+                }
+                $results[] = [
+                    'title' => $r['title'] ?? '',
+                    'url' => $r['url'] ?? '',
+                    'snippet' => $r['content'] ?? $r['snippet'] ?? '',
+                ];
+            }
+
+            return $results;
         } catch (\Exception $e) {
+            logger()->warning('Tavily search failed', ['error' => $e->getMessage()]);
+
             return [];
         }
     }
@@ -81,7 +115,7 @@ final class WebSearchService
         try {
             $url = 'https://api.duckduckgo.com/?q='.urlencode($query).'&format=json&no_html=1&skip_disambig=1';
 
-            $response = Http::timeout(10)->get($url);
+            $response = Http::timeout(10)->connectTimeout(3)->get($url);
 
             if (! $response->successful()) {
                 return [];
@@ -123,6 +157,7 @@ final class WebSearchService
             $url = 'https://www.google.com/search?q='.urlencode($query).'&num='.$maxResults.'&hl=en';
 
             $response = Http::timeout(10)
+                ->connectTimeout(3)
                 ->withHeaders([
                     'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Accept-Language' => 'en-US,en;q=0.9',
@@ -173,14 +208,18 @@ final class WebSearchService
             return [];
         }
 
-        $path = storage_path('app/user-settings-'.$userId.'.json');
+        $cacheKey = "search_settings_{$userId}";
 
-        if (file_exists($path)) {
-            $all = json_decode(file_get_contents($path), true) ?? [];
+        return Cache::remember($cacheKey, 300, function () use ($userId) {
+            $path = storage_path("app/user-settings-{$userId}.json");
 
-            return $all['ai'] ?? [];
-        }
+            if (file_exists($path)) {
+                $all = json_decode(file_get_contents($path), true) ?? [];
 
-        return [];
+                return $all['ai'] ?? [];
+            }
+
+            return [];
+        });
     }
 }

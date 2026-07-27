@@ -4,11 +4,21 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 final class MetadataFetcher
 {
     public function fetch(string $url): array
+    {
+        $cacheKey = 'metadata_'.md5($url);
+
+        return Cache::remember($cacheKey, 86400, function () use ($url) {
+            return $this->fetchFresh($url);
+        });
+    }
+
+    private function fetchFresh(string $url): array
     {
         $metadata = [
             'title' => null,
@@ -22,7 +32,8 @@ final class MetadataFetcher
         ];
 
         try {
-            $response = Http::timeout(10)
+            $response = Http::timeout(5)
+                ->connectTimeout(2)
                 ->withUserAgent('PersonalKnowledgeHub/1.0')
                 ->get($url);
 

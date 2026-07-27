@@ -39,6 +39,7 @@
                                         ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'active' => request()->routeIs('dashboard')],
                                         ['route' => 'bookmarks', 'label' => 'Bookmarks', 'icon' => 'bookmark', 'active' => request()->routeIs('bookmarks'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'bookmark')->count()],
                                         ['route' => 'notes', 'label' => 'Notes', 'icon' => 'note', 'active' => request()->routeIs('notes'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'note')->count()],
+                                        ['route' => 'quick-notepad', 'label' => 'Quick Notepad', 'icon' => 'note', 'active' => request()->routeIs('quick-notepad')],
                                         ['route' => 'prompts', 'label' => 'AI Prompts', 'icon' => 'sparkles', 'active' => request()->routeIs('prompts')],
                                         ['route' => 'snippets', 'label' => 'Code Snippets', 'icon' => 'code', 'active' => request()->routeIs('snippets')],
                                         ['route' => 'worksheets', 'label' => 'Worksheets', 'icon' => 'table', 'active' => request()->routeIs('worksheets'), 'count' => App\Models\Item::where('user_id', auth()->id())->where('type', 'worksheet')->count()],

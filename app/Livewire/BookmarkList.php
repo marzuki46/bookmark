@@ -259,11 +259,12 @@ final class BookmarkList extends Component
 
         $bookmarks = $query->latest()->paginate(12);
 
-        $stats = [
-            'total' => Item::where('user_id', auth()->id())->where('type', 'bookmark')->whereNull('archived_at')->count(),
-            'favorites' => Item::where('user_id', auth()->id())->where('type', 'bookmark')->where('favorite', true)->count(),
-            'archived' => Item::where('user_id', auth()->id())->where('type', 'bookmark')->whereNotNull('archived_at')->count(),
-        ];
+        $userId = auth()->id();
+        $stats = Item::where('user_id', $userId)
+            ->where('type', 'bookmark')
+            ->selectRaw('COUNT(*) as total, SUM(CASE WHEN favorite = 1 THEN 1 ELSE 0 END) as favorites, SUM(CASE WHEN archived_at IS NOT NULL THEN 1 ELSE 0 END) as archived')
+            ->first()
+            ->toArray();
 
         return view('livewire.bookmark-list', compact('bookmarks', 'stats'));
     }
