@@ -15,11 +15,11 @@ final class AIService
 
     private string $model;
 
-    private int $userId;
+    private int $userId = 0;
 
     public function __construct(?int $userId = null)
     {
-        $this->userId = $userId ?? auth()->id();
+        $this->userId = $userId ?? auth()->id() ?? 0;
         $settings = $this->loadUserSettings();
 
         $this->apiUrl = $settings['api_url'] ?? config('services.ai.api_url', 'https://api.openai.com/v1');

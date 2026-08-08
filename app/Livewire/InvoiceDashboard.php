@@ -89,36 +89,58 @@ final class InvoiceDashboard extends Component
     public function getBillStatsProperty(): array
     {
         $userId = auth()->id();
-        $today = now();
-        $thisMonth = $today->copy()->startOfMonth()->format('Y-m');
-        $nextMonth = $today->copy()->addMonth()->startOfMonth()->format('Y-m');
-        $thisYear = $today->format('Y');
-
-        $bills = Bill::where('user_id', $userId)->get();
+        $thisMonth = now()->startOfMonth();
+        $nextMonth = now()->addMonth()->startOfMonth();
+        $yearStart = now()->startOfYear();
+        $yearEnd = $yearStart->copy()->addYear()->subDay();
 
         return [
-            'this_month' => $bills->where('status', 'unpaid')->filter(fn ($b) => $b->due_date->format('Y-m') === $thisMonth)->sum('amount'),
-            'next_month' => $bills->where('status', 'unpaid')->filter(fn ($b) => $b->due_date->format('Y-m') === $nextMonth)->sum('amount'),
-            'paid_year' => $bills->where('status', 'paid')->filter(fn ($b) => $b->due_date->format('Y') === $thisYear)->sum('amount'),
-            'this_year' => $bills->filter(fn ($b) => $b->due_date->format('Y') === $thisYear)->sum('amount'),
+            'this_month' => (float) Bill::where('user_id', $userId)
+                ->where('status', 'unpaid')
+                ->whereBetween('due_date', [$thisMonth, $thisMonth->copy()->endOfMonth()])
+                ->sum('amount'),
+            'next_month' => (float) Bill::where('user_id', $userId)
+                ->where('status', 'unpaid')
+                ->whereBetween('due_date', [$nextMonth, $nextMonth->copy()->endOfMonth()])
+                ->sum('amount'),
+            'paid_year' => (float) Bill::where('user_id', $userId)
+                ->where('status', 'paid')
+                ->whereBetween('due_date', [$yearStart, $yearEnd])
+                ->sum('amount'),
+            'this_year' => (float) Bill::where('user_id', $userId)
+                ->whereBetween('due_date', [$yearStart, $yearEnd])
+                ->sum('amount'),
         ];
     }
 
     public function getBillDetailsProperty(): array
     {
         $userId = auth()->id();
-        $today = now();
-        $thisMonth = $today->copy()->startOfMonth()->format('Y-m');
-        $nextMonth = $today->copy()->addMonth()->startOfMonth()->format('Y-m');
-        $thisYear = $today->format('Y');
-
-        $bills = Bill::where('user_id', $userId)->orderBy('due_date')->get();
+        $thisMonth = now()->startOfMonth();
+        $nextMonth = now()->addMonth()->startOfMonth();
+        $yearStart = now()->startOfYear();
+        $yearEnd = $yearStart->copy()->addYear()->subDay();
 
         return [
-            'this_month' => $bills->where('status', 'unpaid')->filter(fn ($b) => $b->due_date->format('Y-m') === $thisMonth)->values(),
-            'next_month' => $bills->where('status', 'unpaid')->filter(fn ($b) => $b->due_date->format('Y-m') === $nextMonth)->values(),
-            'this_year' => $bills->filter(fn ($b) => $b->due_date->format('Y') === $thisYear)->values(),
-            'paid_year' => $bills->where('status', 'paid')->filter(fn ($b) => $b->due_date->format('Y') === $thisYear)->values(),
+            'this_month' => Bill::where('user_id', $userId)
+                ->where('status', 'unpaid')
+                ->whereBetween('due_date', [$thisMonth, $thisMonth->copy()->endOfMonth()])
+                ->orderBy('due_date')
+                ->get(),
+            'next_month' => Bill::where('user_id', $userId)
+                ->where('status', 'unpaid')
+                ->whereBetween('due_date', [$nextMonth, $nextMonth->copy()->endOfMonth()])
+                ->orderBy('due_date')
+                ->get(),
+            'this_year' => Bill::where('user_id', $userId)
+                ->whereBetween('due_date', [$yearStart, $yearEnd])
+                ->orderBy('due_date')
+                ->get(),
+            'paid_year' => Bill::where('user_id', $userId)
+                ->where('status', 'paid')
+                ->whereBetween('due_date', [$yearStart, $yearEnd])
+                ->orderBy('due_date')
+                ->get(),
         ];
     }
 
@@ -173,10 +195,7 @@ final class InvoiceDashboard extends Component
 
     public function deleteInvoice(int $id): void
     {
-        $invoice = Invoice::where('user_id', auth()->id())->findOrFail($id);
-        $invoice->items()->delete();
-        $invoice->payments()->delete();
-        $invoice->delete();
+        Invoice::where('user_id', auth()->id())->findOrFail($id)->delete();
     }
 
     public function render()

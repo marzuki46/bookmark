@@ -19,6 +19,8 @@ final class PageRenderTest extends TestCase
 
     public function test_login_page_loads(): void
     {
+        User::factory()->create(['setup_completed' => true]);
+
         $this->get('/login')->assertStatus(200);
     }
 

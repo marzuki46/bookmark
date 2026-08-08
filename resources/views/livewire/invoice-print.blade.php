@@ -1,5 +1,11 @@
 <div class="space-y-6">
     @if($invoice)
+    <div class="no-print flex items-center justify-center mb-4">
+        <label class="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer select-none">
+            <input type="checkbox" wire:model.live="showPaymentSummary" class="rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
+            Cantumkan ringkasan (Total Tagihan, Sudah Dibayar, Sisa Tagihan)
+        </label>
+    </div>
     <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 mx-auto" id="invoice-print" style="max-width: 100%;">
         @if($invoice->status === 'paid')
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -rotate-30 text-[10rem] text-emerald-500/10 border-8 border-emerald-500/10 p-8 rounded-2xl pointer-events-none select-none font-bold">LUNAS</div>
@@ -89,6 +95,7 @@
         </div>
         @endif
 
+        @if($showPaymentSummary)
         <div class="flex justify-end mt-8 mb-12">
             <div class="w-72">
                 <table class="w-full text-sm border border-[var(--color-border)]">
@@ -101,6 +108,7 @@
                 </table>
             </div>
         </div>
+        @endif
 
         @if($invoice->status !== 'paid')
         <div class="p-4 bg-[var(--color-bg)] border-l-4 border-[var(--indigo-600)] rounded mb-8">
@@ -132,14 +140,6 @@
                 <p class="font-bold border-t border-[var(--color-border)] inline-block pt-2 px-8 text-sm text-[var(--text-primary)]">( {{ $invoice->company?->pic_name ?? $invoice->company?->name ?? '' }} )</p>
             </div>
         </div>
-    </div>
-
-    <div class="flex justify-center gap-3 no-print">
-        <button onclick="window.print()" class="btn-primary">
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-            Cetak Dokumen
-        </button>
-        <a href="{{ route('invoices') }}" class="btn-secondary">Kembali</a>
     </div>
     @endif
 </div>

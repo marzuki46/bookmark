@@ -6,6 +6,7 @@ namespace App\Livewire;
 
 use App\Models\Company;
 use App\Models\Invoice;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 final class InvoiceForm extends Component
@@ -93,7 +94,7 @@ final class InvoiceForm extends Component
 
         if ($lastInvoice) {
             $lastSeq = (int) substr($lastInvoice->inv_number, -2);
-            $seq = str_pad($lastSeq + 1, 2, '0', STR_PAD_LEFT);
+            $seq = str_pad((string) ($lastSeq + 1), 2, '0', STR_PAD_LEFT);
         } else {
             $seq = '01';
         }
@@ -165,22 +166,24 @@ final class InvoiceForm extends Component
             'grand_total' => $this->grandTotal,
         ];
 
-        if ($this->editingId) {
-            $invoice = Invoice::where('user_id', auth()->id())->findOrFail($this->editingId);
-            $invoice->update($data);
-            $invoice->items()->delete();
-        } else {
-            $invoice = Invoice::create($data);
-        }
+        DB::transaction(function () use ($data): void {
+            if ($this->editingId) {
+                $invoice = Invoice::where('user_id', auth()->id())->findOrFail($this->editingId);
+                $invoice->update($data);
+                $invoice->items()->delete();
+            } else {
+                $invoice = Invoice::create($data);
+            }
 
-        foreach ($this->items as $item) {
-            $invoice->items()->create([
-                'description' => $item['description'],
-                'qty' => $item['qty'],
-                'price' => $item['price'],
-                'total' => $item['qty'] * $item['price'],
-            ]);
-        }
+            foreach ($this->items as $item) {
+                $invoice->items()->create([
+                    'description' => $item['description'],
+                    'qty' => $item['qty'],
+                    'price' => $item['price'],
+                    'total' => $item['qty'] * $item['price'],
+                ]);
+            }
+        });
 
         $this->dispatch('invoiceSaved');
         $this->redirect(route('invoices'));

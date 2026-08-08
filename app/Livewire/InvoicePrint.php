@@ -15,6 +15,8 @@ final class InvoicePrint extends Component
 
     public $payments = [];
 
+    public bool $showPaymentSummary = true;
+
     public function mount(int $id): void
     {
         $this->invoice = Invoice::with(['company', 'items', 'payments'])
