@@ -67,7 +67,9 @@ final class InvoiceTest extends TestCase
             ->get(route('invoices.print', $invoice->id))
             ->assertOk()
             ->assertDontSee('Cetak Dokumen')
-            ->assertDontSee('>Kembali');
+            ->assertDontSee('>Kembali')
+            ->assertDontSee('wp-admin-sidebar')
+            ->assertDontSee('wp-admin-bar');
     }
 
     public function test_print_summary_is_visible_by_default(): void

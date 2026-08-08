@@ -815,3 +815,13 @@ body {
     .bookmark-meta { min-width: 80px; }
     .bookmark-title { max-width: 100%; }
 }
+
+/* ===== PRINT STYLES ===== */
+.no-print { display: none !important; }
+
+@media print {
+    .no-print { display: none !important; }
+    body { background: #ffffff; }
+    .print-body { padding: 0; }
+    @page { margin: 1.5cm; }
+}
