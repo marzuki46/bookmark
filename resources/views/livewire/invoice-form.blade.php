@@ -182,6 +182,30 @@
             </div>
         </div>
 
+        {{-- Print Settings --}}
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
+            <h2 class="text-lg font-semibold text-[var(--text-primary)] mb-1">Pengaturan Cetak</h2>
+            <p class="text-sm text-[var(--text-tertiary)] mb-4">Pilih bagian mana yang akan tampil di dokumen cetak invoice.</p>
+
+            <div class="space-y-3">
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                    <input type="checkbox" wire:model="showPaymentSummary" class="mt-1 rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
+                    <span>
+                        <span class="block text-sm font-medium text-[var(--text-primary)]">Ringkasan pembayaran</span>
+                        <span class="block text-xs text-[var(--text-tertiary)]">Total Tagihan, Sudah Dibayar, dan Sisa Tagihan</span>
+                    </span>
+                </label>
+
+                <label class="flex items-start gap-3 cursor-pointer select-none">
+                    <input type="checkbox" wire:model="showPaymentMethod" class="mt-1 rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
+                    <span>
+                        <span class="block text-sm font-medium text-[var(--text-primary)]">Metode pembayaran</span>
+                        <span class="block text-xs text-[var(--text-tertiary)]">Informasi transfer (bank, no. rekening, kontak)</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+
         {{-- Merge Invoices (Cicilan) --}}
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
             <div class="flex items-center justify-between mb-1">

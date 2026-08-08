@@ -25,6 +25,8 @@ class Invoice extends Model
         'tax_rate',
         'tax_amount',
         'grand_total',
+        'show_payment_summary',
+        'show_payment_method',
     ];
 
     protected function casts(): array
@@ -36,6 +38,8 @@ class Invoice extends Model
             'tax_rate' => 'decimal:2',
             'tax_amount' => 'decimal:2',
             'grand_total' => 'decimal:2',
+            'show_payment_summary' => 'boolean',
+            'show_payment_method' => 'boolean',
         ];
     }
 

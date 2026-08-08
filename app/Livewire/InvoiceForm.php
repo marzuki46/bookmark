@@ -35,6 +35,10 @@ final class InvoiceForm extends Component
 
     public float $taxRate = 0;
 
+    public bool $showPaymentSummary = true;
+
+    public bool $showPaymentMethod = true;
+
     public array $items = [];
 
     public array $companies = [];
@@ -65,6 +69,8 @@ final class InvoiceForm extends Component
             $this->dateIssue = $invoice->date_issue?->format('Y-m-d') ?? now()->format('Y-m-d');
             $this->dateDue = $invoice->date_due?->format('Y-m-d') ?? now()->addDays(7)->format('Y-m-d');
             $this->taxRate = (float) $invoice->tax_rate;
+            $this->showPaymentSummary = (bool) $invoice->show_payment_summary;
+            $this->showPaymentMethod = (bool) $invoice->show_payment_method;
             $this->items = $invoice->items->map(fn ($item) => [
                 'description' => $item->description,
                 'qty' => (float) $item->qty,
@@ -197,6 +203,8 @@ final class InvoiceForm extends Component
             'tax_rate' => $this->taxRate,
             'tax_amount' => $this->taxAmount,
             'grand_total' => $this->grandTotal,
+            'show_payment_summary' => $this->showPaymentSummary,
+            'show_payment_method' => $this->showPaymentMethod,
         ];
 
         DB::transaction(function () use ($data): void {

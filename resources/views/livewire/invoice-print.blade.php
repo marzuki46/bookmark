@@ -1,10 +1,6 @@
 <div class="space-y-6">
     @if($invoice)
     <div class="no-print flex items-center justify-center gap-6 mb-4">
-        <label class="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer select-none">
-            <input type="checkbox" wire:model.live="showPaymentSummary" class="rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
-            Cantumkan ringkasan (Total Tagihan, Sudah Dibayar, Sisa Tagihan)
-        </label>
         @if(!empty($mergeReport))
         <label class="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer select-none">
             <input type="checkbox" wire:model.live="showMergeReport" class="rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
@@ -196,7 +192,7 @@
         </div>
         @endif
 
-        @if($invoice->status !== 'paid')
+        @if($showPaymentMethod && $invoice->status !== 'paid')
         <div class="p-4 bg-[var(--color-bg)] border-l-4 border-[var(--indigo-600)] rounded mb-8">
             <h4 class="font-bold text-[var(--text-primary)]">Metode Pembayaran:</h4>
             <p class="text-xs text-[var(--text-tertiary)] mb-1">Silakan transfer ke:</p>

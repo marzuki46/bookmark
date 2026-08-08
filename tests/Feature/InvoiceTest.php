@@ -90,14 +90,27 @@ final class InvoiceTest extends TestCase
     {
         $user = $this->user();
         $company = $this->company($user);
-        $invoice = $this->invoice($user, $company);
+        $invoice = $this->invoice($user, $company, ['show_payment_summary' => false]);
         $invoice->items()->create(['description' => 'Jasa', 'qty' => 1, 'price' => 1000, 'total' => 1000]);
 
         Livewire::actingAs($user)
             ->test(InvoicePrint::class, ['id' => $invoice->id])
-            ->set('showPaymentSummary', false)
+            ->assertSet('showPaymentSummary', false)
             ->assertDontSee('SISA TAGIHAN')
             ->assertDontSee('- Rp 1.000');
+    }
+
+    public function test_print_payment_method_can_be_hidden(): void
+    {
+        $user = $this->user();
+        $company = $this->company($user);
+        $invoice = $this->invoice($user, $company, ['show_payment_method' => false]);
+        $invoice->items()->create(['description' => 'Jasa', 'qty' => 1, 'price' => 1000, 'total' => 1000]);
+
+        Livewire::actingAs($user)
+            ->test(InvoicePrint::class, ['id' => $invoice->id])
+            ->assertSet('showPaymentMethod', false)
+            ->assertDontSee('Metode Pembayaran');
     }
 
     public function test_invoice_form_saves_invoice_and_items(): void
@@ -110,10 +123,13 @@ final class InvoiceTest extends TestCase
             ->set('companyId', $company->id)
             ->set('clientName', 'Klien B')
             ->set('invNumber', 'INV-T260808-02')
+            ->set('showPaymentSummary', false)
+            ->set('showPaymentMethod', false)
             ->set('items', [['description' => 'Jasa Website', 'qty' => 2, 'price' => 500]])
             ->call('save');
 
         $this->assertDatabaseHas('invoices', ['user_id' => $user->id, 'client_name' => 'Klien B', 'grand_total' => 1000]);
+        $this->assertDatabaseHas('invoices', ['user_id' => $user->id, 'show_payment_summary' => 0, 'show_payment_method' => 0]);
         $this->assertDatabaseHas('invoice_items', ['description' => 'Jasa Website', 'total' => 1000]);
     }
 

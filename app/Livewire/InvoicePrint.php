@@ -17,6 +17,8 @@ final class InvoicePrint extends Component
 
     public bool $showPaymentSummary = true;
 
+    public bool $showPaymentMethod = true;
+
     public bool $showMergeReport = true;
 
     public array $mergeReport = [];
@@ -29,6 +31,8 @@ final class InvoicePrint extends Component
 
         $this->items = $this->invoice->items;
         $this->payments = $this->invoice->payments->sortBy('payment_date');
+        $this->showPaymentSummary = (bool) $this->invoice->show_payment_summary;
+        $this->showPaymentMethod = (bool) $this->invoice->show_payment_method;
 
         $mergeIds = array_map('intval', session("invoice_merge_".auth()->id(), []));
 
