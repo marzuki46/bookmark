@@ -182,6 +182,45 @@
             </div>
         </div>
 
+        {{-- Merge Invoices (Cicilan) --}}
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-6">
+            <div class="flex items-center justify-between mb-1">
+                <h2 class="text-lg font-semibold text-[var(--text-primary)]">Gabungkan Invoice (Cicilan)</h2>
+                @if(count($mergeSelected) > 0)
+                    <button type="button" wire:click="clearMergeSelection" class="text-xs px-2 py-1 rounded-lg border border-[var(--color-border)] text-[var(--text-tertiary)] hover:text-[var(--red-600)] hover:border-[var(--red-600)] transition">Hapus Semua</button>
+                @endif
+            </div>
+            <p class="text-sm text-[var(--text-tertiary)] mb-4">
+                Cari &amp; centang invoice lain dengan nama klien yang sama untuk dijadikan laporan pembayaran gabungan (cicilan). Seleksi hanya sementara dan akan tampil di halaman cetak.
+            </p>
+
+            <input type="text" wire:model.live="mergeSearch" class="wp-form-input !mb-3" placeholder="Cari no. invoice atau nama klien...">
+
+            @if($this->mergeCandidates->isEmpty())
+                <p class="text-sm text-[var(--text-tertiary)] py-4 text-center">Tidak ada invoice yang cocok.</p>
+            @else
+                <div class="max-h-64 overflow-y-auto border border-[var(--color-border)] rounded-lg divide-y divide-[var(--color-border)]">
+                    @foreach($this->mergeCandidates as $cand)
+                        <label class="flex items-center gap-3 px-4 py-2.5 hover:bg-[var(--color-bg)] transition cursor-pointer">
+                            <input type="checkbox" wire:model="mergeSelected" value="{{ $cand->id }}" class="rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
+                            <span class="flex-1">
+                                <span class="block text-sm font-medium text-[var(--text-primary)]">{{ $cand->inv_number }}</span>
+                                <span class="block text-xs text-[var(--text-tertiary)]">{{ $cand->client_name }}</span>
+                            </span>
+                            <span class="text-right">
+                                <span class="block text-sm font-medium text-[var(--text-primary)]">Rp {{ number_format($cand->grand_total, 0, ',', '.') }}</span>
+                                <span class="block text-xs {{ $cand->remaining > 0 ? 'text-amber-600' : 'text-[var(--emerald-600)]' }}">Sisa: Rp {{ number_format($cand->remaining, 0, ',', '.') }}</span>
+                            </span>
+                        </label>
+                    @endforeach
+                </div>
+            @endif
+
+            @if(count($mergeSelected) > 0)
+                <p class="text-xs text-[var(--text-tertiary)] mt-3">{{ count($mergeSelected) }} invoice terpilih. Detail pembayaran gabungan akan tampil di halaman cetak.</p>
+            @endif
+        </div>
+
         {{-- Actions --}}
         <div class="flex items-center justify-end gap-3">
             <a href="{{ route('invoices') }}" class="btn-secondary">Batal</a>

@@ -1,10 +1,16 @@
 <div class="space-y-6">
     @if($invoice)
-    <div class="no-print flex items-center justify-center mb-4">
+    <div class="no-print flex items-center justify-center gap-6 mb-4">
         <label class="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer select-none">
             <input type="checkbox" wire:model.live="showPaymentSummary" class="rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
             Cantumkan ringkasan (Total Tagihan, Sudah Dibayar, Sisa Tagihan)
         </label>
+        @if(!empty($mergeReport))
+        <label class="inline-flex items-center gap-2 text-sm text-[var(--text-secondary)] cursor-pointer select-none">
+            <input type="checkbox" wire:model.live="showMergeReport" class="rounded border-[var(--color-border)] accent-[var(--indigo-600)]">
+            Cantumkan laporan pembayaran gabungan (cicilan)
+        </label>
+        @endif
     </div>
     <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 mx-auto" id="invoice-print" style="max-width: 100%;">
         @if($invoice->status === 'paid')
@@ -26,7 +32,87 @@
                 <h1 class="text-4xl font-light text-[var(--text-tertiary)] tracking-widest">{{ $invoice->status === 'paid' ? 'BUKTI BAYAR' : 'INVOICE' }}</h1>
                 <h3 class="text-lg font-bold mt-2 text-[var(--text-primary)]">{{ $invoice->inv_number }}</h3>
                 <p class="text-sm text-[var(--text-tertiary)]">Tanggal: {{ $invoice->date_issue->format('d F Y') }}</p>
-                @if($invoice->status !== 'paid')
+        @if($showMergeReport && !empty($mergeReport))
+        <div class="mb-8">
+            <h4 class="font-bold border-b border-[var(--color-border)] pb-2 mb-3 text-[var(--text-primary)]">Rincian Pembayaran Gabungan</h4>
+
+            <table class="w-full text-sm border-collapse mb-4">
+                <thead>
+                    <tr class="bg-[#343a40] text-white">
+                        <th class="p-2 text-left">No. Invoice</th>
+                        <th class="p-2 text-left">Tanggal Bayar</th>
+                        <th class="p-2 text-left">Keterangan</th>
+                        <th class="p-2 text-right">Jumlah</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php $mergePaidTotal = 0; @endphp
+                    @foreach($mergeReport as $mr)
+                        @foreach($mr['payments'] as $pay)
+                            @php $mergePaidTotal += (float) $pay->amount; @endphp
+                            <tr class="border-b border-[var(--color-border)]">
+                                <td class="p-2 font-medium text-[var(--text-primary)]">{{ $mr['inv_number'] }}</td>
+                                <td class="p-2 text-[var(--text-secondary)]">{{ $pay->payment_date->format('d M Y') }}</td>
+                                <td class="p-2 text-[var(--text-secondary)]">{{ $pay->note }}</td>
+                                <td class="p-2 text-right text-[var(--text-primary)]">Rp {{ number_format((float) $pay->amount, 0, ',', '.') }}</td>
+                            </tr>
+                        @endforeach
+                        @if($mr['payments']->isEmpty())
+                            <tr class="border-b border-[var(--color-border)]">
+                                <td class="p-2 font-medium text-[var(--text-primary)]">{{ $mr['inv_number'] }}</td>
+                                <td class="p-2 text-[var(--text-secondary)]" colspan="3">Belum ada pembayaran</td>
+                            </tr>
+                        @endif
+                    @endforeach
+                </tbody>
+                <tfoot>
+                    <tr class="border-t-2 border-[var(--text-primary)]">
+                        <td colspan="3" class="p-2 text-right font-bold">Total Pembayaran</td>
+                        <td class="p-2 text-right font-bold">Rp {{ number_format($mergePaidTotal, 0, ',', '.') }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="border-b border-[var(--color-border)] text-left text-[var(--text-tertiary)]">
+                        <th class="py-2 font-medium">No. Invoice</th>
+                        <th class="py-2 font-medium text-right">Total Tagihan</th>
+                        <th class="py-2 font-medium text-right">Sudah Dibayar</th>
+                        <th class="py-2 font-medium text-right">Sisa</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php
+                        $mergeInvoiced = 0;
+                        $mergePaid = 0;
+                        $mergeRemain = 0;
+                    @endphp
+                    @foreach($mergeReport as $mr)
+                        @php
+                            $mergeInvoiced += (float) $mr['grand_total'];
+                            $mergePaid += (float) $mr['total_paid'];
+                            $mergeRemain += (float) $mr['remaining'];
+                        @endphp
+                        <tr class="border-b border-[var(--color-border)] last:border-0">
+                            <td class="py-2 font-medium text-[var(--text-primary)]">{{ $mr['inv_number'] }}</td>
+                            <td class="py-2 text-right text-[var(--text-primary)]">Rp {{ number_format((float) $mr['grand_total'], 0, ',', '.') }}</td>
+                            <td class="py-2 text-right text-[var(--emerald-600)]">Rp {{ number_format((float) $mr['total_paid'], 0, ',', '.') }}</td>
+                            <td class="py-2 text-right {{ $mr['remaining'] > 0 ? 'text-amber-600' : 'text-[var(--emerald-600)]' }}">Rp {{ number_format((float) $mr['remaining'], 0, ',', '.') }}</td>
+                        </tr>
+                    @endforeach
+                    <tr class="border-t-2 border-[var(--text-primary)]">
+                        <td class="py-2 font-bold text-[var(--text-primary)]">Total Gabungan</td>
+                        <td class="py-2 text-right font-bold text-[var(--text-primary)]">Rp {{ number_format($mergeInvoiced, 0, ',', '.') }}</td>
+                        <td class="py-2 text-right font-bold text-[var(--emerald-600)]">Rp {{ number_format($mergePaid, 0, ',', '.') }}</td>
+                        <td class="py-2 text-right font-bold {{ $mergeRemain > 0 ? 'text-amber-600' : 'text-[var(--emerald-600)]' }}">Rp {{ number_format($mergeRemain, 0, ',', '.') }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        @endif
+
+        @if($invoice->status !== 'paid')
                     <p class="text-sm text-[var(--red-600)]">Jatuh Tempo: {{ $invoice->date_due?->format('d F Y') ?? '-' }}</p>
                 @endif
             </div>
@@ -143,3 +229,9 @@
     </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+    document.title = @json($invoice ? trim($invoice->inv_number.' - '.$invoice->client_name) : 'Invoice');
+</script>
+@endpush

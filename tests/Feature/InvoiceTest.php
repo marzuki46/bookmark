@@ -143,4 +143,59 @@ final class InvoiceTest extends TestCase
         $this->assertDatabaseMissing('invoice_items', ['invoice_id' => $invoice->id]);
         $this->assertDatabaseMissing('payments', ['invoice_id' => $invoice->id]);
     }
+
+    public function test_merge_selection_persists_to_session(): void
+    {
+        $user = $this->user();
+        $company = $this->company($user);
+        $other = $this->invoice($user, $company, ['inv_number' => 'INV-P260808-02', 'client_name' => 'Klien Cicil']);
+
+        Livewire::actingAs($user)
+            ->test(InvoiceForm::class)
+            ->set('mergeSearch', 'Klien Cicil')
+            ->set('mergeSelected', [$other->id])
+            ->assertSessionHas("invoice_merge_{$user->id}", [$other->id]);
+    }
+
+    public function test_print_shows_merged_payment_report(): void
+    {
+        $user = $this->user();
+        $company = $this->company($user);
+        $invoice = $this->invoice($user, $company);
+        $invoice->items()->create(['description' => 'Jasa', 'qty' => 1, 'price' => 1000, 'total' => 1000]);
+
+        $merged = $this->invoice($user, $company, [
+            'inv_number' => 'INV-P260808-03',
+            'client_name' => 'Klien Cicil',
+            'status' => 'partial',
+            'grand_total' => 1000,
+        ]);
+        $merged->payments()->create(['amount' => 400, 'payment_date' => now()->subDays(2)]);
+        $merged->payments()->create(['amount' => 300, 'payment_date' => now()->subDay()]);
+
+        session(["invoice_merge_{$user->id}" => [$merged->id]]);
+
+        Livewire::actingAs($user)
+            ->test(InvoicePrint::class, ['id' => $invoice->id])
+            ->assertSee('Rincian Pembayaran Gabungan')
+            ->assertSee('INV-P260808-03')
+            ->assertSee('Total Pembayaran')
+            ->assertSee('Total Gabungan');
+    }
+
+    public function test_print_merge_report_can_be_hidden(): void
+    {
+        $user = $this->user();
+        $company = $this->company($user);
+        $invoice = $this->invoice($user, $company);
+        $invoice->items()->create(['description' => 'Jasa', 'qty' => 1, 'price' => 1000, 'total' => 1000]);
+
+        $merged = $this->invoice($user, $company, ['inv_number' => 'INV-P260808-04', 'client_name' => 'Klien Cicil']);
+        session(["invoice_merge_{$user->id}" => [$merged->id]]);
+
+        Livewire::actingAs($user)
+            ->test(InvoicePrint::class, ['id' => $invoice->id])
+            ->set('showMergeReport', false)
+            ->assertDontSee('Rincian Pembayaran Gabungan');
+    }
 }

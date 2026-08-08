@@ -17,6 +17,10 @@ final class InvoicePrint extends Component
 
     public bool $showPaymentSummary = true;
 
+    public bool $showMergeReport = true;
+
+    public array $mergeReport = [];
+
     public function mount(int $id): void
     {
         $this->invoice = Invoice::with(['company', 'items', 'payments'])
@@ -25,6 +29,25 @@ final class InvoicePrint extends Component
 
         $this->items = $this->invoice->items;
         $this->payments = $this->invoice->payments->sortBy('payment_date');
+
+        $mergeIds = array_map('intval', session("invoice_merge_".auth()->id(), []));
+
+        if (! empty($mergeIds)) {
+            $this->mergeReport = Invoice::with('payments')
+                ->where('user_id', auth()->id())
+                ->whereIn('id', $mergeIds)
+                ->get()
+                ->map(fn ($inv) => [
+                    'inv_number' => $inv->inv_number,
+                    'client_name' => $inv->client_name,
+                    'grand_total' => $inv->grand_total,
+                    'total_paid' => $inv->total_paid,
+                    'remaining' => $inv->remaining,
+                    'payments' => $inv->payments->sortBy('payment_date')->values(),
+                ])
+                ->values()
+                ->all();
+        }
     }
 
     public function render()
