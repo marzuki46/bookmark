@@ -8,6 +8,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -51,5 +52,36 @@ class User extends Authenticatable
     public function settings(): HasMany
     {
         return $this->hasMany(Setting::class);
+    }
+
+    public function familyMemberships(): HasMany
+    {
+        return $this->hasMany(FamilyMember::class);
+    }
+
+    public function families(): BelongsToMany
+    {
+        return $this->belongsToMany(Family::class, 'family_members')
+            ->withPivot('role', 'is_family_only')
+            ->withTimestamps();
+    }
+
+    public function family(): ?Family
+    {
+        return $this->families()->orderBy('id')->first();
+    }
+
+    public function isFamilyOnly(): bool
+    {
+        return (bool) $this->familyMemberships()
+            ->where('is_family_only', true)
+            ->exists();
+    }
+
+    public function isFamilyOwner(): bool
+    {
+        return (bool) $this->familyMemberships()
+            ->where('role', 'owner')
+            ->exists();
     }
 }

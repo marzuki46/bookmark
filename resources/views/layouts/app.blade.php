@@ -94,6 +94,19 @@
                                         ['route' => 'companies', 'label' => 'Perusahaan', 'icon' => 'building', 'active' => request()->routeIs('companies')],
                                     ]
                                 ],
+                                'keluarga' => [
+                                    'label' => 'Keluarga',
+                                    'items' => [
+                                        ['route' => 'keluarga', 'label' => 'Dashboard', 'icon' => 'dashboard', 'active' => request()->routeIs('keluarga')],
+                                        ['route' => 'keluarga.transaksi', 'label' => 'Transaksi', 'icon' => 'receipt', 'active' => request()->routeIs('keluarga.transaksi')],
+                                        ['route' => 'keluarga.anggaran', 'label' => 'Anggaran', 'icon' => 'table', 'active' => request()->routeIs('keluarga.anggaran')],
+                                        ['route' => 'keluarga.tabungan', 'label' => 'Tabungan', 'icon' => 'check', 'active' => request()->routeIs('keluarga.tabungan')],
+                                        ['route' => 'keluarga.hutang', 'label' => 'Hutang', 'icon' => 'shield', 'active' => request()->routeIs('keluarga.hutang')],
+                                        ['route' => 'keluarga.laporan', 'label' => 'Laporan', 'icon' => 'bar-chart', 'active' => request()->routeIs('keluarga.laporan')],
+                                        ['route' => 'keluarga.pengaturan', 'label' => 'Pengaturan', 'icon' => 'cog', 'active' => request()->routeIs('keluarga.pengaturan')],
+                                        ['route' => 'keluarga.app', 'label' => 'Mode App (HP)', 'icon' => 'globe', 'active' => request()->routeIs('keluarga.app')],
+                                    ]
+                                ],
                                 'system' => [
                                     'label' => 'System',
                                     'items' => [

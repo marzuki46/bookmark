@@ -75,6 +75,10 @@ final class LoginController extends Controller
         $request->session()->regenerate();
         $request->session()->migrate(true);
 
+        if (auth()->user()->isFamilyOnly()) {
+            return redirect()->route('keluarga.app');
+        }
+
         return redirect()->intended(route('dashboard'));
     }
 

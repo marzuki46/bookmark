@@ -3,6 +3,14 @@
 use App\Http\Controllers\AiCenterController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\FamilyAppController;
+use App\Http\Controllers\FamilyBudgetController;
+use App\Http\Controllers\FamilyDashboardController;
+use App\Http\Controllers\FamilyDebtsController;
+use App\Http\Controllers\FamilyGoalsController;
+use App\Http\Controllers\FamilyReportController;
+use App\Http\Controllers\FamilySettingsController;
+use App\Http\Controllers\FamilyTransactionsController;
 use App\Http\Controllers\FinancialReportController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PasswordChangeController;
@@ -12,7 +20,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware(['auth', 'family.scope'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
     Route::get('/files/download/{id}', function ($id) {
         $item = Item::where('user_id', auth()->id())->where('type', 'file')->findOrFail($id);
@@ -46,8 +54,20 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/invoices/{id}/print', fn ($id) => view('pages.invoice-print', ['id' => $id]))->name('invoices.print');
     Route::view('/bills', 'pages.bills')->name('bills');
     Route::get('/financial', FinancialReportController::class)->name('financial');
-    Route::view('/companies', 'pages.companies')->name('companies');
-    Route::view('/extension', 'pages.extension')->name('extension');
+    Route::get('/keluarga', FamilyDashboardController::class)->name('keluarga');
+    Route::get('/keluarga/transaksi', FamilyTransactionsController::class)->name('keluarga.transaksi');
+    Route::get('/keluarga/anggaran', FamilyBudgetController::class)->name('keluarga.anggaran');
+    Route::get('/keluarga/tabungan', FamilyGoalsController::class)->name('keluarga.tabungan');
+    Route::get('/keluarga/hutang', FamilyDebtsController::class)->name('keluarga.hutang');
+    Route::get('/keluarga/laporan', FamilyReportController::class)->name('keluarga.laporan');
+    Route::get('/keluarga/pengaturan', FamilySettingsController::class)->name('keluarga.pengaturan');
+    Route::get('/keluarga-app', [FamilyAppController::class, '__invoke'])->name('keluarga.app');
+    Route::get('/keluarga-app/tambah', [FamilyAppController::class, 'add'])->name('keluarga.app.add');
+    Route::get('/keluarga-app/alokasi', [FamilyAppController::class, 'allocation'])->name('keluarga.app.allocation');
+    Route::get('/keluarga-app/tabungan', [FamilyAppController::class, 'goals'])->name('keluarga.app.goals');
+    Route::get('/keluarga-app/hutang', [FamilyAppController::class, 'debts'])->name('keluarga.app.debts');
+    Route::get('/keluarga-app/anggaran', [FamilyAppController::class, 'budget'])->name('keluarga.app.budget');
+    Route::view('/companies', 'pages.companies')->name('companies');    Route::view('/extension', 'pages.extension')->name('extension');
     Route::get('/extension/download', function () {
         $zipFile = storage_path('app/clips-extension.zip');
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureFamilyScope;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'throttle' => ThrottleRequests::class,
+            'family.scope' => EnsureFamilyScope::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
