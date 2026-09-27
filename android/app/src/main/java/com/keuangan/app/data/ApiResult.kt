@@ -1,6 +1,6 @@
 package com.keuangan.app.data
 
-import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import retrofit2.HttpException
@@ -20,32 +20,27 @@ class ApiException(message: String, val code: Int? = null) : Exception(message)
  * for validation failures, so prefer the first field error when present.
  */
 fun Throwable.toApiError(): ApiResult.Err = when (this) {
-    is ApiException -> ApiException(message, code as Int?).let { ApiResult.Err(it.message, it.code) }
+    is ApiException -> ApiResult.Err(message ?: fallbackMessage, code)
+
     is HttpException -> {
         val body = runCatching { response()?.errorBody()?.string() }.getOrNull()
         val parsed = body?.let { parseErrorBody(it) }
-        when (parsed) {
-            null -> ApiResult.Err("Server error (${code()})", code())
-            else -> parsed
-        }
+        parsed ?: ApiResult.Err("Server error (${code()})", code())
     }
+
     is IOException -> ApiResult.Err("Tidak bisa terhubung ke server. Periksa koneksi.")
-    else -> ApiResult.Err(message ?: "Terjadi kesalahan")
+
+    else -> ApiResult.Err(message ?: fallbackMessage)
 }
+
+private const val fallbackMessage = "Terjadi kesalahan"
 
 private fun parseErrorBody(body: String): ApiResult.Err? = runCatching {
     val root = ApiClient.json.parseToJsonElement(body).jsonObject
-    val fieldError = root["errors"]?.let { errors ->
-        errors.jsonObject.values.firstOrNull()?.let { first ->
-            (first as? kotlinx.serialization.json.JsonArray)?.firstOrNull()
-                ?.jsonPrimitive?.content
-        }
-    }
-    val message = fieldError
-        ?: root["message"]?.jsonPrimitive?.content
-        ?: "Terjadi kesalahan"
-    val code = root["message"]?.jsonPrimitive?.content?.takeIf { it.toIntOrNull() != null }?.toInt()
-    ApiResult.Err(message, code)
+    val fieldError = root["errors"]?.jsonObject?.values
+        ?.firstNotNullOfOrNull { (it as? JsonArray)?.firstOrNull()?.jsonPrimitive?.content }
+    val message = fieldError ?: root["message"]?.jsonPrimitive?.content
+    message?.let { ApiResult.Err(it) }
 }.getOrNull()
 
 /** Throws [ApiException] on failure so repository bodies stay linear. */
@@ -55,5 +50,3 @@ suspend fun <T> apiCall(block: suspend () -> T): T = try {
     val err = e.toApiError()
     throw ApiException(err.message, err.code)
 }
-
-fun JsonObject.stringOrNull(key: String): String? = this[key]?.jsonPrimitive?.content
