@@ -51,9 +51,11 @@ final class DashboardController extends Controller
                 'amount' => (float) $tx->amount,
                 'description' => $tx->description,
                 'date' => $tx->date->format('Y-m-d'),
+                'category_id' => $tx->category_id,
                 'category' => $tx->category ? [
                     'id' => $tx->category->id,
                     'name' => $tx->category->name,
+                    'type' => $tx->category->type,
                     'icon' => $tx->category->icon,
                     'color' => $tx->category->color,
                 ] : null,

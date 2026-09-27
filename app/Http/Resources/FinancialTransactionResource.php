@@ -24,6 +24,7 @@ final class FinancialTransactionResource extends JsonResource
             'category' => $this->whenLoaded('category', fn () => $this->category ? [
                 'id' => $this->category->id,
                 'name' => $this->category->name,
+                'type' => $this->category->type,
                 'icon' => $this->category->icon,
                 'color' => $this->category->color,
             ] : null),

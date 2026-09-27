@@ -28,7 +28,9 @@ data class UserDto(
 data class CategoryDto(
     val id: Int,
     val name: String,
-    val type: String,
+    // Defaulted: a category nested inside a transaction may omit it, and a
+    // missing required field would fail the whole response decode.
+    val type: String = "expense",
     val icon: String? = null,
     val color: String? = null,
 )
