@@ -137,12 +137,17 @@ final class InvoiceTest extends TestCase
     {
         $user = $this->user();
         $company = $this->company($user);
-        $this->invoice($user, $company, ['inv_number' => 'INV-P260808-01']);
+
+        // The generator keys the sequence off the current date, so build the
+        // expected prefix the same way instead of hardcoding a past date.
+        $prefix = 'INV-'.strtoupper(substr($company->name, 0, 1)).now()->format('ymd');
+        $this->invoice($user, $company, ['inv_number' => $prefix.'-01']);
 
         Livewire::actingAs($user)
             ->test(InvoiceForm::class)
+            ->set('companyId', $company->id)
             ->call('generateNumber')
-            ->assertSet('invNumber', 'INV-P260808-02');
+            ->assertSet('invNumber', $prefix.'-02');
     }
 
     public function test_delete_invoice_cascades_items_and_payments(): void

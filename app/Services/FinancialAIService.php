@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
-
 final class FinancialAIService
 {
     private AIService $ai;
@@ -58,7 +56,7 @@ Aturan:
 - Jika tidak jelas, tebak dari konteks
 - Balas HANYA dengan JSON, tanpa markdown, tanpa teks lain
 
-Teks: "' . $text . '"';
+Teks: "'.$text.'"';
 
         try {
             $result = $this->ai->askRaw($prompt, $text, 200);
@@ -84,6 +82,7 @@ Teks: "' . $text . '"';
             ];
         } catch (\Exception $e) {
             logger()->error('FinancialAI parseTransaction failed', ['error' => $e->getMessage()]);
+
             return $this->ruleBasedParse($text);
         }
     }
@@ -178,7 +177,7 @@ Teks: "' . $text . '"';
         $txList = '';
         foreach ($transactions as $i => $tx) {
             $catName = is_array($tx['category'] ?? null) ? ($tx['category']['name'] ?? 'Lainnya') : ($tx['category'] ?? 'Lainnya');
-            $txList .= ($i + 1) . ". [{$tx['date']}] {$tx['description']} - Rp " . number_format((float) $tx['amount'], 0, ',', '.') . " ({$tx['type']}, {$catName})\n";
+            $txList .= ($i + 1).". [{$tx['date']}] {$tx['description']} - Rp ".number_format((float) $tx['amount'], 0, ',', '.')." ({$tx['type']}, {$catName})\n";
             if ($tx['type'] === 'income') {
                 $totalIncome += (float) $tx['amount'];
             } else {
@@ -186,22 +185,139 @@ Teks: "' . $text . '"';
             }
         }
 
-        $summary = "Total Pemasukan: Rp " . number_format($totalIncome, 0, ',', '.') . "\n";
-        $summary .= "Total Pengeluaran: Rp " . number_format($totalExpense, 0, ',', '.') . "\n";
-        $summary .= "Saldo: Rp " . number_format($totalIncome - $totalExpense, 0, ',', '.') . "\n";
+        $summary = 'Total Pemasukan: Rp '.number_format($totalIncome, 0, ',', '.')."\n";
+        $summary .= 'Total Pengeluaran: Rp '.number_format($totalExpense, 0, ',', '.')."\n";
+        $summary .= 'Saldo: Rp '.number_format($totalIncome - $totalExpense, 0, ',', '.')."\n";
 
-        $prompt = "Kamu adalah asisten keuangan pribadi. Berikut adalah data transaksi pengguna:\n\n";
-        $prompt .= $summary . "\n";
-        $prompt .= "Daftar Transaksi:\n" . ($txList ?: "(Belum ada transaksi)\n");
-        $prompt .= "\nPertanyaan pengguna: \"{$question}\"\n\n";
-        $prompt .= "Jawab dengan ramah, informatif, dan dalam Bahasa Indonesia. Berikan analisis yang membantu.";
+        // Context belongs in the system message; the user's question goes in the
+        // user message exactly once.
+        $systemPrompt = 'Kamu adalah asisten keuangan pribadi yang helpful, informatif, dan ramah. '
+            ."Selalu menjawab dalam Bahasa Indonesia.\n\n";
+        $systemPrompt .= "Data keuangan pengguna:\n".$summary."\n";
+        $systemPrompt .= "Daftar Transaksi:\n".($txList ?: "(Belum ada transaksi)\n");
+        $systemPrompt .= "\nJawab dengan ramah, analitis, dan konkret. Boleh memakai emoji dan format markdown.";
 
         try {
-            $result = $this->ai->askRaw($prompt, $question, 500);
+            $result = $this->ai->askRaw($systemPrompt, $question, 500);
+
             return $result ?? $this->basicSummary($question, $transactions);
         } catch (\Exception $e) {
             return $this->basicSummary($question, $transactions);
         }
+    }
+
+    /**
+     * Proactive, no-question-needed advice for the dashboard.
+     *
+     * $metrics comes from FinanceReportService::insights() so the advice is
+     * grounded in the same aggregates the cards display. Falls back to a
+     * deterministic rule-based list when the AI provider is not configured,
+     * so the app always has something to show.
+     *
+     * @param  array<string, mixed>  $metrics
+     */
+    public function advice(array $metrics, string $periodLabel = 'periode ini'): string
+    {
+        $income = (float) ($metrics['total_income'] ?? 0);
+        $expense = (float) ($metrics['total_expense'] ?? 0);
+        $savingsRate = (float) ($metrics['savings_rate'] ?? 0);
+        $balance = $income - $expense;
+        $topExpense = $metrics['top_expense_category']['name'] ?? null;
+        $topExpenseShare = (float) ($metrics['top_expense_category']['share'] ?? 0);
+        $expenseChange = $metrics['expense_change_pct'] ?? null;
+        $avgDaily = (float) ($metrics['avg_daily_expense'] ?? 0);
+
+        if (! $this->ai->isConfigured()) {
+            return $this->ruleBasedAdvice(
+                $income,
+                $expense,
+                $savingsRate,
+                $balance,
+                $topExpense,
+                $expenseChange,
+                $periodLabel,
+            );
+        }
+
+        $context = "Periode: {$periodLabel}\n";
+        $context .= 'Pemasukan: Rp '.number_format($income, 0, ',', '.')."\n";
+        $context .= 'Pengeluaran: Rp '.number_format($expense, 0, ',', '.')."\n";
+        $context .= 'Saldo: Rp '.number_format($balance, 0, ',', '.')."\n";
+        $context .= 'Tingkat tabungan: '.number_format($savingsRate, 1)."% (target sehat 20%)\n";
+        $context .= 'Rata-rata belanja harian: Rp '.number_format($avgDaily, 0, ',', '.')."\n";
+        if ($topExpense) {
+            $context .= "Kategori pengeluaran terbesar: {$topExpense} (".number_format($topExpenseShare, 1)."% dari total)\n";
+        }
+        if ($expenseChange !== null) {
+            $arah = $expenseChange > 0 ? 'naik' : 'turun';
+            $context .= 'Perubahan pengeluaran vs periode sebelumnya: '.number_format(abs((float) $expenseChange), 1)."% {$arah}\n";
+        }
+
+        $systemPrompt = 'Kamu adalah penasihat keuangan pribadi yang tajam, praktis, dan tidak menggurung. '
+            .'Selalu menjawab dalam Bahasa Indonesia.\n'
+            .'Berikan 3 sampai 4 saran konkret dan spesifik berdasarkan angka di atas. '
+            .'Fokus pada tindakan yang bisa dilakukan minggu ini, bukan nasihat umum. '
+            .'Format: judul singkat + satu kalimat penjelasan, dipisah baris kosong. '
+            .'Jangan mengulang angka yang sudah tertulis di konteks.';
+
+        try {
+            return $this->ai->askRaw(
+                $systemPrompt,
+                "Berikut data keuangan {$periodLabel}:\n{$context}\n\nBerikan saran keuangan yang bisa langsung saya jalankan.",
+                600
+            ) ?? $this->ruleBasedAdvice($income, $expense, $savingsRate, $balance, $topExpense, $expenseChange, $periodLabel);
+        } catch (\Exception) {
+            return $this->ruleBasedAdvice($income, $expense, $savingsRate, $balance, $topExpense, $expenseChange, $periodLabel);
+        }
+    }
+
+    /**
+     * Deterministic fallback so the advice card is never empty.
+     */
+    private function ruleBasedAdvice(
+        float $income,
+        float $expense,
+        float $savingsRate,
+        float $balance,
+        ?string $topExpense,
+        float|int|null $expenseChange,
+        string $periodLabel,
+    ): string {
+        $lines = [];
+
+        if ($income <= 0) {
+            $lines[] = "Belum ada pemasukan tercatat di {$periodLabel}. Catat pemasukan terlebih dahulu agar analisis bisa akurat.";
+        } else {
+            $lines[] = $savingsRate >= 20
+                ? "Tingkat tabungan {$this->pct($savingsRate)} di atas target 20%. Pertahankan, dan alokasikan sisa ke dana darurat atau investasi."
+                : "Tingkat tabungan baru {$this->pct($savingsRate)}. Targetkan minimal 20% dari pemasukan ({$this->rupiah($income * 0.2)}) per bulan.";
+        }
+
+        if ($topExpense) {
+            $lines[] = "Kategori \"{$topExpense}\" adalah pengeluaran terbesar. Tinjau transaksi di kategori ini untuk memangkas pemborosan.";
+        }
+
+        if ($expenseChange !== null && (float) $expenseChange > 20) {
+            $lines[] = 'Pengeluaran naik '.number_format((float) $expenseChange, 1).'% dibanding periode sebelumnya. Periksa lonjakan ini sebelum akhir bulan.';
+        } elseif ($expenseChange !== null && (float) $expenseChange < -15) {
+            $lines[] = 'Pengeluaran turun '.number_format(abs((float) $expenseChange), 1).'% dari periode sebelumnya. Pertahankan habits penghematan ini.';
+        }
+
+        if ($balance < 0) {
+            $lines[] = 'Saldo minus '.abs($this->rupiah($balance)).'. Kurangi pengeluaran tidak wajib atau cari pemasukan tambahan.';
+        }
+
+        return implode("\n\n", $lines);
+    }
+
+    private function pct(float $value): string
+    {
+        return number_format($value, 1).'%';
+    }
+
+    private function rupiah(float $value): string
+    {
+        return 'Rp '.number_format($value, 0, ',', '.');
     }
 
     private function basicSummary(string $question, array $transactions): string
@@ -219,12 +335,12 @@ Teks: "' . $text . '"';
         $balance = $totalIncome - $totalExpense;
         $count = count($transactions);
 
-        return "📊 *Ringkasan Keuangan*\n\n" .
-            "Total {$count} transaksi tercatat.\n" .
-            "💵 Pemasukan: Rp " . number_format($totalIncome, 0, ',', '.') . "\n" .
-            "💸 Pengeluaran: Rp " . number_format($totalExpense, 0, ',', '.') . "\n" .
-            "💰 Saldo: Rp " . number_format($balance, 0, ',', '.') . "\n\n" .
-            "Untuk analisis lebih detail, silakan atur AI API Key di Settings.";
+        return "📊 *Ringkasan Keuangan*\n\n".
+            "Total {$count} transaksi tercatat.\n".
+            '💵 Pemasukan: Rp '.number_format($totalIncome, 0, ',', '.')."\n".
+            '💸 Pengeluaran: Rp '.number_format($totalExpense, 0, ',', '.')."\n".
+            '💰 Saldo: Rp '.number_format($balance, 0, ',', '.')."\n\n".
+            'Untuk analisis lebih detail, silakan atur AI API Key di Settings.';
     }
 
     private function guessCategory(string $description, string $type): string
@@ -232,21 +348,47 @@ Teks: "' . $text . '"';
         $lower = strtolower($description);
 
         if ($type === 'income') {
-            if (str_contains($lower, 'gaji')) return 'Gaji';
-            if (str_contains($lower, 'freelance') || str_contains($lower, 'project') || str_contains($lower, 'proyek')) return 'Freelance';
-            if (str_contains($lower, 'bisnis') || str_contains($lower, 'jual') || str_contains($lower, 'dagang')) return 'Bisnis';
-            if (str_contains($lower, 'invest') || str_contains($lower, 'saham') || str_contains($lower, 'crypto')) return 'Investasi';
+            if (str_contains($lower, 'gaji')) {
+                return 'Gaji';
+            }
+            if (str_contains($lower, 'freelance') || str_contains($lower, 'project') || str_contains($lower, 'proyek')) {
+                return 'Freelance';
+            }
+            if (str_contains($lower, 'bisnis') || str_contains($lower, 'jual') || str_contains($lower, 'dagang')) {
+                return 'Bisnis';
+            }
+            if (str_contains($lower, 'invest') || str_contains($lower, 'saham') || str_contains($lower, 'crypto')) {
+                return 'Investasi';
+            }
+
             return 'Lainnya';
         }
 
-        if (str_contains($lower, 'makan') || str_contains($lower, 'jajan') || str_contains($lower, 'kopi') || str_contains($lower, 'minum')) return 'Makanan';
-        if (str_contains($lower, 'bensin') || str_contains($lower, 'ongkir') || str_contains($lower, 'transport') || str_contains($lower, 'grab') || str_contains($lower, 'gojek')) return 'Transportasi';
-        if (str_contains($lower, 'beli') || str_contains($lower, 'shopping') || str_contains($lower, 'belanja')) return 'Belanja';
-        if (str_contains($lower, 'listrik') || str_contains($lower, 'air') || str_contains($lower, 'pdam') || str_contains($lower, 'telpon') || str_contains($lower, 'internet')) return 'Tagihan';
-        if (str_contains($lower, 'obat') || str_contains($lower, 'dokter') || str_contains($lower, 'rumah sakit') || str_contains($lower, 'kesehatan')) return 'Kesehatan';
-        if (str_contains($lower, 'domain') || str_contains($lower, 'hosting') || str_contains($lower, 'server') || str_contains($lower, 'vps') || str_contains($lower, 'saas') || str_contains($lower, 'tool')) return 'Technology';
-        if (str_contains($lower, 'kursus') || str_contains($lower, 'les') || str_contains($lower, 'buku') || str_contains($lower, 'belajar') || str_contains($lower, 'course')) return 'Pendidikan';
-        if (str_contains($lower, 'nonton') || str_contains($lower, 'film') || str_contains($lower, 'game') || str_contains($lower, 'liburan')) return 'Hiburan';
+        if (str_contains($lower, 'makan') || str_contains($lower, 'jajan') || str_contains($lower, 'kopi') || str_contains($lower, 'minum')) {
+            return 'Makanan';
+        }
+        if (str_contains($lower, 'bensin') || str_contains($lower, 'ongkir') || str_contains($lower, 'transport') || str_contains($lower, 'grab') || str_contains($lower, 'gojek')) {
+            return 'Transportasi';
+        }
+        if (str_contains($lower, 'beli') || str_contains($lower, 'shopping') || str_contains($lower, 'belanja')) {
+            return 'Belanja';
+        }
+        if (str_contains($lower, 'listrik') || str_contains($lower, 'air') || str_contains($lower, 'pdam') || str_contains($lower, 'telpon') || str_contains($lower, 'internet')) {
+            return 'Tagihan';
+        }
+        if (str_contains($lower, 'obat') || str_contains($lower, 'dokter') || str_contains($lower, 'rumah sakit') || str_contains($lower, 'kesehatan')) {
+            return 'Kesehatan';
+        }
+        if (str_contains($lower, 'domain') || str_contains($lower, 'hosting') || str_contains($lower, 'server') || str_contains($lower, 'vps') || str_contains($lower, 'saas') || str_contains($lower, 'tool')) {
+            return 'Technology';
+        }
+        if (str_contains($lower, 'kursus') || str_contains($lower, 'les') || str_contains($lower, 'buku') || str_contains($lower, 'belajar') || str_contains($lower, 'course')) {
+            return 'Pendidikan';
+        }
+        if (str_contains($lower, 'nonton') || str_contains($lower, 'film') || str_contains($lower, 'game') || str_contains($lower, 'liburan')) {
+            return 'Hiburan';
+        }
+
         return 'Lainnya';
     }
 }

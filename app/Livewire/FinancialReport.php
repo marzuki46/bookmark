@@ -6,9 +6,8 @@ namespace App\Livewire;
 
 use App\Models\FinancialCategory;
 use App\Models\FinancialTransaction;
+use App\Services\FinanceReportService;
 use App\Services\FinancialAIService;
-use App\Services\WhatsAppService;
-use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -18,47 +17,61 @@ final class FinancialReport extends Component
 
     // Filters
     public string $search = '';
+
     public string $filterType = 'all';
+
     public ?int $filterCategory = null;
+
     public string $dateFrom = '';
+
     public string $dateTo = '';
+
     public string $period = 'this_month';
 
     // Transaction form
     public bool $showTransactionModal = false;
+
     public ?int $editingTransactionId = null;
+
     public string $formType = 'expense';
+
     public ?int $formCategoryId = null;
+
     public string $formAmount = '';
+
     public string $formDescription = '';
+
     public string $formDate = '';
+
     public string $formPaymentMethod = '';
+
     public string $formNotes = '';
 
     // Category form
     public bool $showCategoryModal = false;
-    public ?int $editingCategoryId = null;
-    public string $catFormName = '';
-    public string $catFormType = 'expense';
-    public string $catFormIcon = '💳';
-    public string $catFormColor = '#6366f1';
 
-    // WA Gateway settings (Cloud API)
-    public bool $showWaModal = false;
-    public string $waAccessToken = '';
-    public string $waPhoneNumberId = '';
-    public bool $waConnected = false;
-    public string $waStatus = '';
-    public ?string $waPhoneNumber = null;
+    public ?int $editingCategoryId = null;
+
+    public string $catFormName = '';
+
+    public string $catFormType = 'expense';
+
+    public string $catFormIcon = '💳';
+
+    public string $catFormColor = '#6366f1';
 
     // AI Query
     public bool $showAiModal = false;
+
     public string $aiQuery = '';
+
     public string $aiAnswer = '';
+
     public bool $aiLoading = false;
 
     // Status
     public string $statusMessage = '';
+
     public string $statusType = 'success';
 
     protected string $paginationTheme = 'tailwind';
@@ -81,7 +94,6 @@ final class FinancialReport extends Component
         $this->dateFrom = now()->startOfMonth()->format('Y-m-d');
         $this->dateTo = now()->format('Y-m-d');
         $this->formDate = now()->format('Y-m-d');
-        $this->loadWaSettings();
     }
 
     // ─── Computed Properties ───
@@ -96,47 +108,16 @@ final class FinancialReport extends Component
 
     public function getStatsProperty(): array
     {
-        $query = FinancialTransaction::where('user_id', auth()->id());
-        $query = $this->applyPeriodFilter($query);
-
-        $totalIncome = (clone $query)->where('type', 'income')->sum('amount');
-        $totalExpense = (clone $query)->where('type', 'expense')->sum('amount');
-        $count = (clone $query)->count();
-
-        return [
-            'total_income' => (float) $totalIncome,
-            'total_expense' => (float) $totalExpense,
-            'balance' => (float) $totalIncome - (float) $totalExpense,
-            'count' => $count,
-        ];
+        return app(FinanceReportService::class)->stats(
+            (int) auth()->id(),
+            $this->dateFrom ?: null,
+            $this->dateTo ?: null,
+        );
     }
 
     public function getMonthlyStatsProperty(): array
     {
-        $userId = auth()->id();
-        $months = [];
-
-        for ($i = 5; $i >= 0; $i--) {
-            $date = now()->subMonths($i);
-            $income = FinancialTransaction::where('user_id', $userId)
-                ->where('type', 'income')
-                ->whereMonth('date', $date->month)
-                ->whereYear('date', $date->year)
-                ->sum('amount');
-            $expense = FinancialTransaction::where('user_id', $userId)
-                ->where('type', 'expense')
-                ->whereMonth('date', $date->month)
-                ->whereYear('date', $date->year)
-                ->sum('amount');
-
-            $months[] = [
-                'month' => $date->format('M'),
-                'income' => (float) $income,
-                'expense' => (float) $expense,
-            ];
-        }
-
-        return $months;
+        return app(FinanceReportService::class)->monthlySeries((int) auth()->id(), 6);
     }
 
     public function getCategoryStatsProperty(): array
@@ -233,6 +214,7 @@ final class FinancialReport extends Component
         if ($this->dateFrom && $this->dateTo) {
             return $query->whereBetween('date', [$this->dateFrom, $this->dateTo]);
         }
+
         return $query->thisMonth();
     }
 
@@ -379,6 +361,7 @@ final class FinancialReport extends Component
         if ($cat->is_system) {
             $this->statusMessage = 'Tidak bisa menghapus kategori sistem.';
             $this->statusType = 'error';
+
             return;
         }
         // Set transactions to uncategorized
@@ -386,58 +369,6 @@ final class FinancialReport extends Component
         $cat->delete();
         $this->statusMessage = 'Kategori berhasil dihapus.';
         $this->statusType = 'success';
-    }
-
-    // ─── WA Gateway Settings (Cloud API) ───
-
-    public function loadWaSettings(): void
-    {
-        $settings = $this->getFinanceSettings();
-        $wa = $settings['wa_gateway'] ?? [];
-        $this->waAccessToken = $wa['access_token'] ?? '';
-        $this->waPhoneNumberId = $wa['phone_number_id'] ?? '';
-        $this->waConnected = false;
-        $this->checkCloudApiConnection();
-    }
-
-    public function saveWaSettings(): void
-    {
-        $settings = $this->getFinanceSettings();
-        $settings['wa_gateway'] = [
-            'access_token' => $this->waAccessToken,
-            'phone_number_id' => $this->waPhoneNumberId,
-            'provider' => 'whatsapp_cloud',
-        ];
-        $this->saveFinanceSettings($settings);
-
-        $this->loadWaSettings();
-        $this->statusMessage = 'Pengaturan WhatsApp Cloud API berhasil disimpan!';
-        $this->statusType = 'success';
-
-        $this->checkCloudApiConnection();
-    }
-
-    public function checkCloudApiConnection(): void
-    {
-        if (empty($this->waAccessToken) || empty($this->waPhoneNumberId)) {
-            $this->waConnected = false;
-            $this->waStatus = 'Belum dikonfigurasi. Isi Access Token dan Phone Number ID.';
-            return;
-        }
-
-        $waService = new WhatsAppService;
-        $waService->initializeForUser(auth()->id());
-        $status = $waService->getDeviceStatus();
-        $this->waConnected = ($status['status'] ?? '') === 'connected';
-        $this->waPhoneNumber = $status['phone_number'] ?? null;
-        $this->waStatus = $this->waConnected
-            ? "Terhubung ✅ ({$status['phone_number']})"
-            : 'Gagal koneksi. Periksa Token dan Phone Number ID.';
-    }
-
-    public function getWebhookUrlProperty(): string
-    {
-        return url('/api/webhook/wa-finance');
     }
 
     // ─── AI Query ───
@@ -462,7 +393,7 @@ final class FinancialReport extends Component
             $aiService = new FinancialAIService;
             $this->aiAnswer = $aiService->answerQuery($this->aiQuery, $transactions);
         } catch (\Exception $e) {
-            $this->aiAnswer = '❌ Error: ' . $e->getMessage();
+            $this->aiAnswer = '❌ Error: '.$e->getMessage();
         }
 
         $this->aiLoading = false;
@@ -484,21 +415,7 @@ final class FinancialReport extends Component
 
     public static function formatRupiah(float $amount): string
     {
-        return 'Rp ' . number_format($amount, 0, ',', '.');
-    }
-
-    // ─── Webhook Debug ───
-
-    public function getWebhookLogsProperty()
-    {
-        return \App\Models\WebhookLog::latest()->take(20)->get();
-    }
-
-    public function clearWebhookLogs(): void
-    {
-        \App\Models\WebhookLog::truncate();
-        $this->statusMessage = 'Webhook logs cleared';
-        $this->statusType = 'success';
+        return 'Rp '.number_format($amount, 0, ',', '.');
     }
 
     // ─── Render ───
@@ -514,7 +431,6 @@ final class FinancialReport extends Component
             'transactions' => $this->recentTransactions,
             'categories' => $this->categories,
             'isFirstTime' => $isFirstTime,
-            'webhookLogs' => $this->webhookLogs,
         ]);
     }
 
@@ -541,20 +457,5 @@ final class FinancialReport extends Component
         $this->catFormIcon = '💳';
         $this->catFormColor = '#6366f1';
         $this->clearValidation();
-    }
-
-    private function getFinanceSettings(): array
-    {
-        $path = storage_path('app/user-settings-' . auth()->id() . '.json');
-        if (file_exists($path)) {
-            return json_decode(file_get_contents($path), true) ?? [];
-        }
-        return [];
-    }
-
-    private function saveFinanceSettings(array $settings): void
-    {
-        $path = storage_path('app/user-settings-' . auth()->id() . '.json');
-        file_put_contents($path, json_encode($settings, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     }
 }

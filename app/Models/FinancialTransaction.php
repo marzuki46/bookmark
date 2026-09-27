@@ -19,7 +19,6 @@ class FinancialTransaction extends Model
         'payment_method',
         'notes',
         'source',
-        'wa_sender',
         'metadata',
     ];
 
@@ -66,5 +65,21 @@ class FinancialTransaction extends Model
     public function scopeBetweenDates($query, string $start, string $end)
     {
         return $query->whereBetween('date', [$start, $end]);
+    }
+
+    /**
+     * Inclusive date range that behaves identically on MySQL and SQLite.
+     *
+     * A bare whereBetween('date', [...]) is unsafe here: the date cast can
+     * store 'YYYY-MM-DD 00:00:00', and a string comparison against the plain
+     * 'YYYY-MM-DD' end bound then excludes the final day. Extending the upper
+     * bound to end-of-day keeps the comparison correct while still using the
+     * (user_id, date) index.
+     */
+    public function scopeInRange($query, ?string $from, ?string $to)
+    {
+        return $query
+            ->when($from, fn ($q) => $q->where('date', '>=', $from))
+            ->when($to, fn ($q) => $q->where('date', '<=', $to.' 23:59:59'));
     }
 }
