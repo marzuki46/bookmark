@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -22,44 +22,49 @@ import com.keuangan.app.ui.transactions.TransactionsScreen
 import com.keuangan.app.ui.transactions.TransactionsViewModel
 
 object Routes {
-    const val LOGIN = "login"
     const val DASHBOARD = "dashboard"
     const val TRANSACTIONS = "transactions"
     const val CATEGORIES = "categories"
 }
 
 /**
- * Builds a factory bound to the app-wide repository. `viewModel()` only
- * consults the factory on first creation, so rebuilding it is harmless.
+ * One factory for every view model, bound to the app-wide repository.
+ *
+ * `viewModel()` only consults the factory on first creation, so rebuilding it
+ * on recomposition is harmless. Each call site names its own view model type,
+ * which keeps the generic call site reified and compiles cleanly.
  */
 @Composable
-private fun <T : ViewModel> appViewModel(create: (KeuanganRepositoryHolder) -> T): T {
+private fun appFactory(): ViewModelProvider.Factory {
     val app = LocalContext.current.applicationContext as KeuanganApp
-    val factory = viewModelFactory {
-        initializer { create(KeuanganRepositoryHolder(app.repository)) }
+    return viewModelFactory {
+        initializer { SessionViewModel(app.repository) }
+        initializer { LoginViewModel(app.repository) }
+        initializer { DashboardViewModel(app.repository) }
+        initializer { TransactionsViewModel(app.repository) }
+        initializer { CategoriesViewModel(app.repository) }
     }
-    return viewModel(factory = factory)
 }
-
-@JvmInline
-value class KeuanganRepositoryHolder(val repository: com.keuangan.app.data.KeuanganRepository)
 
 @Composable
 fun AppRoot() {
-    val session: SessionViewModel = appViewModel { SessionViewModel(it.repository) }
+    val session: SessionViewModel = viewModel(factory = appFactory())
     val authenticated by session.authenticated.collectAsState()
 
     when (authenticated) {
-        null -> Unit // restoring the stored token
+        // Restoring the stored token; stay blank until we know which screen.
+        null -> Unit
+
         false -> {
-            val login: LoginViewModel = appViewModel { LoginViewModel(it.repository) }
+            val login: LoginViewModel = viewModel(factory = appFactory())
             LoginScreen(viewModel = login, onLoggedIn = session::onLoggedIn)
         }
+
         true -> {
             val navController = rememberNavController()
             NavHost(navController = navController, startDestination = Routes.DASHBOARD) {
                 composable(Routes.DASHBOARD) {
-                    val vm: DashboardViewModel = appViewModel { DashboardViewModel(it.repository) }
+                    val vm: DashboardViewModel = viewModel(factory = appFactory())
                     DashboardScreen(
                         viewModel = vm,
                         onOpenTransactions = { navController.navigate(Routes.TRANSACTIONS) },
@@ -68,11 +73,11 @@ fun AppRoot() {
                     )
                 }
                 composable(Routes.TRANSACTIONS) {
-                    val vm: TransactionsViewModel = appViewModel { TransactionsViewModel(it.repository) }
+                    val vm: TransactionsViewModel = viewModel(factory = appFactory())
                     TransactionsScreen(viewModel = vm, onBack = { navController.popBackStack() })
                 }
                 composable(Routes.CATEGORIES) {
-                    val vm: CategoriesViewModel = appViewModel { CategoriesViewModel(it.repository) }
+                    val vm: CategoriesViewModel = viewModel(factory = appFactory())
                     CategoriesScreen(viewModel = vm, onBack = { navController.popBackStack() })
                 }
             }
