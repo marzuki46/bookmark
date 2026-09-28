@@ -171,6 +171,8 @@ class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewM
 
     fun dismissMessage() = _state.update { it.copy(actionMessage = null) }
 
+    fun showMessage(message: String) = _state.update { it.copy(actionMessage = message) }
+
     private fun firstError(vararg results: ApiResult<*>): String? = results
         .mapNotNull { (it as? ApiResult.Err)?.message }
         .firstOrNull()

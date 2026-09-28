@@ -229,4 +229,24 @@ final class AppOpsApiTest extends TestCase
             'payer_role' => 'wife',
         ])->assertStatus(422);
     }
+
+    public function test_sixth_member_is_rejected(): void
+    {
+        for ($i = 0; $i < 4; $i++) {
+            $member = User::factory()->create();
+            FamilyMember::create([
+                'family_id' => $this->family->id,
+                'user_id' => $member->id,
+                'role' => 'member',
+                'payer_role' => $i === 0 ? 'wife' : null,
+            ]);
+        }
+
+        Sanctum::actingAs($this->owner);
+
+        $this->postJson("/api/families/{$this->family->id}/members", [
+            'name' => 'Anggota Ke Enam',
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'Keluarga sudah penuh (maksimal 5 orang).');
+    }
 }

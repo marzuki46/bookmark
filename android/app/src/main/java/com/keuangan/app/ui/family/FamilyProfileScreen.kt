@@ -87,6 +87,12 @@ fun FamilyProfileScreen(
 
     fun openAddMember() {
         val family = state.family ?: return
+        if (family.members.size >= 5) {
+            viewModel.showMessage(
+                "Anggota keluarga sudah 5 orang (batas maksimal). Kalau ingin menambah, satu anggota perlu dihapus dulu.",
+            )
+            return
+        }
         memberName = ""
         memberRole = when {
             family.members.none { it.payerRole == "husband" } -> "husband"
@@ -201,7 +207,11 @@ fun FamilyProfileScreen(
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    if (isOwner) "Ketuk untuk tambah anggota (Suami/Istri)" else "${family.members.size} anggota",
+                                    if (isOwner) {
+                                        "Ketuk untuk tambah anggota · ${family.members.size}/5"
+                                    } else {
+                                        "${family.members.size}/5 anggota"
+                                    },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )

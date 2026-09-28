@@ -16,6 +16,9 @@ use Illuminate\Support\Str;
 
 final class FamilyController extends Controller
 {
+    /** Hard cap so the household stays small and personal. */
+    private const MAX_MEMBERS = 5;
+
     public function __construct(
         private readonly FamilyAIService $ai,
         private readonly LoginCodeService $codes,
@@ -166,6 +169,14 @@ final class FamilyController extends Controller
     public function storeMember(Request $request, Family $family): JsonResponse
     {
         $this->authorize('manage', $family);
+
+        $currentCount = $family->members()->count();
+        if ($currentCount >= self::MAX_MEMBERS) {
+            return response()->json([
+                'message' => 'Keluarga sudah penuh (maksimal '.self::MAX_MEMBERS.' orang).',
+                'errors' => ['name' => ['Jumlah anggota keluarga sudah mencapai batas maksimal 5 orang.']],
+            ], 422);
+        }
 
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
