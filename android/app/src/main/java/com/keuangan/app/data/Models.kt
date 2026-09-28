@@ -182,6 +182,7 @@ data class AskResponse(val answer: String? = null, val model: String? = null)
 
 @Serializable
 data class SubscriptionDto(
+    @Serializable(with = IntBooleanSerializer::class)
     val active: Boolean = false,
     @SerialName("plan_name") val planName: String? = null,
     @SerialName("plan_slug") val planSlug: String? = null,
@@ -199,8 +200,10 @@ data class MeDto(
     val name: String? = null,
     val email: String? = null,
     val about: String? = null,
-    @SerialName("is_admin") val isAdmin: Boolean = false,
-    @SerialName("setup_completed") val setupCompleted: Boolean = false,
+    @SerialName("is_admin") @Serializable(with = IntBooleanSerializer::class)
+    val isAdmin: Boolean = false,
+    @SerialName("setup_completed") @Serializable(with = IntBooleanSerializer::class)
+    val setupCompleted: Boolean = false,
     val subscription: SubscriptionDto? = null,
 )
 

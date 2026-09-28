@@ -42,6 +42,7 @@ import com.keuangan.app.data.FamilyHealthDto
 import com.keuangan.app.data.InsightDto
 import com.keuangan.app.data.IncomeBySourceDto
 import com.keuangan.app.data.NudgeDto
+import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.formatCompact
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -73,10 +74,31 @@ fun FamilyDashboardScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            FamilyHeader(
-                family = family,
-                refreshing = state.refreshing,
-                onRefresh = { viewModel.refresh(familyId) },
+            GradientHeader(
+                title = family?.name ?: "Keluarga",
+                subtitle = family?.members?.let { members ->
+                    listOfNotNull(
+                        members.count { it.payerRole == "husband" }.takeIf { it > 0 }?.let { "Suami ✓" },
+                        members.count { it.payerRole == "wife" }.takeIf { it > 0 }?.let { "Istri ✓" },
+                    ).joinToString("  ·  ").ifBlank { "Satu sentuhan untuk keuangan bersama" }
+                } ?: "Satu sentuhan untuk keuangan bersama",
+                trailing = {
+                    IconButton(onClick = { viewModel.refresh(familyId) }, enabled = !state.refreshing) {
+                        if (state.refreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White,
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.Refresh,
+                                contentDescription = "Muat ulang",
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                },
             )
         }
 
@@ -139,40 +161,6 @@ fun FamilyDashboardScreen(
                 items(state.incomeBySource, key = { it.incomeSourceId ?: -1 }) { row ->
                     IncomeSourceRow(row)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FamilyHeader(
-    family: FamilyDto?,
-    refreshing: Boolean,
-    onRefresh: () -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                family?.name ?: "Keluarga",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(2.dp))
-            val chips = listOfNotNull(
-                family?.members?.count { it.payerRole == "husband" }?.takeIf { it > 0 }?.let { "Suami ✓" },
-                family?.members?.count { it.payerRole == "wife" }?.takeIf { it > 0 }?.let { "Istri ✓" },
-            )
-            Text(
-                (if (chips.isEmpty()) "Satu sentuhan untuk keuangan bersama" else chips.joinToString("  ·  ")),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        IconButton(onClick = onRefresh, enabled = !refreshing) {
-            if (refreshing) {
-                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(Icons.Filled.Refresh, contentDescription = "Muat ulang")
             }
         }
     }

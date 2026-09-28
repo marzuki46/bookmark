@@ -33,8 +33,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.IncomeSourceDto
+import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
 
@@ -72,11 +71,9 @@ fun FamilyIncomeSourcesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Sumber Pemasukan", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+            GradientHeader(
+                title = "Sumber Pemasukan",
+                subtitle = "Gaji, usaha, sampingan & lainnya",
             )
         },
         floatingActionButton = {

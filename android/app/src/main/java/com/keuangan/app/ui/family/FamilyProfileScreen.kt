@@ -1,5 +1,6 @@
 package com.keuangan.app.ui.family
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,7 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -24,6 +27,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,8 +36,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,9 +47,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import android.widget.Toast
 import com.keuangan.app.data.FamilyMemberDto
+import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
@@ -64,6 +71,22 @@ fun FamilyProfileScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var confirmLogout by remember { mutableStateOf(false) }
+    var showAddMember by remember { mutableStateOf(false) }
+    var memberName by rememberSaveable { mutableStateOf("") }
+    var memberRole by rememberSaveable { mutableStateOf<String?>(null) }
+    val clipboard = LocalClipboardManager.current
+    val context = LocalContext.current
+
+    fun openAddMember() {
+        val family = state.family ?: return
+        memberName = ""
+        memberRole = when {
+            family.members.none { it.payerRole == "husband" } -> "husband"
+            family.members.none { it.payerRole == "wife" } -> "wife"
+            else -> null
+        }
+        showAddMember = true
+    }
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
@@ -71,11 +94,9 @@ fun FamilyProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Keluarga & Akun", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+            GradientHeader(
+                title = "Keluarga & Akun",
+                subtitle = "Kelola profil, peran, kode login & langganan",
             )
         },
     ) { padding ->
@@ -142,13 +163,22 @@ fun FamilyProfileScreen(
             }
 
             state.family?.let { family ->
+                val isOwner = family.role == "owner"
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .let { m ->
+                                    if (isOwner) m.clickable { openAddMember() } else m
+                                }
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Icon(
                                 Icons.Filled.Home,
                                 contentDescription = null,
@@ -156,16 +186,24 @@ fun FamilyProfileScreen(
                                 modifier = Modifier.size(28.dp),
                             )
                             Spacer(Modifier.size(12.dp))
-                            Column {
+                            Column(Modifier.weight(1f)) {
                                 Text(
                                     family.name,
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
                                 Text(
-                                    "${family.members.size} anggota",
+                                    if (isOwner) "Ketuk untuk tambah anggota (Suami/Istri)" else "${family.members.size} anggota",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            if (isOwner) {
+                                Icon(
+                                    Icons.Filled.Add,
+                                    contentDescription = "Tambah anggota",
+                                    tint = Teal700,
+                                    modifier = Modifier.size(24.dp).clickable { openAddMember() },
                                 )
                             }
                         }
@@ -200,7 +238,7 @@ fun FamilyProfileScreen(
                         Column(Modifier.weight(1f)) {
                             Text("Kode login keluarga", fontWeight = FontWeight.SemiBold)
                             Text(
-                                "Ubah kode; semua perangkat lain langsung keluar.",
+                                "Kode ini untuk masuk ke aplikasi. Ubah kode membuat semua perangkat lain keluar.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -217,6 +255,51 @@ fun FamilyProfileScreen(
                             } else {
                                 Text("Ganti kode")
                             }
+                        }
+                    }
+
+                    val code = state.loginCode
+                    val loadingCode = state.loadingCode
+                    if (code != null) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Card(colors = CardDefaults.cardColors(containerColor = Amber100)) {
+                                Text(
+                                    code,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Amber600,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                                )
+                            }
+                            Spacer(Modifier.size(10.dp))
+                            TextButton(onClick = {
+                                clipboard.setText(AnnotatedString(code))
+                                Toast.makeText(context, "Kode disalin", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(
+                                    Icons.Filled.ContentCopy,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.size(6.dp))
+                                Text("Salin")
+                            }
+                        }
+                    } else if (loadingCode) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.size(10.dp))
+                            Text("Memuat kode…", style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -274,6 +357,129 @@ fun FamilyProfileScreen(
             },
         )
     }
+
+    if (showAddMember) {
+        AddMemberDialog(
+            adding = state.addingMember,
+            name = memberName,
+            role = memberRole,
+            onNameChange = { memberName = it },
+            onRoleChange = { memberRole = it },
+            onDismiss = { if (!state.addingMember) showAddMember = false },
+            onConfirm = {
+                showAddMember = false
+                viewModel.addMember(familyId, memberName, memberRole)
+            },
+        )
+    }
+
+    state.newMemberCode?.let { code ->
+        NewMemberCodeDialog(
+            code = code,
+            onCopy = {
+                clipboard.setText(AnnotatedString(code))
+                Toast.makeText(context, "Kode disalin", Toast.LENGTH_SHORT).show()
+            },
+            onDismiss = viewModel::dismissNewMemberCode,
+        )
+    }
+}
+
+@Composable
+private fun AddMemberDialog(
+    adding: Boolean,
+    name: String,
+    role: String?,
+    onNameChange: (String) -> Unit,
+    onRoleChange: (String?) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Tambah anggota") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Nama anggota") },
+                    singleLine = true,
+                    enabled = !adding,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    "Peran pasangan (opsional)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = role == "husband",
+                        onClick = { onRoleChange(if (role == "husband") null else "husband") },
+                        label = { Text("Suami") },
+                        enabled = !adding,
+                    )
+                    FilterChip(
+                        selected = role == "wife",
+                        onClick = { onRoleChange(if (role == "wife") null else "wife") },
+                        label = { Text("Istri") },
+                        enabled = !adding,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = name.isNotBlank() && !adding,
+                onClick = onConfirm,
+            ) { Text("Tambah") }
+        },
+        dismissButton = {
+            TextButton(enabled = !adding, onClick = onDismiss) { Text("Batal") }
+        },
+    )
+}
+
+@Composable
+private fun NewMemberCodeDialog(
+    code: String,
+    onCopy: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Kode login anggota baru") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Bagikan kode ini kepada anggota. Dia login dari HP miliknya lalu masuk ke keluarga.")
+                Card(colors = CardDefaults.cardColors(containerColor = Amber100)) {
+                    Text(
+                        code,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Amber600,
+                        modifier = Modifier.padding(16.dp),
+                    )
+                }
+                Text(
+                    "Kode ditampilkan sekali dan tetap berlaku selama tidak diganti di menu Keamanan.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = onCopy) {
+                    Icon(Icons.Filled.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.size(6.dp))
+                    Text("Salin")
+                }
+                TextButton(onClick = onDismiss) { Text("Selesai") }
+            }
+        },
+    )
 }
 
 @Composable

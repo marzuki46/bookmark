@@ -7,13 +7,19 @@ namespace App\Http\Controllers\Api\Family;
 use App\Http\Controllers\Controller;
 use App\Models\Family;
 use App\Models\FamilyMember;
+use App\Models\User;
 use App\Services\FamilyAIService;
+use App\Services\LoginCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 final class FamilyController extends Controller
 {
-    public function __construct(private readonly FamilyAIService $ai) {}
+    public function __construct(
+        private readonly FamilyAIService $ai,
+        private readonly LoginCodeService $codes,
+    ) {}
 
     /**
      * The caller's own family.
@@ -128,6 +134,94 @@ final class FamilyController extends Controller
                 'payer_label' => $member->payerLabel(),
             ],
         ]);
+    }
+
+    /**
+     * The caller's own permanent login code, so the family screen can show it
+     * and the spouse can log in on their own device. Re-shows the existing
+     * code; only rotates when no stored plaintext survives (e.g. legacy user).
+     */
+    public function loginCode(Request $request, Family $family): JsonResponse
+    {
+        $this->authorize('view', $family);
+
+        $user = $request->user();
+        $member = $user->familyMember();
+
+        abort_if($member === null || $member->family_id !== $family->id, 404);
+
+        $code = $this->codes->displayCodeFor($user) ?? $this->codes->issueFor($user);
+
+        return response()->json([
+            'data' => ['code' => $code],
+        ]);
+    }
+
+    /**
+     * Owner-only: creates a family-only account (no email required) for the
+     * spouse, attaches it to this family with the requested payer role, and
+     * returns the freshly issued login code. The code is shown exactly once —
+     * the owner hands it to the partner, who signs in like any other user.
+     */
+    public function storeMember(Request $request, Family $family): JsonResponse
+    {
+        $this->authorize('manage', $family);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'payer_role' => ['nullable', 'in:husband,wife'],
+            'email' => ['nullable', 'email', 'max:255'],
+        ]);
+
+        if (($data['payer_role'] ?? null) !== null) {
+            $taken = FamilyMember::query()
+                ->where('family_id', $family->id)
+                ->where('payer_role', $data['payer_role'])
+                ->exists();
+
+            if ($taken) {
+                return response()->json([
+                    'message' => 'Peran itu sudah dipakai anggota keluarga.',
+                    'errors' => ['payer_role' => ['Peran ini sudah dipakai anggota keluarga.']],
+                ], 422);
+            }
+        }
+
+        $email = $data['email'] ?? ('family-'.$family->id.'-'.Str::lower(Str::random(8)).'@family.local');
+
+        if (User::where('email', $email)->exists()) {
+            return response()->json([
+                'message' => 'Email sudah dipakai. Masukkan email lain atau kosongkan.',
+                'errors' => ['email' => ['Email sudah dipakai.']],
+            ], 422);
+        }
+
+        $user = User::create([
+            'name' => $data['name'],
+            'email' => $email,
+            'password' => Str::password(24),
+            'setup_completed' => true,
+        ]);
+
+        FamilyMember::create([
+            'family_id' => $family->id,
+            'user_id' => $user->id,
+            'role' => 'member',
+            'is_family_only' => true,
+            'payer_role' => $data['payer_role'] ?? null,
+        ]);
+
+        $code = $this->codes->issueFor($user);
+
+        return response()->json([
+            'data' => [
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'payer_role' => $user->familyMember()?->payer_role,
+                'payer_label' => $user->familyMember()?->payerLabel(),
+                'login_code' => $code,
+            ],
+        ], 201);
     }
 
     /**

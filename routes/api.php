@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\App\CodeAuthController;
+use App\Http\Controllers\Api\App\AppErrorController;
+use App\Http\Controllers\Api\App\AppUpdateController;
 use App\Http\Controllers\Api\App\DeviceController;
 use App\Http\Controllers\Api\App\ProfileController;
 use App\Http\Controllers\Api\AuthController;
@@ -37,6 +39,13 @@ Route::post('/app/login', [CodeAuthController::class, 'login'])
 // authenticity comes from the signature, see MidtransWebhookController).
 Route::post('/payments/midtrans/notification', [MidtransWebhookController::class, 'notification']);
 
+// App diagnostics & updates are public so the app can report crashes and
+// check for updates before/without a login. Both are throttled.
+Route::get('/app/updates', [AppUpdateController::class, 'index'])
+    ->middleware('throttle:60,1,app-updates');
+Route::post('/app/errors', [AppErrorController::class, 'store'])
+    ->middleware('throttle:20,1,app-errors');
+
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', fn (Request $request) => $request->user());
@@ -65,6 +74,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::match(['put', 'patch'], '/families/{family}/me', [FamilyController::class, 'updateMyProfile']);
 
     Route::prefix('families/{family}')->group(function (): void {
+        Route::get('login-code', [FamilyController::class, 'loginCode']);
+        Route::post('members', [FamilyController::class, 'storeMember']);
+
         Route::get('transactions', [FamilyTransactionController::class, 'index']);
         Route::post('transactions', [FamilyTransactionController::class, 'store']);
         Route::get('transactions/{transaction}', [FamilyTransactionController::class, 'show']);

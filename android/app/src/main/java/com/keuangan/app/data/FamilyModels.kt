@@ -73,7 +73,9 @@ data class HousingComplexDto(
 
 @Serializable
 data class FamilyMemberDto(
-    @SerialName("user_id") val userId: Int,
+    // Defaulted: a member row missing a role/payer label must never blank the
+    // whole family detail (e.g. an older server response without payer fields).
+    @SerialName("user_id") val userId: Int = 0,
     val role: String = "member",
     val name: String? = null,
     @SerialName("payer_role") val payerRole: String? = null,
@@ -101,9 +103,14 @@ data class FamilyResponse(val data: FamilyDto)
 @Serializable
 data class PayerRoleRequest(@SerialName("payer_role") val payerRole: String)
 
+/**
+ * Defaults everywhere: this is written from a "best effort" PATCH whose exact
+ * payload shape may vary by server version, so a missing field must degrade to
+ * a no-op instead of failing the whole response.
+ */
 @Serializable
 data class PayerRoleResponse(
-    @SerialName("user_id") val userId: Int,
+    @SerialName("user_id") val userId: Int = 0,
     @SerialName("payer_role") val payerRole: String? = null,
     @SerialName("payer_label") val payerLabel: String? = null,
 )

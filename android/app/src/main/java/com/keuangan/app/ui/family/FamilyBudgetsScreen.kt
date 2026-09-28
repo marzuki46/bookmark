@@ -36,8 +36,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyBudgetDto
+import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
@@ -78,11 +77,9 @@ fun FamilyBudgetsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Anggaran", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+            GradientHeader(
+                title = "Anggaran",
+                subtitle = "Tetapkan batas dan kendalikan pengeluaran",
             )
         },
         floatingActionButton = {

@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -34,8 +36,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,6 +49,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyTransactionDto
 import com.keuangan.app.data.IncomeSourceDto
+import com.keuangan.app.ui.components.ChoiceDropdown
+import com.keuangan.app.ui.components.ChoiceItem
+import com.keuangan.app.ui.components.DateField
+import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -71,11 +75,9 @@ fun FamilyTransactionsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Transaksi", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+            GradientHeader(
+                title = "Transaksi",
+                subtitle = "Kelola pemasukan & pengeluaran keluarga",
             )
         },
         floatingActionButton = {
@@ -289,7 +291,7 @@ private fun TxFormDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (form.id == null) "Tambah Transaksi" else "Ubah Transaksi") },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = form.type == "expense",
@@ -318,12 +320,10 @@ private fun TxFormDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
+                DateField(
+                    label = "Tanggal",
                     value = form.date,
-                    onValueChange = { value -> onChange { it.copy(date = value) } },
-                    label = { Text("Tanggal (YYYY-MM-DD)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    onChange = { date -> onChange { it.copy(date = date.orEmpty()) } },
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -337,44 +337,22 @@ private fun TxFormDialog(
                         }
                 }
                 if (relevant.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("Kategori", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.height(4.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(relevant) { category ->
-                            FilterChip(
-                                selected = form.categoryId == category.id,
-                                onClick = {
-                                    onChange {
-                                        it.copy(
-                                            categoryId = if (it.categoryId == category.id) null else category.id,
-                                        )
-                                    }
-                                },
-                                label = { Text(category.name) },
-                            )
-                        }
-                    }
+                    Spacer(Modifier.height(12.dp))
+                    ChoiceDropdown(
+                        label = "Kategori",
+                        choices = relevant.map { ChoiceItem(it.id, it.name) },
+                        selectedId = form.categoryId,
+                        onSelect = { id -> onChange { it.copy(categoryId = id) } },
+                    )
                 }
                 if (form.type == "income" && incomeSources.isNotEmpty()) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("Sumber pemasukan", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.height(4.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(incomeSources) { source ->
-                            FilterChip(
-                                selected = form.incomeSourceId == source.id,
-                                onClick = {
-                                    onChange {
-                                        it.copy(
-                                            incomeSourceId = if (it.incomeSourceId == source.id) null else source.id,
-                                        )
-                                    }
-                                },
-                                label = { Text(source.name) },
-                            )
-                        }
-                    }
+                    Spacer(Modifier.height(12.dp))
+                    ChoiceDropdown(
+                        label = "Sumber pemasukan",
+                        choices = incomeSources.map { ChoiceItem(it.id, it.name) },
+                        selectedId = form.incomeSourceId,
+                        onSelect = { id -> onChange { it.copy(incomeSourceId = id) } },
+                    )
                 }
                 if (error != null) {
                     Spacer(Modifier.height(10.dp))

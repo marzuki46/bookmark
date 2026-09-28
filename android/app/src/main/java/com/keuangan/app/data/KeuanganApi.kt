@@ -11,6 +11,14 @@ import retrofit2.http.Query
 
 interface KeuanganApi {
 
+    // --- App-level operations (public, throttled) ---
+
+    @GET("api/app/updates")
+    suspend fun appUpdates(@Query("current_version_code") currentVersionCode: Int): AppUpdateResponse
+
+    @POST("api/app/errors")
+    suspend fun reportError(@Body body: AppErrorRequest): AppErrorResponse
+
     @POST("api/login")
     suspend fun login(@Body body: LoginRequest): LoginResponse
 
@@ -102,6 +110,15 @@ interface KeuanganApi {
         @Path("family") familyId: Int,
         @Body body: PayerRoleRequest,
     ): PayerRoleResponse
+
+    @GET("api/families/{family}/login-code")
+    suspend fun familyLoginCode(@Path("family") familyId: Int): LoginCodeResponse
+
+    @POST("api/families/{family}/members")
+    suspend fun createFamilyMember(
+        @Path("family") familyId: Int,
+        @Body body: FamilyMemberRequest,
+    ): FamilyMemberResponse
 
     @GET("api/families/{family}/summary")
     suspend fun familySummary(@Path("family") familyId: Int): FamilySummaryResponse

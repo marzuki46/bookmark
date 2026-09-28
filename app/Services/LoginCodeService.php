@@ -85,10 +85,28 @@ final class LoginCodeService
 
         $user->forceFill([
             'app_login_code' => $digest,
+            'app_login_code_plain' => encrypt($plain),
             'app_login_code_rotated_at' => now(),
         ])->save();
 
         return $plain;
+    }
+
+    /**
+     * Returns the current plaintext code if it is still stored (encrypted),
+     * so the "family login code" screen can re-show it without rotating.
+     */
+    public function displayCodeFor(User $user): ?string
+    {
+        if (blank($user->app_login_code_plain)) {
+            return null;
+        }
+
+        try {
+            return decrypt((string) $user->app_login_code_plain);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function hasCode(User $user): bool

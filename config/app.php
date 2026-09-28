@@ -82,6 +82,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | In-app update (Android APK)
+    |--------------------------------------------------------------------------
+    | Server-side version drums for the "check for updates" feature. Bump these
+    | and point APK_DOWNLOAD_URL at a new build in public/apk/ to ship it.
+    */
+
+    'version_code' => (int) env('APP_VERSION_CODE', 1),
+    'version_name' => (string) env('APP_VERSION_NAME', '1.0.0'),
+    'apk_download_url' => (string) env('APK_DOWNLOAD_URL', ''),
+    'apk_notes' => (string) env('APK_NOTES', 'Perbaikan bug & penyempurnaan tampilan.'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

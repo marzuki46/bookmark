@@ -13,6 +13,7 @@ import com.keuangan.app.ui.theme.KeuanganTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ErrorReporter.install(application as KeuanganApp)
         setContent {
             KeuanganTheme {
                 Surface(

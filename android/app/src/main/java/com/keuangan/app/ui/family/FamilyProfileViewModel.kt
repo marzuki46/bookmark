@@ -23,6 +23,12 @@ data class FamilyProfileUiState(
     val rotating: Boolean = false,
     val newCode: String? = null,
     val actionMessage: String? = null,
+    /** The caller's own login code, shown on the family screen. */
+    val loginCode: String? = null,
+    val loadingCode: Boolean = false,
+    /** Owner only: the freshly created spouse's code, shown once. */
+    val newMemberCode: String? = null,
+    val addingMember: Boolean = false,
 )
 
 class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewModel() {
@@ -49,8 +55,48 @@ class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewM
                     error = firstError(meResult, familyResult),
                 )
             }
+
+            loadLoginCode(familyId)
         }
     }
+
+    fun loadLoginCode(familyId: Int) {
+        if (_state.value.loadingCode || _state.value.loginCode != null) return
+        _state.update { it.copy(loadingCode = true) }
+        viewModelScope.launch {
+            when (val result = repository.familyLoginCode(familyId)) {
+                is ApiResult.Ok -> _state.update { it.copy(loadingCode = false, loginCode = result.value.code) }
+                is ApiResult.Err -> _state.update { it.copy(loadingCode = false) }
+            }
+        }
+    }
+
+    fun addMember(familyId: Int, name: String, payerRole: String?) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) {
+            _state.update { it.copy(actionMessage = "Nama anggota tidak boleh kosong.") }
+            return
+        }
+        if (_state.value.addingMember) return
+        _state.update { it.copy(addingMember = true, actionMessage = null) }
+        viewModelScope.launch {
+            when (val result = repository.addFamilyMember(familyId, trimmed, payerRole)) {
+                is ApiResult.Ok -> {
+                    _state.update {
+                        it.copy(
+                            addingMember = false,
+                            newMemberCode = result.value.loginCode,
+                            actionMessage = "Anggota \"${result.value.name ?: trimmed}\" berhasil ditambahkan.",
+                        )
+                    }
+                    load(familyId)
+                }
+                is ApiResult.Err -> _state.update { it.copy(addingMember = false, actionMessage = result.message) }
+            }
+        }
+    }
+
+    fun dismissNewMemberCode() = _state.update { it.copy(newMemberCode = null) }
 
     fun saveProfile(name: String, about: String) {
         val existing = _state.value.me ?: return

@@ -36,8 +36,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -50,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyGoalDto
+import com.keuangan.app.ui.components.DateField
+import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.formatShortDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -72,11 +72,9 @@ fun FamilyGoalsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Target Keuangan", fontWeight = FontWeight.SemiBold) },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                ),
+            GradientHeader(
+                title = "Target Keuangan",
+                subtitle = "Wujudkan impian keluarga, selangkah demi selangkah",
             )
         },
         floatingActionButton = {
@@ -323,12 +321,10 @@ private fun GoalFormDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
+                DateField(
+                    label = "Batas waktu — opsional",
                     value = form.deadline,
-                    onValueChange = { value -> onChange { it.copy(deadline = value) } },
-                    label = { Text("Batas waktu (YYYY-MM-DD) — opsional") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    onChange = { date -> onChange { it.copy(deadline = date.orEmpty()) } },
                 )
                 if (error != null) {
                     Spacer(Modifier.height(10.dp))

@@ -1,5 +1,10 @@
 package com.keuangan.app.ui
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +58,7 @@ import com.keuangan.app.ui.family.FamilyGoalsViewModel
 import com.keuangan.app.ui.family.FamilyIncomeSourcesScreen
 import com.keuangan.app.ui.family.FamilyIncomeSourcesViewModel
 import com.keuangan.app.ui.family.FamilyMoreScreen
+import com.keuangan.app.ui.family.FamilyMoreViewModel
 import com.keuangan.app.ui.family.FamilyProfileScreen
 import com.keuangan.app.ui.family.FamilyProfileViewModel
 import com.keuangan.app.ui.family.FamilySubscriptionScreen
@@ -96,6 +102,7 @@ private fun appFactory(): ViewModelProvider.Factory {
         initializer { FamilyIncomeSourcesViewModel(app.repository) }
         initializer { FamilyProfileViewModel(app.repository) }
         initializer { FamilySubscriptionViewModel(app.repository) }
+        initializer { FamilyMoreViewModel(app.repository) }
     }
 }
 
@@ -192,6 +199,10 @@ NavigationBarItem(
             navController = navController,
             startDestination = Routes.HOME,
             modifier = Modifier.padding(padding),
+            enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(280), initialOffsetX = { it / 10 }) },
+            exitTransition = { fadeOut(tween(160)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(160)) + slideOutHorizontally(tween(280)) { it / 10 } },
         ) {
             composable(Routes.HOME) {
                 val vm: FamilyDashboardViewModel = viewModel(factory = appFactory())
@@ -210,7 +221,9 @@ NavigationBarItem(
                 FamilyGoalsScreen(familyId = familyId!!, viewModel = vm)
             }
             composable(Routes.MORE) {
+                val vm: FamilyMoreViewModel = viewModel(factory = appFactory())
                 FamilyMoreScreen(
+                    viewModel = vm,
                     onOpenBudgets = { navController.navigate(Routes.BUDGETS) },
                     onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
                     onOpenIncomeSources = { navController.navigate(Routes.INCOME_SOURCES) },

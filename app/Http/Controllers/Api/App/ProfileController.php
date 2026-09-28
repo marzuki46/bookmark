@@ -26,8 +26,8 @@ final class ProfileController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'about' => $user->about,
-                'is_admin' => $user->is_admin,
-                'setup_completed' => $user->setup_completed,
+                'is_admin' => (bool) $user->is_admin,
+                'setup_completed' => (bool) $user->setup_completed,
                 'subscription' => $subscription ? [
                     'active' => $subscription->isUsable(),
                     'plan_name' => $subscription->plan?->name,

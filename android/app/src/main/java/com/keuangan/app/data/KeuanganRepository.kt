@@ -1,5 +1,6 @@
 package com.keuangan.app.data
 
+import com.keuangan.app.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -352,5 +353,38 @@ class KeuanganRepository(
      */
     suspend fun registerDevice(fcmToken: String, appVersion: String?): ApiResult<DeviceResponse> = runCatching {
         apiCall { api.registerDevice(DeviceRequest(fcmToken, "android", appVersion)) }
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    // --- app ops: updates & crash reporting ---
+
+    suspend fun appUpdates(): ApiResult<AppUpdateDto> = runCatching {
+        apiCall { api.appUpdates(BuildConfig.VERSION_CODE) }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    /**
+     * Best-effort crash reporter. Never throws: a failed report must not mask
+     * the original crash or block the caller.
+     */
+    suspend fun reportCrash(errorClass: String?, message: String?, stackTrace: String?): ApiResult<Unit> = runCatching {
+        apiCall {
+            api.reportError(
+                AppErrorRequest(
+                    errorClass = errorClass,
+                    message = message?.take(2000),
+                    stackTrace = stackTrace?.take(20_000),
+                    appVersion = BuildConfig.VERSION_NAME,
+                ),
+            )
+        }
+    }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
+
+    // --- family: login code & spouse members ---
+
+    suspend fun familyLoginCode(familyId: Int): ApiResult<LoginCodeData> = runCatching {
+        apiCall { api.familyLoginCode(familyId) }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun addFamilyMember(familyId: Int, name: String, payerRole: String?): ApiResult<NewFamilyMemberDto> = runCatching {
+        apiCall { api.createFamilyMember(familyId, FamilyMemberRequest(name.trim(), payerRole)) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 }
