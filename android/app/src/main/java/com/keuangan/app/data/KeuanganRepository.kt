@@ -55,6 +55,33 @@ class KeuanganRepository(
         onFailure = { e -> e.toApiError() },
     )
 
+    // --- profile & paid plans ---
+
+    /** The caller's profile plus entitlement, for the personal menu. */
+    suspend fun currentUser(): ApiResult<MeDto> = runCatching {
+        apiCall { api.me() }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun updateProfile(name: String?, about: String?): ApiResult<Unit> = runCatching {
+        apiCall { api.updateMe(UpdateMeRequest(name, about)) }
+    }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun currentSubscription(): ApiResult<SubscriptionDto> = runCatching {
+        apiCall { api.currentSubscription() }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun subscriptionPlans(): ApiResult<List<PlanDto>> = runCatching {
+        apiCall { api.plans() }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    /**
+     * Starts a Midtrans purchase. The returned redirect URL opens the Snap
+     * payment page in the external browser; the webhook activates the plan.
+     */
+    suspend fun chargePlan(planId: Int): ApiResult<ChargeResponse> = runCatching {
+        apiCall { api.charge(ChargeRequest(planId)) }
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
     /** The signed-in user's id, restored with the token on cold start. */
     val currentUserId: Int?
         get() = tokenStore.userId

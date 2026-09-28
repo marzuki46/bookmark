@@ -177,3 +177,68 @@ data class AskRequest(val question: String)
 
 @Serializable
 data class AskResponse(val answer: String? = null, val model: String? = null)
+
+// --- Personal profile (the "about" menu) ---
+
+@Serializable
+data class SubscriptionDto(
+    val active: Boolean = false,
+    @SerialName("plan_name") val planName: String? = null,
+    @SerialName("plan_slug") val planSlug: String? = null,
+    @SerialName("starts_at") val startsAt: String? = null,
+    @SerialName("expires_at") val expiresAt: String? = null,
+    val provider: String? = null,
+)
+
+@Serializable
+data class SubscriptionResponse(val data: SubscriptionDto)
+
+@Serializable
+data class MeDto(
+    val id: Int,
+    val name: String? = null,
+    val email: String? = null,
+    val about: String? = null,
+    @SerialName("is_admin") val isAdmin: Boolean = false,
+    @SerialName("setup_completed") val setupCompleted: Boolean = false,
+    val subscription: SubscriptionDto? = null,
+)
+
+@Serializable
+data class MeResponse(val data: MeDto)
+
+@Serializable
+data class UpdateMeRequest(
+    val name: String? = null,
+    val about: String? = null,
+)
+
+@Serializable
+data class MessageResponse(val message: String? = null)
+
+// --- Sellable plans & checkout (Midtrans Snap via external browser) ---
+
+@Serializable
+data class PlanDto(
+    val id: Int,
+    val slug: String,
+    val name: String,
+    val description: String? = null,
+    @SerialName("duration_type") val durationType: String,
+    @SerialName("duration_label") val durationLabel: String? = null,
+    val price: Double = 0.0,
+)
+
+@Serializable
+data class PlansResponse(val data: List<PlanDto> = emptyList())
+
+@Serializable
+data class ChargeRequest(@SerialName("plan_id") val planId: Int)
+
+@Serializable
+data class ChargeResponse(
+    @SerialName("order_id") val orderId: String,
+    val token: String,
+    @SerialName("redirect_url") val redirectUrl: String,
+    val price: Double = 0.0,
+)

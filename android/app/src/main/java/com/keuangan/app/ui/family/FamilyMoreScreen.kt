@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +50,7 @@ fun FamilyMoreScreen(
     onOpenCategories: () -> Unit,
     onOpenIncomeSources: () -> Unit,
     onOpenProfile: () -> Unit,
+    onOpenSubscription: () -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -64,6 +66,7 @@ fun FamilyMoreScreen(
             MenuItem("Anggaran", "Atur batas pengeluaran per bulan", Icons.Filled.AccountBalanceWallet, onOpenBudgets),
             MenuItem("Sumber Pemasukan", "Gaji, usaha, sampingan", Icons.Filled.AttachMoney, onOpenIncomeSources),
             MenuItem("Kategori", "Kelompok pengeluaran & pemasukan", Icons.Filled.Category, onOpenCategories),
+            MenuItem("Langganan", "Status paket & pembayaran", Icons.Filled.WorkspacePremium, onOpenSubscription),
             MenuItem("Keluarga & Akun", "Anggota, peran, kode login", Icons.Filled.Group, onOpenProfile),
         )
 

@@ -1,7 +1,6 @@
 package com.keuangan.app.ui.family
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,6 +18,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,8 +48,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyMemberDto
+import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
+import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +59,7 @@ import com.keuangan.app.ui.theme.Teal700
 fun FamilyProfileScreen(
     familyId: Int,
     viewModel: FamilyProfileViewModel,
+    onOpenSubscription: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
@@ -89,7 +94,7 @@ fun FamilyProfileScreen(
                             colors = CardDefaults.cardColors(containerColor = Amber100),
                         ) {
                             Text(
-                                "ℹ️  $message",
+                                message,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(12.dp),
                             )
@@ -112,6 +117,26 @@ fun FamilyProfileScreen(
                         error,
                         color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+
+            state.me?.let { me ->
+                item {
+                    ProfileCard(
+                        name = me.name ?: "Akun #${me.id}",
+                        email = me.email,
+                        about = me.about,
+                        saving = state.saving,
+                        onSave = viewModel::saveProfile,
+                    )
+                }
+                item {
+                    SubscriptionCard(
+                        active = me.subscription?.active == true,
+                        planName = me.subscription?.planName,
+                        expiresAt = me.subscription?.expiresAt,
+                        onOpenSubscription = onOpenSubscription,
                     )
                 }
             }
@@ -252,7 +277,133 @@ fun FamilyProfileScreen(
 }
 
 @Composable
-private fun SectionHeading(text: String) {
+private fun ProfileCard(
+    name: String,
+    email: String?,
+    about: String?,
+    saving: Boolean,
+    onSave: (name: String, about: String) -> Unit,
+) {
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var draftName by rememberSaveable(name) { mutableStateOf(name) }
+    var draftAbout by rememberSaveable(about) { mutableStateOf(about ?: "") }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.Person,
+                    contentDescription = null,
+                    tint = Teal700,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.size(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    email?.let {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                TextButton(onClick = { editing = true }) { Text("Edit") }
+            }
+            (about ?: "").takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(10.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+
+    if (editing) {
+        AlertDialog(
+            onDismissRequest = { if (!saving) editing = false },
+            title = { Text("Edit profil") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = draftName,
+                        onValueChange = { draftName = it },
+                        label = { Text("Nama") },
+                        singleLine = true,
+                        enabled = !saving,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = draftAbout,
+                        onValueChange = { draftAbout = it },
+                        label = { Text("Tentang (opsional)") },
+                        enabled = !saving,
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !saving,
+                    onClick = {
+                        onSave(draftName, draftAbout)
+                        editing = false
+                    },
+                ) { Text("Simpan") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !saving,
+                    onClick = { editing = false },
+                ) { Text("Batal") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun SubscriptionCard(
+    active: Boolean,
+    planName: String?,
+    expiresAt: String?,
+    onOpenSubscription: () -> Unit,
+) {
+    val (bg, fg) = if (active) Teal100 to Teal700 else Amber100 to Amber600
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Filled.WorkspacePremium,
+                contentDescription = null,
+                tint = Teal700,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.size(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Langganan", fontWeight = FontWeight.SemiBold)
+                if (active) {
+                    Text(
+                        "${planName ?: "Paket aktif"}${expiresAt?.let { " · s/d ${formatFullDate(it)}" } ?: ""}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Text(
+                        "Belum berlangganan",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            TextButton(onClick = onOpenSubscription) { Text("Kelola") }
+        }
+    }
+}
+
+@Composable
+fun SectionHeading(text: String) {
     Text(
         text,
         style = MaterialTheme.typography.titleSmall,

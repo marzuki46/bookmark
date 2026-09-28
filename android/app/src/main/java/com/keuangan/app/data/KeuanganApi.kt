@@ -72,6 +72,23 @@ interface KeuanganApi {
     @GET("api/app/devices")
     suspend fun devices(): DeviceListResponse
 
+    // --- Personal profile & paid plans (Sellable from the family app) ---
+
+    @GET("api/me")
+    suspend fun me(): MeResponse
+
+    @PATCH("api/me")
+    suspend fun updateMe(@Body body: UpdateMeRequest): MessageResponse
+
+    @GET("api/subscription")
+    suspend fun currentSubscription(): SubscriptionResponse
+
+    @GET("api/subscription/plans")
+    suspend fun plans(): PlansResponse
+
+    @POST("api/subscription/charge")
+    suspend fun charge(@Body body: ChargeRequest): ChargeResponse
+
     // --- Family ---
 
     @GET("api/families")

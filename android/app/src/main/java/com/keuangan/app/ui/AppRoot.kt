@@ -54,6 +54,8 @@ import com.keuangan.app.ui.family.FamilyIncomeSourcesViewModel
 import com.keuangan.app.ui.family.FamilyMoreScreen
 import com.keuangan.app.ui.family.FamilyProfileScreen
 import com.keuangan.app.ui.family.FamilyProfileViewModel
+import com.keuangan.app.ui.family.FamilySubscriptionScreen
+import com.keuangan.app.ui.family.FamilySubscriptionViewModel
 import com.keuangan.app.ui.family.FamilyTransactionsScreen
 import com.keuangan.app.ui.family.FamilyTransactionsViewModel
 
@@ -67,6 +69,7 @@ object Routes {
     const val CATEGORIES = "categories"
     const val INCOME_SOURCES = "income-sources"
     const val PROFILE = "profile"
+    const val SUBSCRIPTION = "subscription"
 }
 
 /**
@@ -91,6 +94,7 @@ private fun appFactory(): ViewModelProvider.Factory {
         initializer { FamilyCategoriesViewModel(app.repository) }
         initializer { FamilyIncomeSourcesViewModel(app.repository) }
         initializer { FamilyProfileViewModel(app.repository) }
+        initializer { FamilySubscriptionViewModel(app.repository) }
     }
 }
 
@@ -210,6 +214,7 @@ NavigationBarItem(
                     onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
                     onOpenIncomeSources = { navController.navigate(Routes.INCOME_SOURCES) },
                     onOpenProfile = { navController.navigate(Routes.PROFILE) },
+                    onOpenSubscription = { navController.navigate(Routes.SUBSCRIPTION) },
                 )
             }
             composable(Routes.BUDGETS) {
@@ -226,7 +231,16 @@ NavigationBarItem(
             }
             composable(Routes.PROFILE) {
                 val vm: FamilyProfileViewModel = viewModel(factory = appFactory())
-                FamilyProfileScreen(familyId = familyId!!, viewModel = vm, onLogout = onLogout)
+                FamilyProfileScreen(
+                    familyId = familyId!!,
+                    viewModel = vm,
+                    onOpenSubscription = { navController.navigate(Routes.SUBSCRIPTION) },
+                    onLogout = onLogout,
+                )
+            }
+            composable(Routes.SUBSCRIPTION) {
+                val vm: FamilySubscriptionViewModel = viewModel(factory = appFactory())
+                FamilySubscriptionScreen(viewModel = vm, onBack = { navController.popBackStack() })
             }
         }
     }
