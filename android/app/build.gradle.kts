@@ -19,7 +19,7 @@ android {
         // Single place to change the backend. Override without editing the file:
         //   ./gradlew assembleDebug -PapiBaseUrl=https://api.example.com
         val apiBaseUrl = (project.findProperty("apiBaseUrl") as String?)
-            ?: "https://keuangan.example.com"
+            ?: "https://bookmark.juki.eu.org"
         buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
 
