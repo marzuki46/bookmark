@@ -23,7 +23,7 @@
         </div>
     @endif
 
-    <form action="{{ route('keuangan.aplikasi.store') }}" method="POST" enctype="multipart/form-data" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
+    <form id="apk-upload-form" action="{{ route('keuangan.aplikasi.store') }}" method="POST" enctype="multipart/form-data" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
         @csrf
         <div class="grid gap-4 sm:grid-cols-3">
             <div class="sm:col-span-1">
@@ -43,7 +43,17 @@
             <label class="wp-form-label">Catatan Rilis</label>
             <textarea name="notes" rows="3" maxlength="5000" placeholder="Apa yang baru? Ditampilkan di layar Periksa Pembaruan" class="wp-form-input"></textarea>
         </div>
-        <button type="submit" class="btn-primary">Unggah Rilis</button>
+        <div id="apk-upload-status" class="hidden rounded-xl border border-teal-200 bg-teal-50 px-4 py-3" aria-live="polite">
+            <div class="flex items-center justify-between gap-4 text-sm font-medium text-teal-800">
+                <span id="apk-upload-status-text">Menyiapkan upload…</span>
+                <span id="apk-upload-percent">0%</span>
+            </div>
+            <div class="mt-2 h-2.5 overflow-hidden rounded-full bg-teal-100" role="progressbar" aria-label="Progress upload APK" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                <div id="apk-upload-progress" class="h-full w-0 rounded-full bg-teal-600 transition-[width] duration-150"></div>
+            </div>
+        </div>
+        <div id="apk-upload-error" class="hidden rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert"></div>
+        <button id="apk-upload-button" type="submit" class="btn-primary">Unggah Rilis</button>
     </form>
 
     <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
@@ -89,4 +99,102 @@
         </div>
     </div>
 </div>
+
+<script>
+    (() => {
+        const form = document.getElementById('apk-upload-form');
+        if (!form || !window.XMLHttpRequest) return;
+
+        const button = document.getElementById('apk-upload-button');
+        const status = document.getElementById('apk-upload-status');
+        const statusText = document.getElementById('apk-upload-status-text');
+        const percent = document.getElementById('apk-upload-percent');
+        const progress = document.getElementById('apk-upload-progress');
+        const progressBar = status.querySelector('[role="progressbar"]');
+        const error = document.getElementById('apk-upload-error');
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            if (button.disabled) return;
+
+            const file = form.querySelector('input[type="file"]').files[0];
+            if (!file) return;
+
+            const chunkSize = 2 * 1024 * 1024;
+            const totalChunks = Math.ceil(file.size / chunkSize);
+            const uploadId = (window.crypto && crypto.randomUUID)
+                ? crypto.randomUUID().replaceAll('-', '')
+                : `${Date.now()}${Math.random().toString(36).slice(2)}`;
+            button.disabled = true;
+            button.classList.add('opacity-60', 'cursor-wait');
+            status.classList.remove('hidden');
+            error.classList.add('hidden');
+            statusText.textContent = `Mengunggah ${file.name} dalam ${totalChunks} bagian…`;
+            progress.style.width = '0%';
+            percent.textContent = '0%';
+            progressBar.setAttribute('aria-valuenow', '0');
+
+            const csrf = form.querySelector('input[name="_token"]').value;
+            const request = (url, data, onProgress) => new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('Accept', 'application/json');
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.upload.addEventListener('progress', (uploadEvent) => {
+                    if (uploadEvent.lengthComputable && onProgress) onProgress(uploadEvent.loaded, uploadEvent.total);
+                });
+                xhr.addEventListener('load', () => {
+                    let body = {};
+                    try { body = JSON.parse(xhr.responseText); } catch (_) {}
+                    if (xhr.status >= 200 && xhr.status < 300) resolve(body);
+                    else reject(new Error(body.message || Object.values(body.errors || {}).flat().join(' ') || 'Upload gagal.'));
+                });
+                xhr.addEventListener('error', () => reject(new Error('Koneksi upload terputus.')));
+                xhr.send(data);
+            });
+
+            const fail = (uploadError) => {
+                error.textContent = uploadError.message || 'Upload gagal. Periksa data dan coba lagi.';
+                error.classList.remove('hidden');
+                status.classList.add('hidden');
+                button.disabled = false;
+                button.classList.remove('opacity-60', 'cursor-wait');
+            };
+
+            (async () => {
+                try {
+                    for (let index = 0; index < totalChunks; index++) {
+                        const start = index * chunkSize;
+                        const chunk = file.slice(start, Math.min(start + chunkSize, file.size));
+                        const data = new FormData();
+                        data.append('_token', csrf);
+                        data.append('upload_id', uploadId);
+                        data.append('chunk_index', String(index));
+                        data.append('total_chunks', String(totalChunks));
+                        data.append('chunk', chunk, file.name + `.part-${index}`);
+                        await request('{{ route('keuangan.aplikasi.chunk') }}', data, (loaded, total) => {
+                            const value = Math.round(((start + Math.min(loaded, total)) / file.size) * 100);
+                            progress.style.width = `${value}%`;
+                            percent.textContent = `${value}%`;
+                            progressBar.setAttribute('aria-valuenow', String(value));
+                        });
+                    }
+
+                    statusText.textContent = 'Upload selesai, server sedang memeriksa APK…';
+                    const finalData = new FormData(form);
+                    finalData.delete('apk');
+                    finalData.append('upload_id', uploadId);
+                    finalData.append('total_chunks', String(totalChunks));
+                    await request('{{ route('keuangan.aplikasi.finalize') }}', finalData);
+                    statusText.textContent = 'Rilis berhasil disimpan. Memuat ulang halaman…';
+                    progress.style.width = '100%';
+                    percent.textContent = '100%';
+                    window.location.reload();
+                } catch (uploadError) {
+                    fail(uploadError);
+                }
+            })();
+        });
+    })();
+</script>
 @endsection

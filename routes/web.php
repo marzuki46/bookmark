@@ -85,6 +85,8 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
         Route::get('/log', [KeuanganController::class, 'logs'])->name('log');
         Route::get('/aplikasi', [AppReleaseController::class, 'index'])->name('aplikasi');
         Route::post('/aplikasi', [AppReleaseController::class, 'store'])->name('aplikasi.store');
+        Route::post('/aplikasi/chunk', [AppReleaseController::class, 'uploadChunk'])->name('aplikasi.chunk');
+        Route::post('/aplikasi/finalize', [AppReleaseController::class, 'finalizeChunked'])->name('aplikasi.finalize');
         Route::delete('/aplikasi/{release}', [AppReleaseController::class, 'destroy'])->name('aplikasi.destroy');
     });
     Route::view('/companies', 'pages.companies')->name('companies');
