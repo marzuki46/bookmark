@@ -8,6 +8,7 @@ import com.keuangan.app.data.FamilyTransactionDto
 import com.keuangan.app.data.FamilyTransactionRequest
 import com.keuangan.app.data.IncomeSourceDto
 import com.keuangan.app.data.KeuanganRepository
+import com.keuangan.app.data.getOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,7 +94,6 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
                 form = TxForm(
                     type = it.typeFilter?.takeIf { f -> f == "income" || f == "expense" } ?: "expense",
                     date = todayIso(),
-                    formError = null,
                 ),
             )
         }

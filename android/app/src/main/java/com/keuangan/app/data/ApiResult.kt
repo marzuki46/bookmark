@@ -19,35 +19,37 @@ class ApiException(message: String, val code: Int? = null) : Exception(message)
  * Laravel returns `{"message": "...", "errors": {"amount": ["The amount ..."]}}`
  * for validation failures, so prefer the first field error when present.
  */
-fun Throwable.toApiError(): ApiResult.Err = when (this) {
-    is ApiException -> ApiResult.Err(message ?: fallbackMessage, code)
+fun Throwable.toApiError(): ApiResult.Err {
+    return when (this) {
+        is ApiException -> ApiResult.Err(message ?: fallbackMessage, code)
 
-    is HttpException -> {
-        val code = code()
-        // Short-circuit the fatal ones so nobody parses an HTML/empty 401 body.
-        if (code == 401) {
-            return ApiResult.Err("Sesi berakhir. Silakan login ulang.", 401)
-        }
-        if (code == 403) {
-            return ApiResult.Err("Kamu tidak punya akses ke data ini.", 403)
-        }
-        if (code in 500..599) {
-            return ApiResult.Err("Server sedang bermasalah. Coba lagi sebentar.", code)
+        is HttpException -> {
+            val code = code()
+            // Short-circuit the fatal ones so nobody parses an HTML/empty 401 body.
+            if (code == 401) {
+                return ApiResult.Err("Sesi berakhir. Silakan login ulang.", 401)
+            }
+            if (code == 403) {
+                return ApiResult.Err("Kamu tidak punya akses ke data ini.", 403)
+            }
+            if (code in 500..599) {
+                return ApiResult.Err("Server sedang bermasalah. Coba lagi sebentar.", code)
+            }
+
+            val body = runCatching { response()?.errorBody()?.string() }.getOrNull()
+            val parsed = body?.let { parseErrorBody(it) }
+            val message = when (code) {
+                404 -> "Data tidak ditemukan."
+                429 -> "Terlalu banyak permintaan. Coba lagi nanti."
+                else -> "Server error ($code)"
+            }
+            parsed ?: ApiResult.Err(message, code)
         }
 
-        val body = runCatching { response()?.errorBody()?.string() }.getOrNull()
-        val parsed = body?.let { parseErrorBody(it) }
-        val message = when (code) {
-            404 -> "Data tidak ditemukan."
-            429 -> "Terlalu banyak permintaan. Coba lagi nanti."
-            else -> "Server error ($code)"
-        }
-        parsed ?: ApiResult.Err(message, code)
+        is IOException -> ApiResult.Err("Tidak bisa terhubung ke server. Periksa koneksi.")
+
+        else -> ApiResult.Err(message ?: fallbackMessage)
     }
-
-    is IOException -> ApiResult.Err("Tidak bisa terhubung ke server. Periksa koneksi.")
-
-    else -> ApiResult.Err(message ?: fallbackMessage)
 }
 
 private const val fallbackMessage = "Terjadi kesalahan"

@@ -53,7 +53,7 @@ class FamilyDashboardViewModel(private val repository: KeuanganRepository) : Vie
                 it.copy(
                     loading = false,
                     refreshing = false,
-                    insights = snapshot?.data.orEmpty(),
+                    insights = listOfNotNull(snapshot?.family, snapshot?.personal),
                     health = health,
                     nudge = nudge,
                     incomeBySource = incomeBySourceThisMonth(familyId),

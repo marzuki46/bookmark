@@ -238,7 +238,7 @@ private fun TxCard(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    tx.description.ifBlank { tx.category?.name ?: "Transaksi" },
+                    (tx.description?.ifBlank { null } ?: tx.category?.name) ?: "Transaksi",
                     style = MaterialTheme.typography.bodyLarge,
                     maxLines = 1,
                 )

@@ -181,7 +181,7 @@ class KeuanganRepository(
     suspend fun familyDetail(familyId: Int): ApiResult<FamilyDto> = runCatching {
         val dto = apiCall { api.family(familyId) }.data
         _family.value = dto
-        ApiResult.Ok(dto)
+        dto
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
     suspend fun setPayerRole(familyId: Int, payerRole: String): ApiResult<PayerRoleResponse> = runCatching {

@@ -47,22 +47,19 @@ class FamilyDebtsViewModel(private val repository: KeuanganRepository) : ViewMod
         _state.update { it.copy(loading = it.items.isEmpty(), error = null) }
         viewModelScope.launch {
             val filters = _state.value
-            repository.debts(familyId, filters.statusFilter).let { data ->
-                var items = when (data) {
-                    is ApiResult.Ok -> data.value
-                    is ApiResult.Err -> {
-                        _state.update { it.copy(loading = false, error = data.message) }
-                        return@let emptyList()
-                    }
-                }
-                // The server already sorts; this only keeps the tab honest.
-                items = items.sortedWith(
+            val result = repository.debts(familyId, filters.statusFilter)
+            val items = when (result) {
+                is ApiResult.Ok -> result.value.sortedWith(
                     compareByDescending<FamilyDebtDto> { it.status != "settled" }
                         .thenBy { it.dueDate ?: "" },
                 )
-                _state.update {
-                    it.copy(loading = false, items = items, error = null)
+                is ApiResult.Err -> {
+                    _state.update { it.copy(loading = false, error = result.message) }
+                    emptyList()
                 }
+            }
+            _state.update {
+                it.copy(loading = false, items = items, error = null)
             }
         }
     }

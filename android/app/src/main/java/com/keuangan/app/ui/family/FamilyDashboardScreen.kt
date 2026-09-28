@@ -215,7 +215,8 @@ private fun HealthCard(health: FamilyHealthDto) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     when {
-                        health.statusSafe -> "Kondisi sehat — pemasukan menutupi pengeluaran dan tabungan berjalan."
+                        health.income >= health.expense && health.savings >= 0 ->
+                            "Kondisi sehat — pemasukan menutupi pengeluaran dan tabungan berjalan."
                         health.savings < 0 -> "Tabungan negatif — bicarakan anggaran bulan ini."
                         else -> "Berjalan cukup — dorong tabungan darurat agar lebih aman."
                     },
@@ -334,7 +335,7 @@ private fun NudgeCard(nudge: NudgeDto, onDismiss: () -> Unit) {
 
 @Composable
 private fun InsightRow(insight: InsightDto, onMarkRead: () -> Unit) {
-    val emphasized = !insight.isRead
+    val emphasized = insight.readAt == null
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -351,11 +352,11 @@ private fun InsightRow(insight: InsightDto, onMarkRead: () -> Unit) {
                 )
                 Spacer(Modifier.height(2.dp))
             }
-            Text(insight.content, style = MaterialTheme.typography.bodyMedium)
+            Text(insight.message, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    insight.title,
+                    if (insight.scope == "personal") "Ringkasan pribadi" else "Keluarga",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
