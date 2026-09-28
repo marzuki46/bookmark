@@ -6,7 +6,11 @@ namespace App\Http\Controllers\Api\Family;
 
 use App\Http\Controllers\Controller;
 use App\Models\Family;
+use App\Models\FamilyBudget;
+use App\Models\FamilyDebt;
+use App\Models\FamilyGoal;
 use App\Models\FamilyMember;
+use App\Models\FamilyTransaction;
 use App\Models\User;
 use App\Services\FamilyAIService;
 use App\Services\LoginCodeService;
@@ -246,5 +250,144 @@ final class FamilyController extends Controller
         return response()->json([
             'data' => $this->ai->healthScore($family),
         ]);
+    }
+
+    /**
+     * Gentle, family-toned reminders built purely from the household's own data:
+     * debts whose due date is close (or past), goals nearing their deadline, and
+     * monthly budgets that are already 80%+ spent. Used by the app's background
+     * worker to wake a local notification — no FCM service required.
+     */
+    public function reminders(Request $request, Family $family): JsonResponse
+    {
+        $this->authorize('view', $family);
+
+        $today = now()->startOfDay();
+        $reminders = collect();
+
+        $debts = FamilyDebt::query()
+            ->where('family_id', $family->id)
+            ->whereIn('status', ['open', 'partial'])
+            ->where('type', 'payable')
+            ->whereNotNull('due_date')
+            ->get();
+
+        foreach ($debts as $debt) {
+            $dueAt = now()->parse($debt->due_date)->startOfDay();
+            $days = (int) $today->diffInDays($dueAt, false);
+            if ($days > 7) {
+                continue;
+            }
+            $when = match (true) {
+                $days < 0 => 'sudah lewat '.abs($days).' hari',
+                $days === 0 => 'jatuh tempo hari ini',
+                default => 'tinggal '.$days.' hari lagi',
+            };
+            $reminders->push([
+                'type' => 'debt',
+                'message' => "Utang \"{$debt->name}\" {$when}. Semakin cepat dilunasi, semakin ringan bebannya — kamu pasti bisa. 😊",
+            ]);
+        }
+
+        $goals = FamilyGoal::query()
+            ->where('family_id', $family->id)
+            ->where('status', 'active')
+            ->whereNotNull('deadline')
+            ->get();
+
+        foreach ($goals as $goal) {
+            $deadlineAt = now()->parse($goal->deadline)->startOfDay();
+            $days = (int) $today->diffInDays($deadlineAt, false);
+            if ($goal->current_amount >= $goal->target_amount || $days > 30) {
+                continue;
+            }
+            $percent = $goal->target_amount > 0
+                ? intdiv((int) $goal->current_amount, max(1, (int) ceil($goal->target_amount / 100)))
+                : 0;
+            $when = match (true) {
+                $days < 0 => 'sudah lewat batas waktunya',
+                $days === 0 => 'target waktunya hari ini',
+                default => 'tinggal '.$days.' hari lagi',
+            };
+            $reminders->push([
+                'type' => 'goal',
+                'message' => "Target \"{$goal->name}\" {$when} dan baru terkumpul {$percent}%. Sedikit demi sedikit, terus dijaga ya! 🎯",
+            ]);
+        }
+
+        $now = now();
+        $budgets = FamilyBudget::query()
+            ->where('family_id', $family->id)
+            ->where('month', $now->month)
+            ->where('year', $now->year)
+            ->with('category')
+            ->get();
+
+        foreach ($budgets as $budget) {
+            if ($budget->category === null) {
+                continue;
+            }
+            $spent = (float) FamilyTransaction::query()
+                ->where('family_id', $family->id)
+                ->where('type', 'expense')
+                ->where('category_id', $budget->category_id)
+                ->whereYear('date', $now->year)
+                ->whereMonth('date', $now->month)
+                ->sum('amount');
+            $percent = $budget->amount > 0
+                ? intdiv((int) $spent, max(1, (int) ceil($budget->amount / 100)))
+                : 100;
+            if ($percent >= 80) {
+                $reminders->push([
+                    'type' => 'budget',
+                    'message' => "Anggaran \"{$budget->category->name}\" bulan ini sudah terpakai {$percent}%. Sisa waktunya masih ada — gunakan dengan bijak. 💪",
+                ]);
+            }
+        }
+
+        return response()->json(['data' => $reminders->take(8)->values()]);
+    }
+
+    /**
+     * Income/expense totals per month for the last N months, oldest first, so
+     * the app can draw a home-made bar chart without charting libraries.
+     */
+    public function trend(Request $request, Family $family): JsonResponse
+    {
+        $this->authorize('view', $family);
+
+        $months = max(1, min(12, $request->integer('months', 6) ?: 6));
+        $start = now()->startOfMonth()->subMonths($months - 1);
+
+        $rows = FamilyTransaction::query()
+            ->where('family_id', $family->id)
+            ->where('date', '>=', $start->toDateString())
+            ->get(['type', 'amount', 'date']);
+
+        $byMonth = $rows->groupBy(fn ($tx) => substr((string) $tx->date, 0, 7));
+
+        $labels = [
+            '1' => 'Jan', '2' => 'Feb', '3' => 'Mar', '4' => 'Apr',
+            '5' => 'Mei', '6' => 'Jun', '7' => 'Jul', '8' => 'Agu',
+            '9' => 'Sep', '10' => 'Okt', '11' => 'Nov', '12' => 'Des',
+        ];
+
+        $data = [];
+        for ($i = 0; $i < $months; $i++) {
+            $month = $start->copy()->addMonths($i);
+            $key = $month->format('Y-m');
+            $bucket = $byMonth->get($key, collect());
+            $income = (float) $bucket->where('type', 'income')->sum('amount');
+            $expense = (float) $bucket->where('type', 'expense')->sum('amount');
+            $data[] = [
+                'month' => $key,
+                'label' => $labels[$month->format('n')].' '.$month->format('y'),
+                'income' => $income,
+                'expense' => $expense,
+                'net' => $income - $expense,
+            ];
+        }
+
+        return response()->json(['data' => $data]);
     }
 }

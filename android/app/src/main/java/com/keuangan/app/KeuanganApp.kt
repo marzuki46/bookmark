@@ -1,16 +1,23 @@
 package com.keuangan.app
 
 import android.app.Application
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.keuangan.app.data.ApiClient
 import com.keuangan.app.data.Connectivity
 import com.keuangan.app.data.KeuanganRepository
 import com.keuangan.app.data.OfflineTxStore
 import com.keuangan.app.data.TokenStore
+import com.keuangan.app.reminder.ReminderWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.TimeUnit
 
 class KeuanganApp : Application() {
 
@@ -35,6 +42,7 @@ class KeuanganApp : Application() {
             OfflineTxStore(this),
         )
         observeRecovery()
+        scheduleReminders()
     }
 
     /**
@@ -48,5 +56,14 @@ class KeuanganApp : Application() {
                 repository.syncPendingTransactions()
             }
         }
+    }
+
+    /** Gentle, infrequent nudge at most every 6h while the device is online. */
+    private fun scheduleReminders() {
+        val request = PeriodicWorkRequestBuilder<ReminderWorker>(6, TimeUnit.HOURS)
+            .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .build()
+        WorkManager.getInstance(this)
+            .enqueueUniquePeriodicWork("family-reminders", ExistingPeriodicWorkPolicy.KEEP, request)
     }
 }

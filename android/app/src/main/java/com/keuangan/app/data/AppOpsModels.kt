@@ -67,3 +67,26 @@ data class NewFamilyMemberDto(
 
 @Serializable
 data class FamilyMemberResponse(val data: NewFamilyMemberDto = NewFamilyMemberDto())
+
+// --- Reminders (background notifications) & monthly trend ---
+
+@Serializable
+data class ReminderDto(
+    val type: String = "",
+    val message: String = "",
+)
+
+@Serializable
+data class ReminderListResponse(val data: List<ReminderDto> = emptyList())
+
+@Serializable
+data class TrendPointDto(
+    val month: String = "",
+    val label: String = "",
+    val income: Double = 0.0,
+    val expense: Double = 0.0,
+    val net: Double = 0.0,
+)
+
+@Serializable
+data class FamilyTrendResponse(val data: List<TrendPointDto> = emptyList())

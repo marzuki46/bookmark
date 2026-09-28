@@ -123,6 +123,15 @@ interface KeuanganApi {
     @GET("api/families/{family}/summary")
     suspend fun familySummary(@Path("family") familyId: Int): FamilySummaryResponse
 
+    @GET("api/families/{family}/transactions/trend")
+    suspend fun familyTrend(
+        @Path("family") familyId: Int,
+        @Query("months") months: Int = 6,
+    ): FamilyTrendResponse
+
+    @GET("api/families/{family}/reminders")
+    suspend fun familyReminders(@Path("family") familyId: Int): ReminderListResponse
+
     // --- Household: categories ---
 
     @GET("api/families/{family}/categories")

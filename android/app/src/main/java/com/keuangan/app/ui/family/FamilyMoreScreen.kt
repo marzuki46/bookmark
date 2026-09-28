@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
@@ -70,6 +71,7 @@ fun FamilyMoreScreen(
     onOpenBudgets: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenIncomeSources: () -> Unit,
+    onOpenTrend: () -> Unit,
     onOpenProfile: () -> Unit,
     onOpenSubscription: () -> Unit,
 ) {
@@ -89,6 +91,7 @@ fun FamilyMoreScreen(
             MenuItem("Anggaran", "Atur batas pengeluaran per bulan", Icons.Filled.AccountBalanceWallet, onOpenBudgets),
             MenuItem("Sumber Pemasukan", "Gaji, usaha, sampingan", Icons.Filled.AttachMoney, onOpenIncomeSources),
             MenuItem("Kategori", "Kelompok pengeluaran & pemasukan", Icons.Filled.Category, onOpenCategories),
+            MenuItem("Tren Keluarga", "Grafik pemasukan vs pengeluaran", Icons.Filled.TrendingUp, onOpenTrend),
             MenuItem("Tema", "Enam warna senang untuk aplikasi", Icons.Filled.Palette, { showThemePicker = true }),
             MenuItem("Langganan", "Status paket & pembayaran", Icons.Filled.WorkspacePremium, onOpenSubscription),
             MenuItem("Keluarga & Akun", "Anggota, peran, kode login & barcode", Icons.Filled.Group, onOpenProfile),

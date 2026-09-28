@@ -194,6 +194,16 @@ class KeuanganRepository(
         apiCall { api.familySummary(familyId) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
+    // --- reminders & trend ---
+
+    suspend fun familyReminders(familyId: Int): ApiResult<List<ReminderDto>> = runCatching {
+        apiCall { api.familyReminders(familyId) }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun familyTrend(familyId: Int, months: Int = 6): ApiResult<List<TrendPointDto>> = runCatching {
+        apiCall { api.familyTrend(familyId, months) }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
     // --- insights ---
 
     suspend fun insights(familyId: Int): ApiResult<FamilyInsightsResponse> = runCatching {

@@ -87,6 +87,8 @@ import com.keuangan.app.ui.family.FamilySubscriptionScreen
 import com.keuangan.app.ui.family.FamilySubscriptionViewModel
 import com.keuangan.app.ui.family.FamilyTransactionsScreen
 import com.keuangan.app.ui.family.FamilyTransactionsViewModel
+import com.keuangan.app.ui.family.FamilyTrendScreen
+import com.keuangan.app.ui.family.FamilyTrendViewModel
 
 object Routes {
     const val HOME = "home"
@@ -97,6 +99,7 @@ object Routes {
     const val BUDGETS = "budgets"
     const val CATEGORIES = "categories"
     const val INCOME_SOURCES = "income-sources"
+    const val TREND = "trend"
     const val PROFILE = "profile"
     const val SUBSCRIPTION = "subscription"
 }
@@ -125,6 +128,7 @@ private fun appFactory(): ViewModelProvider.Factory {
         initializer { FamilyProfileViewModel(app.repository) }
         initializer { FamilySubscriptionViewModel(app.repository) }
         initializer { FamilyMoreViewModel(app.repository) }
+        initializer { FamilyTrendViewModel(app.repository) }
     }
 }
 
@@ -244,6 +248,7 @@ private fun FamilyShell(
                     onOpenBudgets = { navController.navigate(Routes.BUDGETS) },
                     onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
                     onOpenIncomeSources = { navController.navigate(Routes.INCOME_SOURCES) },
+                    onOpenTrend = { navController.navigate(Routes.TREND) },
                     onOpenProfile = { navController.navigate(Routes.PROFILE) },
                     onOpenSubscription = { navController.navigate(Routes.SUBSCRIPTION) },
                 )
@@ -259,6 +264,10 @@ private fun FamilyShell(
             composable(Routes.INCOME_SOURCES) {
                 val vm: FamilyIncomeSourcesViewModel = viewModel(factory = appFactory())
                 FamilyIncomeSourcesScreen(familyId = familyId!!, viewModel = vm)
+            }
+            composable(Routes.TREND) {
+                val vm: FamilyTrendViewModel = viewModel(factory = appFactory())
+                FamilyTrendScreen(familyId = familyId!!, viewModel = vm)
             }
             composable(Routes.PROFILE) {
                 val vm: FamilyProfileViewModel = viewModel(factory = appFactory())

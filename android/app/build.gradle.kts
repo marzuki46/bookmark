@@ -97,6 +97,7 @@ dependencies {
     implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:1.0.0")
 
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     implementation("com.google.zxing:core:3.5.3")
     implementation("androidx.camera:camera-core:1.4.1")

@@ -79,6 +79,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         Route::get('transactions', [FamilyTransactionController::class, 'index']);
         Route::post('transactions', [FamilyTransactionController::class, 'store']);
+        // Trend must be registered before the wildcard route below, otherwise
+        // Laravel would treat "trend" as a {transaction} id.
+        Route::get('transactions/trend', [FamilyController::class, 'trend']);
         Route::get('transactions/{transaction}', [FamilyTransactionController::class, 'show']);
         Route::match(['put', 'patch'], 'transactions/{transaction}', [FamilyTransactionController::class, 'update']);
         Route::delete('transactions/{transaction}', [FamilyTransactionController::class, 'destroy']);
@@ -110,6 +113,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('insights', [FamilyInsightController::class, 'index']);
         Route::get('nudge', [FamilyInsightController::class, 'nudge']);
         Route::post('insights/read', [FamilyInsightController::class, 'markRead']);
+
+        // Reminders for the app's background notifications + the 6-month trend.
+        Route::get('reminders', [FamilyController::class, 'reminders']);
 
         // Categories are needed to build a transaction and were previously
         // web-only, so the app could record spending but not categorise it.

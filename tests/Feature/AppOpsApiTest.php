@@ -7,7 +7,9 @@ namespace Tests\Feature;
 use App\Models\AppErrorLog;
 use App\Models\AppRelease;
 use App\Models\Family;
+use App\Models\FamilyDebt;
 use App\Models\FamilyMember;
+use App\Models\FamilyTransaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -248,5 +250,52 @@ final class AppOpsApiTest extends TestCase
             'name' => 'Anggota Ke Enam',
         ])->assertStatus(422)
             ->assertJsonPath('message', 'Keluarga sudah penuh (maksimal 5 orang).');
+    }
+
+    public function test_reminders_call_out_due_debt(): void
+    {
+        FamilyDebt::create([
+            'family_id' => $this->family->id,
+            'name' => 'Cicilan Motor',
+            'type' => 'payable',
+            'amount' => 2000000,
+            'due_date' => now()->addDays(2)->toDateString(),
+        ]);
+
+        Sanctum::actingAs($this->owner);
+
+        $response = $this->getJson("/api/families/{$this->family->id}/reminders")->assertOk();
+
+        $this->assertNotEmpty($response->json('data'));
+        $this->assertStringContainsString('Cicilan Motor', $response->json('data.0.message'));
+    }
+
+    public function test_trend_returns_monthly_buckets(): void
+    {
+        FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $this->owner->id,
+            'type' => 'income',
+            'amount' => 1000000,
+            'description' => 'Gaji',
+            'date' => now()->toDateString(),
+        ]);
+        FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $this->owner->id,
+            'type' => 'expense',
+            'amount' => 250000,
+            'description' => 'Belanja',
+            'date' => now()->toDateString(),
+        ]);
+
+        Sanctum::actingAs($this->owner);
+
+        $response = $this->getJson("/api/families/{$this->family->id}/transactions/trend?months=6")->assertOk();
+
+        $this->assertCount(6, $response->json('data'));
+        $this->assertSame(1000000.0, (float) $response->json('data.5.income'));
+        $this->assertSame(250000.0, (float) $response->json('data.5.expense'));
+        $this->assertSame(750000.0, (float) $response->json('data.5.net'));
     }
 }
