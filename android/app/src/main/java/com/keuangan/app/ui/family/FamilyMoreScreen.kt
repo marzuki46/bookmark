@@ -1,5 +1,8 @@
 package com.keuangan.app.ui.family
 
+import android.content.Intent
+import android.net.Uri
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,13 +20,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.AlertDialog
@@ -78,6 +82,7 @@ fun FamilyMoreScreen(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     var showThemePicker by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -91,11 +96,12 @@ fun FamilyMoreScreen(
             MenuItem("Anggaran", "Atur batas pengeluaran per bulan", Icons.Filled.AccountBalanceWallet, onOpenBudgets),
             MenuItem("Sumber Pemasukan", "Gaji, usaha, sampingan", Icons.Filled.AttachMoney, onOpenIncomeSources),
             MenuItem("Kategori", "Kelompok pengeluaran & pemasukan", Icons.Filled.Category, onOpenCategories),
-            MenuItem("Tren Keluarga", "Grafik pemasukan vs pengeluaran", Icons.Filled.TrendingUp, onOpenTrend),
+            MenuItem("Tren Keluarga", "Grafik pemasukan vs pengeluaran", Icons.AutoMirrored.Filled.TrendingUp, onOpenTrend),
             MenuItem("Tema", "Enam warna senang untuk aplikasi", Icons.Filled.Palette, { showThemePicker = true }),
             MenuItem("Langganan", "Status paket & pembayaran", Icons.Filled.WorkspacePremium, onOpenSubscription),
             MenuItem("Keluarga & Akun", "Anggota, peran, kode login & barcode", Icons.Filled.Group, onOpenProfile),
             MenuItem("Periksa Pembaruan", "Versi ${BuildConfig.VERSION_NAME} · pasang versi baru", Icons.Filled.SystemUpdate, viewModel::checkUpdates),
+            MenuItem("Tentang KEUANGAN", "Privasi, keamanan & bantuan", Icons.Filled.Info, { showAbout = true }),
         )
 
         LazyColumn(
@@ -162,6 +168,42 @@ fun FamilyMoreScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showThemePicker = false }) { Text("Tutup") }
+            },
+        )
+    }
+
+    if (showAbout) {
+        AlertDialog(
+            onDismissRequest = { showAbout = false },
+            title = { Text("Tentang KEUANGAN") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        "KEUANGAN dibuat khusus untuk membantu rumah tangga di Indonesia mencatat, memahami, dan merencanakan keuangan bersama.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        "Data keuangan disimpan dengan aman. Akses keluarga hanya dapat dibuka oleh orang yang memiliki kode rumah tangga. Kode akses tidak disimpan sebagai teks biasa di sistem.",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text("Butuh bantuan?", fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.size(2.dp))
+                            Text("Tri Marzuki\nWhatsApp: 082213028718")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/6282213028718")),
+                    )
+                }) { Text("Hubungi WhatsApp") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAbout = false }) { Text("Tutup") }
             },
         )
     }

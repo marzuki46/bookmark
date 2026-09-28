@@ -27,6 +27,12 @@ class FamilyAppViewModel(private val repository: KeuanganRepository) : ViewModel
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
     init {
+        // Show the last known family immediately while the fresh membership
+        // request runs. This removes the blank startup state on slow networks.
+        repository.cachedFamilyId?.let { cachedId ->
+            _familyId.value = cachedId
+            _loading.value = false
+        }
         resolve()
     }
 

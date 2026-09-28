@@ -48,6 +48,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyTransactionDto
 import com.keuangan.app.data.IncomeSourceDto
@@ -98,6 +101,8 @@ fun FamilyTransactionsScreen(
                 onValueChange = viewModel::onSearchChange,
                 label = { Text("Cari transaksi") },
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { viewModel.submitSearch(familyId) }),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),

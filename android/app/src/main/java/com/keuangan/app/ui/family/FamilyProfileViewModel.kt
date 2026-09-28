@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keuangan.app.data.ApiResult
 import com.keuangan.app.data.FamilyDto
+import com.keuangan.app.data.FamilyMemberDto
 import com.keuangan.app.data.KeuanganRepository
 import com.keuangan.app.data.MeDto
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -92,6 +93,34 @@ class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewM
                     load(familyId)
                 }
                 is ApiResult.Err -> _state.update { it.copy(addingMember = false, actionMessage = result.message) }
+            }
+        }
+    }
+
+    fun updateMember(familyId: Int, member: FamilyMemberDto, name: String, payerRole: String?) {
+        if (name.isBlank()) {
+            showMessage("Nama anggota harus diisi.")
+            return
+        }
+        viewModelScope.launch {
+            when (val result = repository.updateFamilyMember(familyId, member.userId, name, payerRole)) {
+                is ApiResult.Ok -> {
+                    showMessage("Data anggota diperbarui.")
+                    load(familyId)
+                }
+                is ApiResult.Err -> showMessage(result.message)
+            }
+        }
+    }
+
+    fun deleteMember(familyId: Int, member: FamilyMemberDto) {
+        viewModelScope.launch {
+            when (repository.deleteFamilyMember(familyId, member.userId)) {
+                is ApiResult.Ok -> {
+                    showMessage("Akses anggota sudah dicabut dari keluarga.")
+                    load(familyId)
+                }
+                is ApiResult.Err -> showMessage("Anggota belum dapat dihapus. Coba lagi.")
             }
         }
     }

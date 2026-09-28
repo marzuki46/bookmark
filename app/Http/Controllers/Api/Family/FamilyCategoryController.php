@@ -17,9 +17,8 @@ use Illuminate\Http\Request;
  * manageable from the web Livewire screens, so an app user could record a
  * transaction but could not create the category it needed.
  *
- * Delete is intentionally absent: family_transactions references these rows,
- * and dropping one would either orphan history or block on the foreign key.
- * Categories are retired by renaming instead.
+ * Custom categories may be deleted safely because family_transactions.category_id
+ * is nullable; historical entries remain in the ledger without a category.
  */
 final class FamilyCategoryController extends Controller
 {
@@ -104,6 +103,22 @@ final class FamilyCategoryController extends Controller
             'color' => $category->color,
             'is_system' => (bool) $category->is_system,
         ]]);
+    }
+
+    public function destroy(Request $request, Family $family, FamilyCategory $category): \Illuminate\Http\Response|JsonResponse
+    {
+        $this->authorize('view', $family);
+        $this->assertSameFamily($family, $category->id);
+
+        if ($category->is_system) {
+            return response()->json(['message' => 'Kategori bawaan tidak dapat dihapus.'], 422);
+        }
+
+        // The foreign key is nullable, so deleting a custom category keeps
+        // historical transactions and marks them uncategorised.
+        $category->delete();
+
+        return response()->noContent();
     }
 
     private function assertSameFamily(Family $family, int $categoryId): void

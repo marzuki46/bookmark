@@ -144,16 +144,18 @@ final class FamilyCategoryApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_there_is_no_delete_route(): void
+    public function test_it_deletes_custom_category_without_touching_the_family(): void
     {
-        // Categories are referenced by transactions, so retiring one by
-        // deleting it would orphan history.
-        $this->assertFalse(
-            collect(app('router')->getRoutes())->contains(
-                fn ($r): bool => $r->methods()[0] === 'DELETE'
-                    && str_contains($r->uri(), 'families/{family}/categories')
-            ),
-            'A family category delete route must not exist.'
-        );
+        $category = FamilyCategory::create([
+            'family_id' => $this->family->id,
+            'name' => 'Kategori sementara',
+            'type' => 'expense',
+            'is_system' => false,
+        ]);
+
+        $this->deleteJson("/api/families/{$this->family->id}/categories/{$category->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('family_categories', ['id' => $category->id]);
     }
 }

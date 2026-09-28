@@ -252,6 +252,55 @@ final class AppOpsApiTest extends TestCase
             ->assertJsonPath('message', 'Keluarga sudah penuh (maksimal 5 orang).');
     }
 
+    public function test_owner_can_edit_and_remove_a_member_without_deleting_history(): void
+    {
+        $member = User::factory()->create(['name' => 'Nama Lama']);
+        FamilyMember::create([
+            'family_id' => $this->family->id,
+            'user_id' => $member->id,
+            'role' => 'member',
+        ]);
+        $transaction = FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $member->id,
+            'type' => 'expense',
+            'amount' => 25000,
+            'description' => 'Riwayat tetap ada',
+            'date' => now()->toDateString(),
+        ]);
+
+        Sanctum::actingAs($this->owner);
+
+        $this->patchJson("/api/families/{$this->family->id}/members/{$member->id}", [
+            'name' => 'Nama Baru',
+            'payer_role' => 'wife',
+        ])->assertOk()
+            ->assertJsonPath('data.name', 'Nama Baru')
+            ->assertJsonPath('data.payer_role', 'wife');
+
+        $this->deleteJson("/api/families/{$this->family->id}/members/{$member->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('family_members', [
+            'family_id' => $this->family->id,
+            'user_id' => $member->id,
+        ]);
+        $this->assertDatabaseHas('family_transactions', ['id' => $transaction->id]);
+    }
+
+    public function test_owner_cannot_remove_themselves_or_another_family_member_cannot_manage_members(): void
+    {
+        Sanctum::actingAs($this->owner);
+        $this->deleteJson("/api/families/{$this->family->id}/members/{$this->owner->id}")
+            ->assertStatus(422);
+
+        $member = User::factory()->create();
+        FamilyMember::create(['family_id' => $this->family->id, 'user_id' => $member->id, 'role' => 'member']);
+        Sanctum::actingAs($member);
+        $this->patchJson("/api/families/{$this->family->id}/members/{$this->owner->id}", ['name' => 'Tidak boleh'])
+            ->assertStatus(403);
+    }
+
     public function test_reminders_call_out_due_debt(): void
     {
         FamilyDebt::create([

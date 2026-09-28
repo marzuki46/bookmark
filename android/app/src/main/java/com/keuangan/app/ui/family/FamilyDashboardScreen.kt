@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -323,11 +324,25 @@ private fun NudgeCard(nudge: NudgeDto, onDismiss: () -> Unit) {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.Top) {
-            Text(
-                "👉  " + (nudge.message.ifBlank { "Saran keuangan untuk keluarga." }),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
+            Icon(
+                Icons.Filled.Lightbulb,
+                contentDescription = null,
+                tint = Amber600,
+                modifier = Modifier.size(20.dp),
             )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Saran lembut dari KEUANGAN",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = Amber600,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    nudge.message.ifBlank { "Ada kabar kecil tentang keuangan keluarga." },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                 Icon(
                     Icons.Filled.Close,

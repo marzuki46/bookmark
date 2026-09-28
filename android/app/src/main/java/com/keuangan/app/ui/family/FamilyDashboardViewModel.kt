@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
@@ -40,14 +41,28 @@ class FamilyDashboardViewModel(private val repository: KeuanganRepository) : Vie
     fun load(familyId: Int, refreshing: Boolean = false) {
         _state.update { it.copy(error = null, refreshing = refreshing) }
         viewModelScope.launch {
-            val snapshot = repository.insights(familyId)
-                .let { when (it) { is ApiResult.Ok -> it.value; is ApiResult.Err -> null } }
-
-            val health = repository.familyHealth(familyId)
-                .let { when (it) { is ApiResult.Ok -> it.value; is ApiResult.Err -> null } }
-
-            val nudge = repository.nudge(familyId)
-                .let { when (it) { is ApiResult.Ok -> it.value; is ApiResult.Err -> null } }
+            // These endpoints are independent. Awaiting them together removes
+            // two network round trips from the dashboard's critical path.
+            val snapshotDeferred = async {
+                repository.insights(familyId).let { result ->
+                    when (result) { is ApiResult.Ok -> result.value; is ApiResult.Err -> null }
+                }
+            }
+            val healthDeferred = async {
+                repository.familyHealth(familyId).let { result ->
+                    when (result) { is ApiResult.Ok -> result.value; is ApiResult.Err -> null }
+                }
+            }
+            val nudgeDeferred = async {
+                repository.nudge(familyId).let { result ->
+                    when (result) { is ApiResult.Ok -> result.value; is ApiResult.Err -> null }
+                }
+            }
+            val incomeDeferred = async { incomeBySourceThisMonth(familyId) }
+            val snapshot = snapshotDeferred.await()
+            val health = healthDeferred.await()
+            val nudge = nudgeDeferred.await()
+            val incomeBySource = incomeDeferred.await()
 
             _state.update {
                 it.copy(
@@ -56,7 +71,7 @@ class FamilyDashboardViewModel(private val repository: KeuanganRepository) : Vie
                     insights = listOfNotNull(snapshot?.family, snapshot?.personal),
                     health = health,
                     nudge = nudge,
-                    incomeBySource = incomeBySourceThisMonth(familyId),
+                    incomeBySource = incomeBySource,
                 )
             }
         }

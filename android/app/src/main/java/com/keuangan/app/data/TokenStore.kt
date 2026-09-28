@@ -25,16 +25,23 @@ class TokenStore(private val context: Context) {
     @Volatile
     private var cachedUserId: Int? = null
 
+    @Volatile
+    private var cachedFamilyId: Int? = null
+
     val token: String?
         get() = cachedToken
 
     val userId: Int?
         get() = cachedUserId
 
+    val familyId: Int?
+        get() = cachedFamilyId
+
     suspend fun restore(): String? {
         val data = context.dataStore.data.first()
         cachedToken = data[KEY_TOKEN]
         cachedUserId = data[KEY_USER_ID]
+        cachedFamilyId = data[KEY_FAMILY_ID]
         return cachedToken
     }
 
@@ -55,18 +62,28 @@ class TokenStore(private val context: Context) {
         }
     }
 
+    suspend fun saveFamilyId(value: Int?) {
+        cachedFamilyId = value
+        context.dataStore.edit {
+            if (value == null) it.remove(KEY_FAMILY_ID) else it[KEY_FAMILY_ID] = value
+        }
+    }
+
     suspend fun clear() {
         cachedToken = null
         cachedUserId = null
+        cachedFamilyId = null
         context.dataStore.edit {
             it.remove(KEY_TOKEN)
             it.remove(KEY_USER_ID)
+            it.remove(KEY_FAMILY_ID)
         }
     }
 
     companion object {
         private val KEY_TOKEN = stringPreferencesKey("token")
         private val KEY_USER_ID = intPreferencesKey("user_id")
+        private val KEY_FAMILY_ID = intPreferencesKey("family_id")
     }
 }
 

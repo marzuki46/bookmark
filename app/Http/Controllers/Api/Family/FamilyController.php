@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\FamilyAIService;
 use App\Services\LoginCodeService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -237,6 +238,86 @@ final class FamilyController extends Controller
                 'login_code' => $code,
             ],
         ], 201);
+    }
+
+    /** Update a managed member without allowing ownership or family changes. */
+    public function updateMember(Request $request, Family $family, int $memberUser): JsonResponse
+    {
+        $this->authorize('manage', $family);
+        $member = $family->members()->where('user_id', $memberUser)->firstOrFail();
+        $this->assertSameFamilyMember($family, $member);
+
+        if ($member->role === 'owner') {
+            return response()->json(['message' => 'Pemilik keluarga tidak dapat diubah dari menu anggota.'], 422);
+        }
+
+        $data = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'payer_role' => ['sometimes', 'nullable', 'in:husband,wife'],
+        ]);
+
+        if (array_key_exists('payer_role', $data) && $data['payer_role'] !== null) {
+            $taken = FamilyMember::query()
+                ->where('family_id', $family->id)
+                ->where('payer_role', $data['payer_role'])
+                ->where('user_id', '!=', $member->user_id)
+                ->exists();
+
+            if ($taken) {
+                return response()->json([
+                    'message' => 'Peran itu sudah dipakai anggota keluarga.',
+                    'errors' => ['payer_role' => ['Peran ini sudah dipakai anggota keluarga.']],
+                ], 422);
+            }
+        }
+
+        if (array_key_exists('name', $data)) {
+            $member->user()->update(['name' => trim($data['name'])]);
+        }
+        if (array_key_exists('payer_role', $data)) {
+            $member->update(['payer_role' => $data['payer_role']]);
+        }
+
+        $member->load('user:id,name,email');
+
+        return response()->json(['data' => $this->memberPayload($member)]);
+    }
+
+    /** Remove access while retaining the user's historical transactions. */
+    public function destroyMember(Request $request, Family $family, int $memberUser): Response|JsonResponse
+    {
+        $this->authorize('manage', $family);
+        $member = $family->members()->where('user_id', $memberUser)->firstOrFail();
+        $this->assertSameFamilyMember($family, $member);
+
+        if ($member->role === 'owner' || $member->user_id === $request->user()->id) {
+            return response()->json(['message' => 'Pemilik atau akun sendiri tidak dapat dihapus dari keluarga.'], 422);
+        }
+
+        $user = $member->user;
+        $member->delete();
+        // A removed member must not retain an old bearer token into this family.
+        $user?->tokens()->delete();
+
+        return response()->noContent();
+    }
+
+    private function assertSameFamilyMember(Family $family, FamilyMember $member): void
+    {
+        abort_unless($member->family_id === $family->id, 404);
+    }
+
+    /** @return array<string, mixed> */
+    private function memberPayload(FamilyMember $member): array
+    {
+        return [
+            'user_id' => $member->user_id,
+            'role' => $member->role,
+            'name' => $member->user?->name,
+            'email' => $member->user?->email,
+            'payer_role' => $member->payer_role,
+            'payer_label' => $member->payerLabel(),
+        ];
     }
 
     /**

@@ -93,4 +93,13 @@ class FamilyCategoriesViewModel(private val repository: KeuanganRepository) : Vi
     }
 
     fun closeForm() = _state.update { it.copy(form = null, formError = null) }
+
+    fun delete(familyId: Int, category: FamilyCategoryDto) {
+        viewModelScope.launch {
+            when (val result = repository.deleteFamilyCategory(familyId, category.id)) {
+                is ApiResult.Ok -> load(familyId)
+                is ApiResult.Err -> _state.update { it.copy(error = result.message) }
+            }
+        }
+    }
 }

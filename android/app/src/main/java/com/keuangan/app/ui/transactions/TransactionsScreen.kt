@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.TransactionDto
+import com.keuangan.app.ui.components.DateField
 import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Red600
@@ -294,12 +295,10 @@ private fun TransactionFormDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
-                OutlinedTextField(
+                DateField(
+                    label = "Tanggal",
                     value = form.date,
-                    onValueChange = { value -> onChange { it.copy(date = value) } },
-                    label = { Text("Tanggal (YYYY-MM-DD)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                    onChange = { date -> onChange { it.copy(date = date.orEmpty()) } },
                 )
                 if (relevant.isNotEmpty()) {
                     Spacer(Modifier.height(10.dp))

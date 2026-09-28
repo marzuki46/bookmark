@@ -35,11 +35,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -114,21 +114,23 @@ object Routes {
 @Composable
 private fun appFactory(): ViewModelProvider.Factory {
     val app = LocalContext.current.applicationContext as KeuanganApp
-    return viewModelFactory {
-        initializer { SessionViewModel(app.repository) }
-        initializer { CodeLoginViewModel(app.repository) }
-        initializer { FamilyAppViewModel(app.repository) }
-        initializer { FamilyDashboardViewModel(app.repository) }
-        initializer { FamilyTransactionsViewModel(app.repository) }
-        initializer { FamilyDebtsViewModel(app.repository) }
-        initializer { FamilyGoalsViewModel(app.repository) }
-        initializer { FamilyBudgetsViewModel(app.repository) }
-        initializer { FamilyCategoriesViewModel(app.repository) }
-        initializer { FamilyIncomeSourcesViewModel(app.repository) }
-        initializer { FamilyProfileViewModel(app.repository) }
-        initializer { FamilySubscriptionViewModel(app.repository) }
-        initializer { FamilyMoreViewModel(app.repository) }
-        initializer { FamilyTrendViewModel(app.repository) }
+    return remember(app) {
+        viewModelFactory {
+            initializer { SessionViewModel(app.repository) }
+            initializer { CodeLoginViewModel(app.repository) }
+            initializer { FamilyAppViewModel(app.repository) }
+            initializer { FamilyDashboardViewModel(app.repository) }
+            initializer { FamilyTransactionsViewModel(app.repository) }
+            initializer { FamilyDebtsViewModel(app.repository) }
+            initializer { FamilyGoalsViewModel(app.repository) }
+            initializer { FamilyBudgetsViewModel(app.repository) }
+            initializer { FamilyCategoriesViewModel(app.repository) }
+            initializer { FamilyIncomeSourcesViewModel(app.repository) }
+            initializer { FamilyProfileViewModel(app.repository) }
+            initializer { FamilySubscriptionViewModel(app.repository) }
+            initializer { FamilyMoreViewModel(app.repository) }
+            initializer { FamilyTrendViewModel(app.repository) }
+        }
     }
 }
 
@@ -140,7 +142,7 @@ private data class Tab(
 
 private val TABS = listOf(
     Tab(Routes.HOME, "Rumah", Icons.Filled.Home),
-    Tab(Routes.TRANSACTIONS, "Transaksi", Icons.Filled.ReceiptLong),
+    Tab(Routes.TRANSACTIONS, "Transaksi", Icons.AutoMirrored.Filled.ReceiptLong),
     Tab(Routes.DEBTS, "Utang", Icons.Filled.Balance),
     Tab(Routes.GOALS, "Target", Icons.Filled.Flag),
     Tab(Routes.MORE, "Lainnya", Icons.Filled.MoreVert),
@@ -220,10 +222,12 @@ private fun FamilyShell(
             navController = navController,
             startDestination = Routes.HOME,
             modifier = Modifier.padding(padding),
-            enterTransition = { fadeIn(tween(220)) + slideInHorizontally(tween(280), initialOffsetX = { it / 10 }) },
-            exitTransition = { fadeOut(tween(160)) },
-            popEnterTransition = { fadeIn(tween(220)) },
-            popExitTransition = { fadeOut(tween(160)) + slideOutHorizontally(tween(280)) { it / 10 } },
+            // Keep navigation responsive on low-end phones. Screen content can
+            // still load progressively without waiting behind long transitions.
+            enterTransition = { fadeIn(tween(100)) },
+            exitTransition = { fadeOut(tween(70)) },
+            popEnterTransition = { fadeIn(tween(100)) },
+            popExitTransition = { fadeOut(tween(70)) },
         ) {
             composable(Routes.HOME) {
                 val vm: FamilyDashboardViewModel = viewModel(factory = appFactory())

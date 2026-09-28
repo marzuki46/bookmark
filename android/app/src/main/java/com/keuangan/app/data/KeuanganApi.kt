@@ -120,6 +120,19 @@ interface KeuanganApi {
         @Body body: FamilyMemberRequest,
     ): FamilyMemberResponse
 
+    @PATCH("api/families/{family}/members/{member}")
+    suspend fun updateFamilyMember(
+        @Path("family") familyId: Int,
+        @Path("member") userId: Int,
+        @Body body: FamilyMemberRequest,
+    ): FamilyMemberResponse
+
+    @DELETE("api/families/{family}/members/{member}")
+    suspend fun deleteFamilyMember(
+        @Path("family") familyId: Int,
+        @Path("member") userId: Int,
+    )
+
     @GET("api/families/{family}/summary")
     suspend fun familySummary(@Path("family") familyId: Int): FamilySummaryResponse
 
@@ -152,6 +165,12 @@ interface KeuanganApi {
         @Path("category") categoryId: Int,
         @Body body: FamilyCategoryRequest,
     ): FamilyCategoryResponse
+
+    @DELETE("api/families/{family}/categories/{category}")
+    suspend fun deleteFamilyCategory(
+        @Path("family") familyId: Int,
+        @Path("category") categoryId: Int,
+    )
 
     // --- Household: transactions ---
 

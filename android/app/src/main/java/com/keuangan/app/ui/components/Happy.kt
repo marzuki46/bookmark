@@ -29,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -48,6 +49,7 @@ import com.keuangan.app.ui.parseIsoDate
 import com.keuangan.app.ui.theme.AppThemes
 import com.keuangan.app.ui.theme.ThemeController
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneOffset
 
 /** Happy gradient banner used as the top of every screen. Follows the theme. */
@@ -82,26 +84,21 @@ fun GradientHeader(
                 .size(56.dp)
                 .background(Color.White.copy(alpha = 0.08f), CircleShape),
         )
-        AnimatedVisibility(
-            visible = true,
-            enter = slideInVertically(tween(320), initialOffsetY = { -14 }),
-        ) {
-            Column(Modifier.fillMaxWidth(0.86f)) {
+        Column(Modifier.fillMaxWidth(0.86f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+            )
+            if (subtitle != null) {
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White,
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.92f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                if (subtitle != null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.92f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
             }
         }
         trailing?.let { action ->
@@ -122,8 +119,9 @@ fun DateField(
     var open by remember { mutableStateOf(false) }
     val initialMillis = remember(value) { parseIsoDate(value)?.time }
 
+    val isToday = value == LocalDate.now().toString()
     OutlinedTextField(
-        value = formatFullDate(value),
+        value = if (isToday) "Hari ini" else formatFullDate(value),
         onValueChange = {},
         readOnly = true,
         label = { Text(label) },
@@ -137,6 +135,12 @@ fun DateField(
                 )
             }
         },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = MaterialTheme.colorScheme.primary,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        ),
         modifier = modifier.fillMaxWidth(),
     )
 

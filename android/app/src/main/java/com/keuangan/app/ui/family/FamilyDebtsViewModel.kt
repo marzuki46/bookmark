@@ -40,14 +40,17 @@ data class FamilyDebtsUiState(
 
 class FamilyDebtsViewModel(private val repository: KeuanganRepository) : ViewModel() {
 
+    private var activeFamilyId: Int? = null
+
     private val _state = MutableStateFlow(FamilyDebtsUiState())
     val state: StateFlow<FamilyDebtsUiState> = _state.asStateFlow()
 
     fun load(familyId: Int) {
+        activeFamilyId = familyId
         _state.update { it.copy(loading = it.items.isEmpty(), error = null) }
         viewModelScope.launch {
             val filters = _state.value
-            val result = repository.debts(familyId, filters.statusFilter)
+            val result = repository.debts(familyId, filters.statusFilter, filters.typeFilter)
             val items = when (result) {
                 is ApiResult.Ok -> result.value.sortedWith(
                     compareByDescending<FamilyDebtDto> { it.status != "settled" }
@@ -66,10 +69,12 @@ class FamilyDebtsViewModel(private val repository: KeuanganRepository) : ViewMod
 
     fun setTypeFilter(type: String?) {
         _state.update { it.copy(typeFilter = type) }
+        activeFamilyId?.let(::load)
     }
 
     fun setStatusFilter(status: String?) {
         _state.update { it.copy(statusFilter = status) }
+        activeFamilyId?.let(::load)
     }
 
     fun openCreate() {

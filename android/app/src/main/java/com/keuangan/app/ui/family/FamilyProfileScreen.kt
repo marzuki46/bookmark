@@ -18,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
@@ -82,6 +84,8 @@ fun FamilyProfileScreen(
     var showQr by remember { mutableStateOf(false) }
     var memberName by rememberSaveable { mutableStateOf("") }
     var memberRole by rememberSaveable { mutableStateOf<String?>(null) }
+    var editingMember by remember { mutableStateOf<FamilyMemberDto?>(null) }
+    var deletingMember by remember { mutableStateOf<FamilyMemberDto?>(null) }
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
 
@@ -234,6 +238,9 @@ fun FamilyProfileScreen(
                         member = member,
                         isMe = member.userId == viewModel.currentUserId,
                         onSetRole = { role -> viewModel.setPayerRole(familyId, role) },
+                        canManage = isOwner && member.userId != viewModel.currentUserId,
+                        onEdit = { editingMember = member },
+                        onDelete = { deletingMember = member },
                     )
                 }
             }
@@ -447,6 +454,32 @@ fun FamilyProfileScreen(
             },
         )
     }
+
+    editingMember?.let { member ->
+        EditMemberDialog(
+            member = member,
+            onDismiss = { editingMember = null },
+            onSave = { name, role ->
+                editingMember = null
+                viewModel.updateMember(familyId, member, name, role)
+            },
+        )
+    }
+
+    deletingMember?.let { member ->
+        AlertDialog(
+            onDismissRequest = { deletingMember = null },
+            title = { Text("Hapus anggota?") },
+            text = { Text("Akses ${member.name ?: "anggota ini"} ke keluarga akan dicabut. Riwayat transaksi tetap aman.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deletingMember = null
+                    viewModel.deleteMember(familyId, member)
+                }) { Text("Hapus") }
+            },
+            dismissButton = { TextButton(onClick = { deletingMember = null }) { Text("Batal") } },
+        )
+    }
 }
 
 @Composable
@@ -502,6 +535,39 @@ private fun AddMemberDialog(
         dismissButton = {
             TextButton(enabled = !adding, onClick = onDismiss) { Text("Batal") }
         },
+    )
+}
+
+@Composable
+private fun EditMemberDialog(
+    member: FamilyMemberDto,
+    onDismiss: () -> Unit,
+    onSave: (String, String?) -> Unit,
+) {
+    var name by rememberSaveable(member.userId) { mutableStateOf(member.name.orEmpty()) }
+    var role by rememberSaveable(member.userId) { mutableStateOf(member.payerRole) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ubah anggota") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Nama anggota") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text("Peran pasangan (opsional)", style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = role == "husband", onClick = { role = if (role == "husband") null else "husband" }, label = { Text("Suami") })
+                    FilterChip(selected = role == "wife", onClick = { role = if (role == "wife") null else "wife" }, label = { Text("Istri") })
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(name.trim(), role) }, enabled = name.isNotBlank()) { Text("Simpan") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } },
     )
 }
 
@@ -687,6 +753,9 @@ private fun MemberRow(
     member: FamilyMemberDto,
     isMe: Boolean,
     onSetRole: (String) -> Unit,
+    canManage: Boolean,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val (chipBg, chipFg) = payerChip(member.payerRole)
 
@@ -719,6 +788,14 @@ private fun MemberRow(
                     }
                 }
                 PayerBadge(member.payerRole, chipBg, chipFg)
+                if (canManage) {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Filled.Edit, contentDescription = "Ubah anggota")
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Hapus anggota", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
             if (isMe) {
                 Spacer(Modifier.height(8.dp))

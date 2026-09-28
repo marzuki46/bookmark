@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 
 data class TxForm(
@@ -51,22 +52,29 @@ data class FamilyTransactionsUiState(
 
 class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : ViewModel() {
 
+    private var activeFamilyId: Int? = null
+
     private val _state = MutableStateFlow(FamilyTransactionsUiState())
     val state: StateFlow<FamilyTransactionsUiState> = _state.asStateFlow()
 
     fun load(familyId: Int) {
+        activeFamilyId = familyId
         _state.update { it.copy(loading = it.items.isEmpty(), error = null) }
         viewModelScope.launch {
-            val cats = repository.familyCategories(familyId).getOrNull().orEmpty()
-            val sources = repository.incomeSources(familyId).getOrNull().orEmpty()
+            // Filters are independent of the transaction list; fetch all three
+            // in parallel so opening this menu does not feel serialised.
+            val catsDeferred = async { repository.familyCategories(familyId).getOrNull().orEmpty() }
+            val sourcesDeferred = async { repository.incomeSources(familyId).getOrNull().orEmpty() }
             val filters = _state.value
-
-            repository.familyTransactions(
+            val transactionsDeferred = async { repository.familyTransactions(
                 familyId = familyId,
                 type = filters.typeFilter,
                 payer = filters.payerFilter,
                 query = filters.search.ifBlank { null },
-            ).let { loaded ->
+            ) }
+            val cats = catsDeferred.await()
+            val sources = sourcesDeferred.await()
+            transactionsDeferred.await().let { loaded ->
                 when (val result = loaded.result) {
                     is ApiResult.Ok -> _state.update {
                         it.copy(
@@ -92,12 +100,16 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
         _state.update { it.copy(search = value.filter { c -> c != '\n' }.take(50)) }
     }
 
+    fun submitSearch(familyId: Int) = load(familyId)
+
     fun setTypeFilter(type: String?) {
         _state.update { it.copy(typeFilter = type) }
+        activeFamilyId?.let(::load)
     }
 
     fun setPayerFilter(payer: String?) {
         _state.update { it.copy(payerFilter = payer) }
+        activeFamilyId?.let(::load)
     }
 
     fun openCreate() {

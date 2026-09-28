@@ -26,6 +26,7 @@ class KeuanganRepository(
     }.fold(
         onSuccess = { response ->
             tokenStore.save(response.token)
+            clearFamily()
             _authenticated.value = true
             ApiResult.Ok(Unit)
         },
@@ -51,6 +52,7 @@ class KeuanganRepository(
     }.fold(
         onSuccess = { response ->
             tokenStore.saveSession(response.token, response.user?.id)
+            clearFamily()
             _authenticated.value = true
             ApiResult.Ok(Unit)
         },
@@ -165,6 +167,8 @@ class KeuanganRepository(
 
     val familyId: Int? get() = _family.value?.id
 
+    val cachedFamilyId: Int? get() = tokenStore.familyId
+
     /** Resolves the caller's household. Safe to call repeatedly. */
     suspend fun loadFamily(force: Boolean = false): ApiResult<FamilyDto?> {
         if (!force && _family.value != null) {
@@ -172,17 +176,22 @@ class KeuanganRepository(
         }
 
         return runCatching {
-            apiCall { api.families() }.data.firstOrNull().also { _family.value = it }
+            apiCall { api.families() }.data.firstOrNull().also {
+                _family.value = it
+                tokenStore.saveFamilyId(it?.id)
+            }
         }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
     }
 
-    fun clearFamily() {
+    private suspend fun clearFamily() {
         _family.value = null
+        tokenStore.saveFamilyId(null)
     }
 
     suspend fun familyDetail(familyId: Int): ApiResult<FamilyDto> = runCatching {
         val dto = apiCall { api.family(familyId) }.data
         _family.value = dto
+        tokenStore.saveFamilyId(dto.id)
         dto
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
@@ -231,6 +240,10 @@ class KeuanganRepository(
     suspend fun updateFamilyCategory(familyId: Int, categoryId: Int, body: FamilyCategoryRequest): ApiResult<FamilyCategoryDto> = runCatching {
         apiCall { api.updateFamilyCategory(familyId, categoryId, body) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun deleteFamilyCategory(familyId: Int, categoryId: Int): ApiResult<Unit> = runCatching {
+        apiCall { api.deleteFamilyCategory(familyId, categoryId) }
+    }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
 
     // --- transactions ---
 
@@ -526,8 +539,8 @@ class KeuanganRepository(
 
     // --- debts ---
 
-    suspend fun debts(familyId: Int, status: String? = null): ApiResult<List<FamilyDebtDto>> = runCatching {
-        apiCall { api.debts(familyId, status) }.data
+    suspend fun debts(familyId: Int, status: String? = null, type: String? = null): ApiResult<List<FamilyDebtDto>> = runCatching {
+        apiCall { api.debts(familyId, status, type) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
     suspend fun saveDebt(
@@ -635,6 +648,14 @@ class KeuanganRepository(
     suspend fun addFamilyMember(familyId: Int, name: String, payerRole: String?): ApiResult<NewFamilyMemberDto> = runCatching {
         apiCall { api.createFamilyMember(familyId, FamilyMemberRequest(name.trim(), payerRole)) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun updateFamilyMember(familyId: Int, userId: Int, name: String, payerRole: String?): ApiResult<NewFamilyMemberDto> = runCatching {
+        apiCall { api.updateFamilyMember(familyId, userId, FamilyMemberRequest(name.trim(), payerRole)) }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun deleteFamilyMember(familyId: Int, userId: Int): ApiResult<Unit> = runCatching {
+        apiCall { api.deleteFamilyMember(familyId, userId) }
+    }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
 }
 
 /** Result of a transaction load plus whether it came from the offline cache. */

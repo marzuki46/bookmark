@@ -50,7 +50,8 @@ final class NudgeService
     }
 
     /**
-     * The motivating case: "kamu bulan ini terlalu banyak pengeluaran untuk makan".
+     * The motivating case: give a calm, practical suggestion without judging
+     * the household's choices.
      * Checks the category that was just touched first, since that is the one the
      * user is looking at on screen.
      */
@@ -102,7 +103,7 @@ final class NudgeService
                     'tone' => 'critical',
                     'code' => 'budget_exceeded',
                     'message' => sprintf(
-                        '%s sudah lewat anggaran bulan ini (%s dari %s). Sisa %d hari, berhenti dulu di sini ya.',
+                         '%s sudah melewati batas anggaran bulan ini (%s dari %s). Masih ada %d hari; mungkin ini waktu yang baik untuk meninjau pilihan berikutnya.',
                         $name,
                         $this->rp($spent),
                         $this->rp($limit),
@@ -113,7 +114,7 @@ final class NudgeService
                     'tone' => 'warning',
                     'code' => 'budget_near_limit',
                     'message' => sprintf(
-                        '%s sudah makan %d%% anggaran (%s dari %s). Sisa %d hari: sisihkan %s/hari biar aman.',
+                         '%s sudah memakai sekitar %d%% anggaran (%s dari %s). Masih ada %d hari; rata-rata %s/hari bisa membantu menjaga ruang sampai akhir bulan.',
                         $name,
                         (int) round($ratio * 100),
                         $this->rp($spent),
@@ -168,7 +169,7 @@ final class NudgeService
             'tone' => 'warning',
             'code' => 'projected_deficit',
             'message' => sprintf(
-                'Proyeksi akhir bulan: pengeluaran %s tapi pemasukan %s. Tersisa %d hari, tahan spending dulu ya.',
+                 'Perkiraan akhir bulan: pengeluaran %s dan pemasukan %s. Masih ada %d hari; yuk pertimbangkan prioritas pengeluaran berikutnya bersama.',
                 $this->rp($projected),
                 $this->rp($income),
                 $daysLeft
@@ -197,7 +198,7 @@ final class NudgeService
         return [
             'tone' => 'neutral',
             'code' => 'no_income_logged',
-            'message' => 'Belum ada pemasukan tercatat bulan ini. Kalau sudah masuk, catat dulu biar analisisnya akurat.',
+            'message' => 'Belum ada pemasukan tercatat bulan ini. Kalau sudah masuk, mencatatnya akan membantu ringkasan keluarga lebih akurat.',
         ];
     }
 
@@ -221,7 +222,7 @@ final class NudgeService
             'tone' => 'critical',
             'code' => 'debt_overdue',
             'message' => sprintf(
-                'Hutang "%s" sudah lewat jatuh tempo %d hari. Sisa tagihan %s.',
+                'Catatan menunjukkan "%s" melewati jatuh tempo %d hari. Sisa tagihan %s; mungkin bisa dibicarakan jadwal berikutnya bersama.',
                 $overdue->name,
                 $days,
                 $this->rp($overdue->remaining)
@@ -253,7 +254,7 @@ final class NudgeService
                 'tone' => 'neutral',
                 'code' => 'thin_savings',
                 'message' => sprintf(
-                    'Tabungan bulan ini cuma %d%% dari pemasukan. Coba sisihkan %s sebelum pengeluaran berikutnya.',
+                    'Tabungan bulan ini sekitar %d%% dari pemasukan. Jika sesuai kondisi keluarga, menyisihkan %s sebelum pengeluaran berikutnya bisa menjadi pilihan.',
                     (int) round($rate),
                     $this->rp($income * 0.1)
                 ),
@@ -264,7 +265,7 @@ final class NudgeService
             'tone' => 'warning',
             'code' => 'negative_savings',
             'message' => sprintf(
-                'Pengeluaran bulan ini %s lebih besar dari pemasukan. Saldo keluarga sedang minus.',
+                'Ringkasan bulan ini menunjukkan pengeluaran %s lebih besar dari pemasukan. Yuk lihat bersama pengeluaran mana yang paling mudah disesuaikan.',
                 $this->rp(abs($income - $expense))
             ),
         ];

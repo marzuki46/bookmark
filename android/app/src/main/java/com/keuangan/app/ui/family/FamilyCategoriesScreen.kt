@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -36,6 +37,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +54,7 @@ fun FamilyCategoriesScreen(
     viewModel: FamilyCategoriesViewModel,
 ) {
     val state by viewModel.state.collectAsState()
+    var pendingDelete by androidx.compose.runtime.remember { mutableStateOf<FamilyCategoryDto?>(null) }
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
@@ -85,6 +89,7 @@ fun FamilyCategoriesScreen(
                     CategoryRow(
                         category = category,
                         onEdit = { viewModel.openEdit(category) },
+                        onDelete = { pendingDelete = category },
                     )
                 }
             }
@@ -101,12 +106,28 @@ fun FamilyCategoriesScreen(
             onDismiss = viewModel::closeForm,
         )
     }
+
+    pendingDelete?.let { category ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("Hapus kategori?") },
+            text = { Text("Transaksi lama tetap aman, tetapi kategorinya akan menjadi belum dikategorikan.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingDelete = null
+                    viewModel.delete(familyId, category)
+                }) { Text("Hapus") }
+            },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Batal") } },
+        )
+    }
 }
 
 @Composable
 private fun CategoryRow(
     category: FamilyCategoryDto,
     onEdit: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -134,6 +155,11 @@ private fun CategoryRow(
             }
             IconButton(onClick = onEdit) {
                 Icon(Icons.Filled.Edit, contentDescription = "Ubah")
+            }
+            if (!category.isSystem) {
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

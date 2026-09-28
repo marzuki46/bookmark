@@ -76,6 +76,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::prefix('families/{family}')->group(function (): void {
         Route::get('login-code', [FamilyController::class, 'loginCode']);
         Route::post('members', [FamilyController::class, 'storeMember']);
+        Route::match(['put', 'patch'], 'members/{memberUser}', [FamilyController::class, 'updateMember']);
+        Route::delete('members/{memberUser}', [FamilyController::class, 'destroyMember']);
 
         Route::get('transactions', [FamilyTransactionController::class, 'index']);
         Route::post('transactions', [FamilyTransactionController::class, 'store']);
@@ -122,6 +124,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('categories', [FamilyCategoryController::class, 'index']);
         Route::post('categories', [FamilyCategoryController::class, 'store']);
         Route::match(['put', 'patch'], 'categories/{category}', [FamilyCategoryController::class, 'update']);
+        Route::delete('categories/{category}', [FamilyCategoryController::class, 'destroy']);
     });
 
     Route::get('/tokens', [TokenController::class, 'index']);

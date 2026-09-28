@@ -253,10 +253,12 @@ Teks: "'.$text.'"';
             $context .= 'Perubahan pengeluaran vs periode sebelumnya: '.number_format(abs((float) $expenseChange), 1)."% {$arah}\n";
         }
 
-        $systemPrompt = 'Kamu adalah penasihat keuangan pribadi yang tajam, praktis, dan tidak menggurung. '
+        $systemPrompt = 'Kamu adalah pendamping keuangan rumah tangga Indonesia yang hangat, praktis, dan tidak menghakimi. '
             .'Selalu menjawab dalam Bahasa Indonesia.\n'
             .'Berikan 3 sampai 4 saran konkret dan spesifik berdasarkan angka di atas. '
             .'Fokus pada tindakan yang bisa dilakukan minggu ini, bukan nasihat umum. '
+            .'Gunakan kata "kita" atau "keluarga" dan hindari kata yang menyalahkan seperti boros, gagal, buruk, harus, atau pemborosan. '
+            .'Akui bahwa setiap keluarga punya kebutuhan dan prioritas berbeda. '
             .'Format: judul singkat + satu kalimat penjelasan, dipisah baris kosong. '
             .'Jangan mengulang angka yang sudah tertulis di konteks.';
 
@@ -286,25 +288,25 @@ Teks: "'.$text.'"';
         $lines = [];
 
         if ($income <= 0) {
-            $lines[] = "Belum ada pemasukan tercatat di {$periodLabel}. Catat pemasukan terlebih dahulu agar analisis bisa akurat.";
+            $lines[] = "Belum ada pemasukan tercatat di {$periodLabel}. Jika sudah masuk, mencatatnya akan membantu ringkasan keluarga lebih akurat.";
         } else {
             $lines[] = $savingsRate >= 20
-                ? "Tingkat tabungan {$this->pct($savingsRate)} di atas target 20%. Pertahankan, dan alokasikan sisa ke dana darurat atau investasi."
-                : "Tingkat tabungan baru {$this->pct($savingsRate)}. Targetkan minimal 20% dari pemasukan ({$this->rupiah($income * 0.2)}) per bulan.";
+                ? "Tingkat tabungan keluarga {$this->pct($savingsRate)}. Ini sudah menjadi langkah baik; sisa dana bisa diarahkan ke dana darurat atau tujuan keluarga."
+                : "Tingkat tabungan keluarga sekitar {$this->pct($savingsRate)}. Jika memungkinkan, sisihkan bertahap menuju {$this->rupiah($income * 0.2)} per bulan.";
         }
 
         if ($topExpense) {
-            $lines[] = "Kategori \"{$topExpense}\" adalah pengeluaran terbesar. Tinjau transaksi di kategori ini untuk memangkas pemborosan.";
+            $lines[] = "Kategori \"{$topExpense}\" menjadi porsi terbesar. Kita bisa meninjau beberapa transaksi di sini dan memilih mana yang paling mudah disesuaikan.";
         }
 
         if ($expenseChange !== null && (float) $expenseChange > 20) {
-            $lines[] = 'Pengeluaran naik '.number_format((float) $expenseChange, 1).'% dibanding periode sebelumnya. Periksa lonjakan ini sebelum akhir bulan.';
+            $lines[] = 'Pengeluaran naik '.number_format((float) $expenseChange, 1).'% dibanding periode sebelumnya. Yuk lihat bersama apakah ada kebutuhan khusus yang memengaruhinya.';
         } elseif ($expenseChange !== null && (float) $expenseChange < -15) {
-            $lines[] = 'Pengeluaran turun '.number_format(abs((float) $expenseChange), 1).'% dari periode sebelumnya. Pertahankan habits penghematan ini.';
+            $lines[] = 'Pengeluaran turun '.number_format(abs((float) $expenseChange), 1).'% dari periode sebelumnya. Ini perkembangan yang baik untuk dibicarakan bersama keluarga.';
         }
 
         if ($balance < 0) {
-            $lines[] = 'Saldo minus '.abs($this->rupiah($balance)).'. Kurangi pengeluaran tidak wajib atau cari pemasukan tambahan.';
+            $lines[] = 'Ringkasan saat ini menunjukkan selisih '.abs($this->rupiah($balance)).'. Kita bisa menyusun prioritas pengeluaran dan rencana pemasukan berikutnya bersama-sama.';
         }
 
         return implode("\n\n", $lines);
