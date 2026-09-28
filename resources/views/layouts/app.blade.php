@@ -204,17 +204,18 @@
                             </li>
                         @endforeach
 
-                        <!-- Collapse indicator -->
-                        <li class="wp-collapse-footer" role="none">
-                            <button id="wp-collapse-menu" class="wp-collapse-btn" aria-label="Collapse menu" aria-expanded="true">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M15 18l-6-6 6-6"/>
-                                </svg>
-                                <span class="wp-collapse-text">Collapse menu</span>
-                            </button>
-                        </li>
                     </ul>
                 </nav>
+
+                <!-- Collapse control stays pinned below the scrollable menu. -->
+                <div class="wp-collapse-footer" role="none">
+                    <button id="wp-collapse-menu" class="wp-collapse-btn" aria-label="Collapse menu" aria-expanded="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 18l-6-6 6-6"/>
+                        </svg>
+                        <span class="wp-collapse-text">Collapse menu</span>
+                    </button>
+                </div>
             </div>
         </aside>
 
