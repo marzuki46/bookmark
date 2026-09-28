@@ -141,7 +141,7 @@ private data class Tab(
 )
 
 private val TABS = listOf(
-    Tab(Routes.HOME, "Rumah", Icons.Filled.Home),
+    Tab(Routes.HOME, "Ringkasan", Icons.Filled.Home),
     Tab(Routes.TRANSACTIONS, "Transaksi", Icons.AutoMirrored.Filled.ReceiptLong),
     Tab(Routes.DEBTS, "Utang", Icons.Filled.Balance),
     Tab(Routes.GOALS, "Target", Icons.Filled.Flag),
@@ -390,18 +390,12 @@ private fun AppleNavItem(
                 modifier = Modifier.size(iconScale),
             )
         }
-        AnimatedVisibility(
-            visible = selected,
-            enter = fadeIn(tween(220)) + slideInVertically(tween(220), initialOffsetY = { it / 2 }),
-            exit = fadeOut(tween(140)),
-        ) {
-            Text(
-                tab.label,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = iconTint,
-                maxLines = 1,
-            )
-        }
+        Text(
+            tab.label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = iconTint,
+            maxLines = 1,
+        )
     }
 }

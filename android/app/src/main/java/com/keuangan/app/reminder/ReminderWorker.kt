@@ -16,6 +16,8 @@ import androidx.work.WorkerParameters
 import com.keuangan.app.KeuanganApp
 import com.keuangan.app.MainActivity
 import com.keuangan.app.data.getOrNull
+import java.time.Duration
+import java.time.Instant
 
 /**
  * Periodically asks the server for household reminders (budgets nearly spent,
@@ -32,16 +34,32 @@ class ReminderWorker(
         val app = applicationContext as? KeuanganApp ?: return Result.failure()
         if (app.tokenStore.token == null) return Result.success()
 
-        val familyId = app.repository.loadFamily(force = true).getOrNull()?.id ?: return Result.success()
-        val reminders = app.repository.familyReminders(familyId).getOrNull().orEmpty()
-        if (reminders.isEmpty()) return Result.success()
+        val familyId = app.repository.loadFamily(force = true).getOrNull()?.id
+        val reminders = familyId?.let { app.repository.familyReminders(it).getOrNull() }.orEmpty()
+        val licenseReminder = app.repository.currentSubscription().getOrNull()?.let { subscription ->
+            subscription.expiresAt?.let { expiresAt ->
+                runCatching { Duration.between(Instant.now(), Instant.parse(expiresAt)).toDays() }
+                    .getOrNull()
+                    ?.takeIf { it <= LICENSE_WARNING_DAYS }
+                    ?.let { days ->
+                        when {
+                            days < 0 -> "Lisensi ${subscription.planName ?: "aplikasi"} sudah berakhir. Segera lakukan pembayaran."
+                            days == 0L -> "Lisensi ${subscription.planName ?: "aplikasi"} berakhir hari ini. Segera lakukan pembayaran."
+                            else -> "Lisensi ${subscription.planName ?: "aplikasi"} tersisa $days hari. Segera lakukan pembayaran."
+                        }
+                    }
+            }
+        }
+        val lines = reminders.map { it.message } + listOfNotNull(licenseReminder)
+        if (lines.isEmpty()) return Result.success()
 
         val prefs = applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val key = reminders.joinToString("|") { it.message }
+        // Include the remaining-day value so an expiry warning can repeat once per day.
+        val key = lines.joinToString("|")
         if (prefs.getString(KEY_LAST, null) == key) return Result.success()
         prefs.edit().putString(KEY_LAST, key).apply()
 
-        showNotification(reminders.map { it.message })
+        showNotification(lines)
         return Result.success()
     }
 
@@ -93,5 +111,6 @@ class ReminderWorker(
         private const val NOTIFICATION_ID = 4102
         private const val PREFS = "reminder_prefs"
         private const val KEY_LAST = "last_key"
+        private const val LICENSE_WARNING_DAYS = 3L
     }
 }

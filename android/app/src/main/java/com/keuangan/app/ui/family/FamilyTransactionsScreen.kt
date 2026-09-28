@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyTransactionDto
 import com.keuangan.app.data.IncomeSourceDto
@@ -398,6 +399,7 @@ private fun TxFormDialog(
                     onValueChange = { value -> onChange { it.copy(amount = value) } },
                     label = { Text("Jumlah") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))

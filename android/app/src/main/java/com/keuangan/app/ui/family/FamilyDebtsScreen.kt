@@ -46,7 +46,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyDebtDto
 import com.keuangan.app.ui.components.DateField
@@ -340,6 +342,7 @@ private fun DebtFormDialog(
                     onValueChange = { value -> onChange { it.copy(amount = value) } },
                     label = { Text("Jumlah") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -348,6 +351,7 @@ private fun DebtFormDialog(
                     onValueChange = { value -> onChange { it.copy(interestRate = value) } },
                     label = { Text("Bunga (%) — opsional") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -356,6 +360,7 @@ private fun DebtFormDialog(
                     onValueChange = { value -> onChange { it.copy(installment = value) } },
                     label = { Text("Angsuran per bulan — opsional") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -419,6 +424,7 @@ private fun PaymentDialog(
                     onValueChange = onAmountChange,
                     label = { Text("Jumlah pembayaran") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (error != null) {

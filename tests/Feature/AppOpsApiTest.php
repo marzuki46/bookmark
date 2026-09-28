@@ -59,6 +59,17 @@ final class AppOpsApiTest extends TestCase
         $this->assertStringContainsString('perbaikan', strtolower((string) $response->json('data.notes')));
     }
 
+    public function test_api_responses_are_not_cacheable(): void
+    {
+        Sanctum::actingAs($this->owner);
+
+        $this->getJson('/api/families')
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'max-age=0, no-store, private')
+            ->assertHeader('CDN-Cache-Control', 'no-store')
+            ->assertHeader('Surrogate-Control', 'no-store');
+    }
+
     public function test_update_check_is_noop_when_current_is_newer(): void
     {
         config(['app.version_code' => 3]);

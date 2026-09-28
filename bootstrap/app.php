@@ -3,6 +3,7 @@
 use App\Http\Middleware\EnsureFamilyScope;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\LogRequest;
+use App\Http\Middleware\PreventApiCaching;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(append: [
             LogRequest::class,
+            PreventApiCaching::class,
         ]);
 
         $middleware->api(prepend: [

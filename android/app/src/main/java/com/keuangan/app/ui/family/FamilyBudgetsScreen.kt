@@ -45,7 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyBudgetDto
 import com.keuangan.app.ui.components.GradientHeader
@@ -301,6 +303,7 @@ private fun BudgetFormDialog(
                     onValueChange = { value -> onChange { it.copy(amount = value) } },
                     label = { Text("Jumlah anggaran") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (error != null) {

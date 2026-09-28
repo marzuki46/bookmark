@@ -49,6 +49,8 @@ import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
+import java.time.Duration
+import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -200,6 +202,12 @@ private fun StatusBanner(
     onRefresh: () -> Unit,
 ) {
     val (bg, fg) = if (active) Teal100 to Teal700 else Amber100 to Amber600
+    val daysRemaining = expiresAt?.let { value ->
+        runCatching {
+            Duration.between(Instant.now(), Instant.parse(value)).toDays()
+        }.getOrNull()
+    }
+    val expiringSoon = active && daysRemaining != null && daysRemaining in 0..3
     Card(colors = CardDefaults.cardColors(containerColor = bg), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(
@@ -218,10 +226,22 @@ private fun StatusBanner(
                 )
                 if (active) {
                     Text(
-                        "${planName ?: "Paket aktif"}${expiresAt?.let { " · s/d ${formatFullDate(it)}" } ?: ""}",
+                        "${planName ?: "Paket aktif"}${expiresAt?.let { " · berlaku sampai ${formatFullDate(it)}" } ?: ""}",
                         style = MaterialTheme.typography.bodySmall,
                         color = fg,
                     )
+                    daysRemaining?.let { days ->
+                        Text(
+                            when {
+                                days < 0 -> "Lisensi sudah berakhir. Segera lakukan pembayaran."
+                                days == 0L -> "Lisensi berakhir hari ini. Segera lakukan pembayaran."
+                                else -> "Sisa masa lisensi: $days hari${if (expiringSoon) ". Segera lakukan pembayaran." else ""}",
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = if (expiringSoon || days < 0) FontWeight.Bold else FontWeight.Normal,
+                            color = if (expiringSoon || days < 0) Amber600 else fg,
+                        )
+                    }
                 }
             }
             IconButton(onClick = onRefresh) {

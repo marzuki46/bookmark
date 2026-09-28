@@ -45,7 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyGoalDto
 import com.keuangan.app.ui.components.DateField
@@ -310,6 +312,7 @@ private fun GoalFormDialog(
                     onValueChange = { value -> onChange { it.copy(targetAmount = value) } },
                     label = { Text("Target jumlah") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -318,6 +321,7 @@ private fun GoalFormDialog(
                     onValueChange = { value -> onChange { it.copy(monthlyAllocation = value) } },
                     label = { Text("Alokasi per bulan — opsional") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -374,6 +378,7 @@ private fun ContributeDialog(
                     onValueChange = onAmountChange,
                     label = { Text("Jumlah ditabung") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (error != null) {

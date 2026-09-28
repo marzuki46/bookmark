@@ -1,6 +1,10 @@
 package com.keuangan.app
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +16,10 @@ import com.keuangan.app.ui.theme.KeuanganTheme
 import com.keuangan.app.ui.theme.ThemeController
 
 class MainActivity : ComponentActivity() {
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ErrorReporter.install(application as KeuanganApp)
@@ -25,6 +33,16 @@ class MainActivity : ComponentActivity() {
                 ) {
                     AppRoot()
                 }
+            }
+        }
+
+        val app = application as KeuanganApp
+        if (Build.VERSION.SDK_INT >= 33 &&
+            app.tokenStore.token != null &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            window.decorView.post {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }
