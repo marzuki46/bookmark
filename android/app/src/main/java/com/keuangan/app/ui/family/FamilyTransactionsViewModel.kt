@@ -29,6 +29,7 @@ data class TxForm(
 data class FamilyTransactionsUiState(
     val loading: Boolean = true,
     val saving: Boolean = false,
+    val syncing: Boolean = false,
     val search: String = "",
     val typeFilter: String? = null,
     val payerFilter: String? = null,
@@ -37,6 +38,12 @@ data class FamilyTransactionsUiState(
     val incomeSources: List<IncomeSourceDto> = emptyList(),
     val error: String? = null,
     val formError: String? = null,
+    /** True when the current data came from the local offline cache. */
+    val offline: Boolean = false,
+    /** Writes still waiting to reach the server. */
+    val pendingCount: Int = 0,
+    /** Problem blocking a queued write from syncing, inviting a retry. */
+    val pendingError: String? = null,
     /** Instant rule nudge returned by a create/update, shown above the list. */
     val nudge: String? = null,
     val form: TxForm? = null,
@@ -59,17 +66,22 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
                 type = filters.typeFilter,
                 payer = filters.payerFilter,
                 query = filters.search.ifBlank { null },
-            ).let { result ->
-                _state.update {
-                    when (result) {
-                        is ApiResult.Ok -> it.copy(
+            ).let { loaded ->
+                when (val result = loaded.result) {
+                    is ApiResult.Ok -> _state.update {
+                        it.copy(
                             loading = false,
                             items = result.value.data,
                             categories = cats,
                             incomeSources = sources,
+                            offline = loaded.offline,
                             error = null,
+                            pendingCount = repository.pendingCount(familyId),
+                            pendingError = repository.failedPendingMessage(familyId),
                         )
-                        is ApiResult.Err -> it.copy(loading = false, error = result.message)
+                    }
+                    is ApiResult.Err -> _state.update {
+                        it.copy(loading = false, offline = loaded.offline, error = result.message)
                     }
                 }
             }
@@ -147,7 +159,12 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
             when (val result = repository.saveFamilyTransaction(familyId, body, form.id)) {
                 is ApiResult.Ok -> {
                     _state.update {
-                        it.copy(saving = false, form = null, nudge = result.value.nudge?.message)
+                        it.copy(
+                            saving = false,
+                            form = null,
+                            nudge = result.value.nudge?.message,
+                            pendingCount = repository.pendingCount(familyId),
+                        )
                     }
                     load(familyId)
                 }
@@ -160,11 +177,25 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
 
     fun dismissNudge() = _state.update { it.copy(nudge = null) }
 
+    /**
+     * Replays queued offline writes now (invoked from the offline banner's
+     * retry button) and refreshes the list to their server state.
+     */
+    fun retrySync(familyId: Int) {
+        viewModelScope.launch {
+            _state.update { it.copy(syncing = true) }
+            repository.syncPendingTransactions()
+            _state.update { it.copy(syncing = false) }
+            load(familyId)
+        }
+    }
+
     fun closeForm() = _state.update { it.copy(form = null, formError = null) }
 
     fun delete(familyId: Int, tx: FamilyTransactionDto) {
         viewModelScope.launch {
             repository.deleteFamilyTransaction(familyId, tx.id)
+            _state.update { it.copy(pendingCount = repository.pendingCount(familyId)) }
             load(familyId)
         }
     }

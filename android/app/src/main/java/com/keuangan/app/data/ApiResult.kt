@@ -46,13 +46,19 @@ fun Throwable.toApiError(): ApiResult.Err {
             parsed ?: ApiResult.Err(message, code)
         }
 
-        is IOException -> ApiResult.Err("Tidak bisa terhubung ke server. Periksa koneksi.")
+        is IOException -> ApiResult.Err("Tidak bisa terhubung ke server. Periksa koneksi.", OFFLINE_CODE)
 
         else -> ApiResult.Err(message ?: fallbackMessage)
     }
 }
 
 private const val fallbackMessage = "Terjadi kesalahan"
+
+/** Sentinel code marking a reachability failure (no network / server down). */
+const val OFFLINE_CODE = -1
+
+/** True when [Err.code] is the offline sentinel. */
+fun ApiResult<*>.isOffline(): Boolean = this is ApiResult.Err && code == OFFLINE_CODE
 
 private fun parseErrorBody(body: String): ApiResult.Err? = runCatching {
     val root = ApiClient.json.parseToJsonElement(body).jsonObject

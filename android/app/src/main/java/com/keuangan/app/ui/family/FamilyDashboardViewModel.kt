@@ -71,11 +71,11 @@ class FamilyDashboardViewModel(private val repository: KeuanganRepository) : Vie
         val today = LocalDate.now()
         val first = today.withDayOfMonth(1).toString()
         val todayStr = today.toString()
-        val result = repository.familyTransactions(familyId, type = "income", from = first, to = todayStr)
-        if (result !is ApiResult.Ok) return@runCatching emptyList()
+        val loaded = repository.familyTransactions(familyId, type = "income", from = first, to = todayStr)
+        if (loaded.result !is ApiResult.Ok) return@runCatching emptyList()
 
         val rows = mutableMapOf<Int?, Pair<String, Double>>()
-        result.value.data.forEach { tx ->
+        loaded.result.value.data.forEach { tx ->
             val source = tx.incomeSource
             val key = source?.id
             val name = source?.name ?: "Belum dikategorikan"

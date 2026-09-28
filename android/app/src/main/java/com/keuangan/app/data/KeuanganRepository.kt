@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class KeuanganRepository(
     private val api: KeuanganApi,
     private val tokenStore: TokenStore,
+    private val offline: OfflineTxStore,
 ) {
 
     private val _authenticated = MutableStateFlow<Boolean?>(null)
@@ -223,6 +224,14 @@ class KeuanganRepository(
 
     // --- transactions ---
 
+    /**
+     * Loads the household transactions.
+     *
+     * When the server cannot be reached the last synced list is served from the
+     * local cache instead, locally filtered the way the server would have done,
+     * so the screen always has something honest to show. [OfflineLoad.offline]
+     * tells the UI it is looking at cached data.
+     */
     suspend fun familyTransactions(
         familyId: Int,
         type: String? = null,
@@ -230,29 +239,258 @@ class KeuanganRepository(
         from: String? = null,
         to: String? = null,
         query: String? = null,
-    ): ApiResult<FamilyTransactionListResponse> = runCatching {
-        apiCall { api.familyTransactions(familyId, type, payer, null, null, from, to, query, 50) }
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    ): OfflineLoad {
+        val remote = runCatching {
+            api.familyTransactions(familyId, type, payer, null, null, from, to, query, 50)
+        }.fold(
+            onSuccess = { response ->
+                offline.writeCache(familyId, response.data)
+                OfflineLoad(ApiResult.Ok(response), offline = false)
+            },
+            onFailure = { e -> OfflineLoad(e.toApiError(), offline = true) },
+        )
+        if (!remote.result.isOffline()) return remote
+
+        val cached = offline.readCache(familyId).items
+        if (cached.isEmpty()) return remote
+
+        val filtered = cached.filter { tx ->
+            (type == null || tx.type == type) &&
+                (payer == null || tx.payer == payer) &&
+                (query.isNullOrBlank() || (tx.description?.contains(query, ignoreCase = true) == true))
+        }
+        return OfflineLoad(ApiResult.Ok(FamilyTransactionListResponse(data = filtered)), offline = true)
+    }
 
     /**
      * Saves a transaction and hands back the instant nudge the server
      * evaluated, so the caller can show advice without another request.
+     *
+     * While offline the write is queued to the outbox and applied to the local
+     * cache straight away, returning a pending placeholder transaction; the same
+     * shape is used so the caller needs no special-casing.
      */
     suspend fun saveFamilyTransaction(
         familyId: Int,
         body: FamilyTransactionRequest,
         id: Int? = null,
-    ): ApiResult<FamilyTransactionSaveResponse> = runCatching {
-        if (id == null) {
-            apiCall { api.createFamilyTransaction(familyId, body) }
-        } else {
-            apiCall { api.updateFamilyTransaction(familyId, id, body) }
-        }
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    ): ApiResult<FamilyTransactionSaveResponse> {
+        if (id != null && id < 0) return editPendingCreate(familyId, id, body)
 
-    suspend fun deleteFamilyTransaction(familyId: Int, id: Int): ApiResult<Unit> = runCatching {
-        apiCall { api.deleteFamilyTransaction(familyId, id) }
-    }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
+        val remote = runCatching {
+            if (id == null) {
+                api.createFamilyTransaction(familyId, body)
+            } else {
+                api.updateFamilyTransaction(familyId, id, body)
+            }
+        }.fold(
+            onSuccess = { ApiResult.Ok(it) },
+            onFailure = { e -> e.toApiError() },
+        )
+
+        return when {
+            remote is ApiResult.Ok -> {
+                remote.value.data?.let { upsertCache(familyId, it) }
+                remote
+            }
+            remote.isOffline() -> queueOfflineWrite(familyId, body, id)
+            else -> remote
+        }
+    }
+
+    private suspend fun queueOfflineWrite(
+        familyId: Int,
+        body: FamilyTransactionRequest,
+        id: Int?,
+    ): ApiResult<FamilyTransactionSaveResponse> {
+        val localId = if (id == null) -offline.readOutbox().nextLocalId else id
+        updateOutbox { box ->
+            box.copy(
+                nextLocalId = if (id == null) box.nextLocalId + 1 else box.nextLocalId,
+                ops = box.ops + PendingTxOp(
+                    opId = System.currentTimeMillis() + if (id == null) 0 else localId,
+                    familyId = familyId,
+                    op = if (id == null) OP_CREATE else OP_UPDATE,
+                    id = id,
+                    localId = localId,
+                    body = body,
+                ),
+            )
+        }
+
+        val pendingItem = pendingDto(localId, familyId, body)
+        val cache = offline.readCache(familyId)
+        val items = if (id == null) {
+            listOf(pendingItem) + cache.items
+        } else {
+            cache.items.map { if (it.id == id) pendingItem else it }
+        }
+        offline.writeCache(familyId, items)
+        return ApiResult.Ok(FamilyTransactionSaveResponse(data = pendingItem))
+    }
+
+    private suspend fun editPendingCreate(
+        familyId: Int,
+        localId: Int,
+        body: FamilyTransactionRequest,
+    ): ApiResult<FamilyTransactionSaveResponse> {
+        updateOutbox { box ->
+            box.copy(
+                ops = box.ops.map { op ->
+                    if (op.op == OP_CREATE && op.localId == localId) op.copy(body = body) else op
+                },
+            )
+        }
+
+        val pendingItem = pendingDto(localId, familyId, body)
+        val cache = offline.readCache(familyId)
+        offline.writeCache(familyId, cache.items.map { if (it.id == localId) pendingItem else it })
+        return ApiResult.Ok(FamilyTransactionSaveResponse(data = pendingItem))
+    }
+
+    private suspend fun updateOutbox(transform: (PendingOutbox) -> PendingOutbox) {
+        offline.saveOutbox(transform(offline.readOutbox()))
+    }
+
+    private fun pendingDto(id: Int, familyId: Int, body: FamilyTransactionRequest): FamilyTransactionDto =
+        FamilyTransactionDto(
+            id = id,
+            familyId = familyId,
+            type = body.type,
+            amount = body.amount,
+            description = body.description,
+            date = body.date,
+            payer = body.payer,
+            incomeSource = body.incomeSourceId?.let { IncomeSourceDto(id = it, name = "") },
+        )
+
+    private suspend fun upsertCache(familyId: Int, tx: FamilyTransactionDto) {
+        val cache = offline.readCache(familyId)
+        val items = if (cache.items.any { it.id == tx.id }) {
+            cache.items.map { if (it.id == tx.id) tx else it }
+        } else {
+            listOf(tx) + cache.items
+        }
+        offline.writeCache(familyId, items)
+    }
+
+    suspend fun deleteFamilyTransaction(familyId: Int, id: Int): ApiResult<Unit> {
+        if (id < 0) {
+            updateOutbox { box ->
+                box.copy(ops = box.ops.filterNot { it.op == OP_CREATE && it.localId == id })
+            }
+            val cache = offline.readCache(familyId)
+            offline.writeCache(familyId, cache.items.filterNot { it.id == id })
+            return ApiResult.Ok(Unit)
+        }
+
+        val remote = runCatching { api.deleteFamilyTransaction(familyId, id) }.fold(
+            onSuccess = { ApiResult.Ok(Unit) },
+            onFailure = { e -> e.toApiError() },
+        )
+        when {
+            remote is ApiResult.Ok -> {
+                val cache = offline.readCache(familyId)
+                offline.writeCache(familyId, cache.items.filterNot { it.id == id })
+                return remote
+            }
+            remote.isOffline() -> {
+                updateOutbox { box ->
+                    box.copy(
+                        ops = box.ops + PendingTxOp(
+                            opId = System.currentTimeMillis(),
+                            familyId = familyId,
+                            op = OP_DELETE,
+                            id = id,
+                        ),
+                    )
+                }
+                val cache = offline.readCache(familyId)
+                offline.writeCache(familyId, cache.items.filterNot { it.id == id })
+                return ApiResult.Ok(Unit)
+            }
+            else -> return remote
+        }
+    }
+
+    /** Count of offline writes still waiting for this family. */
+    suspend fun pendingCount(familyId: Int): Int = offline.readOutbox().ops.count { it.familyId == familyId }
+
+    /** Message of the oldest failed replay, if any, so the UI can explain why. */
+    suspend fun failedPendingMessage(familyId: Int): String? =
+        offline.readOutbox().ops.firstOrNull { it.familyId == familyId && it.failedMessage != null }?.failedMessage
+
+    /**
+     * Replays every queued offline write in the order the user made them.
+     * Keeps a conflicting write (e.g. a server-side validation) in the outbox
+     * with its error message rather than silently dropping the user's data.
+     */
+    suspend fun syncPendingTransactions(): Int {
+        val outbox = offline.readOutbox()
+        if (outbox.ops.isEmpty()) return 0
+
+        var remaining = outbox.ops.size
+        var result = outbox.copy()
+        for (op in outbox.ops) {
+            val outcome = when (op.op) {
+                OP_CREATE -> op.body?.let { body ->
+                    runCatching { api.createFamilyTransaction(op.familyId, body) }.fold(
+                        onSuccess = {
+                            it.data?.let { serverTx -> pendingCreated(op, serverTx) }
+                            ReplayDone(null)
+                        },
+                        onFailure = { e -> ReplayDone(e.toApiError().message) },
+                    )
+                } ?: ReplayDone(null)
+
+                OP_UPDATE -> op.body?.let { body -> op.id?.let { id ->
+                    runCatching { api.updateFamilyTransaction(op.familyId, id, body) }.fold(
+                        onSuccess = {
+                            it.data?.let { serverTx -> upsertCache(op.familyId, serverTx) }
+                            ReplayDone(null)
+                        },
+                        onFailure = { e -> ReplayDone(e.toApiError().message) },
+                    )
+                } } ?: ReplayDone(null)
+
+                OP_DELETE -> op.id?.let { id ->
+                    runCatching { api.deleteFamilyTransaction(op.familyId, id) }.fold(
+                        onSuccess = {
+                            val cache = offline.readCache(op.familyId)
+                            offline.writeCache(op.familyId, cache.items.filterNot { it.id == id })
+                            ReplayDone(null)
+                        },
+                        onFailure = { e -> ReplayDone(e.toApiError().message) },
+                    )
+                } ?: ReplayDone(null)
+
+                else -> ReplayDone(null)
+            }
+
+            if (outcome.failedMessage == null) {
+                remaining -= 1
+                result = result.copy(ops = result.ops.filterNot { it.opId == op.opId })
+            } else {
+                result = result.copy(ops = result.ops.map { if (it.opId == op.opId) it.copy(failedMessage = outcome.failedMessage) else it })
+            }
+        }
+        offline.saveOutbox(result)
+        return remaining
+    }
+
+    /** Confirms a queued create: replaces the placeholder with the real entry. */
+    private suspend fun pendingCreated(op: PendingTxOp, serverTx: FamilyTransactionDto?) {
+        if (serverTx == null) return
+        val cache = offline.readCache(op.familyId)
+        val items = if (op.localId != null && cache.items.any { it.id == op.localId }) {
+            cache.items.map { if (it.id == op.localId) serverTx else it }
+        } else {
+            listOf(serverTx) + cache.items
+        }
+        offline.writeCache(op.familyId, items)
+    }
+
+    private data class ReplayDone(val failedMessage: String?)
 
     // --- income sources ---
 
@@ -388,3 +626,9 @@ class KeuanganRepository(
         apiCall { api.createFamilyMember(familyId, FamilyMemberRequest(name.trim(), payerRole)) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 }
+
+/** Result of a transaction load plus whether it came from the offline cache. */
+data class OfflineLoad(
+    val result: ApiResult<FamilyTransactionListResponse>,
+    val offline: Boolean,
+)

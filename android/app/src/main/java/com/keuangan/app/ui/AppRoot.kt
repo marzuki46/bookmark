@@ -1,23 +1,39 @@
 package com.keuangan.app.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Flag
@@ -27,10 +43,16 @@ import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -177,22 +199,17 @@ private fun FamilyShell(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                TABS.forEach { tab ->
-NavigationBarItem(
-                        selected = selectedTab?.route == tab.route,
-                        onClick = {
-                            navController.navigate(tab.route) {
-                                popUpTo(Routes.HOME) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(tab.icon, contentDescription = tab.label) },
-                        label = { Text(tab.label) },
-                    )
-                }
-            }
+            AppleNavBar(
+                tabs = TABS,
+                selectedRoute = selectedTab?.route,
+                onSelect = { route ->
+                    navController.navigate(route) {
+                        popUpTo(Routes.HOME) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+            )
         },
     ) { padding ->
         NavHost(
@@ -256,6 +273,122 @@ NavigationBarItem(
                 val vm: FamilySubscriptionViewModel = viewModel(factory = appFactory())
                 FamilySubscriptionScreen(viewModel = vm, onBack = { navController.popBackStack() })
             }
+        }
+    }
+}
+
+/**
+ * Apple-style navigation rail: a floating glass pill with a soft ring, a smooth
+ * growing highlighter around the active icon, and the label fading in beneath it.
+ * Pure Compose — no external libs needed for the glassy look.
+ */
+@Composable
+private fun AppleNavBar(
+    tabs: List<Tab>,
+    selectedRoute: String?,
+    onSelect: (String) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(28.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(66.dp)
+                .drawBehind {
+                    // Frosted glass: translucent base + soft edge highlight.
+                    drawRoundRect(
+                        color = scheme.surface.copy(alpha = 0.82f),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx()),
+                    )
+                    drawRoundRect(
+                        color = Color.White.copy(alpha = 0.06f),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx()),
+                    )
+                }
+                .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)), shape)
+                .clip(shape)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            tabs.forEach { tab ->
+                AppleNavItem(
+                    tab = tab,
+                    selected = tab.route == selectedRoute,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onSelect(tab.route) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppleNavItem(
+    tab: Tab,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+
+    val springy = spring<androidx.compose.ui.unit.Dp>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
+    val pillSize by animateDpAsState(if (selected) 56.dp else 44.dp, animationSpec = springy)
+    val iconScale by animateDpAsState(if (selected) 26.dp else 20.dp, animationSpec = springy)
+    val pillColor by androidx.compose.animation.animateColorAsState(
+        if (selected) scheme.primary.copy(alpha = 0.16f) else Color.Transparent,
+        animationSpec = tween(220),
+    )
+    val iconTint by androidx.compose.animation.animateColorAsState(
+        if (selected) scheme.primary else scheme.onSurfaceVariant,
+        animationSpec = tween(220),
+    )
+    val pressScale = if (pressed) 0.92f else 1f
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(pillSize)
+                .clip(CircleShape)
+                .background(pillColor)
+                .scale(pressScale)
+                .clickable(
+                    interactionSource = interaction,
+                    indication = androidx.compose.material3.ripple(),
+                    onClick = onClick,
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                tab.icon,
+                contentDescription = tab.label,
+                tint = iconTint,
+                modifier = Modifier.size(iconScale),
+            )
+        }
+        AnimatedVisibility(
+            visible = selected,
+            enter = fadeIn(tween(220)) + slideInVertically(tween(220), initialOffsetY = { it / 2 }),
+            exit = fadeOut(tween(140)),
+        ) {
+            Text(
+                tab.label,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = iconTint,
+                maxLines = 1,
+            )
         }
     }
 }

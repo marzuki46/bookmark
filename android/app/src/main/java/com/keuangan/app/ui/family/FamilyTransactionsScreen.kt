@@ -19,8 +19,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -116,6 +118,16 @@ fun FamilyTransactionsScreen(
 
             Spacer(Modifier.height(8.dp))
 
+            if (state.offline || state.pendingCount > 0) {
+                OfflineBanner(
+                    pendingCount = state.pendingCount,
+                    pendingError = state.pendingError,
+                    syncing = state.syncing,
+                    onRetry = { viewModel.retrySync(familyId) },
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+
             state.nudge?.let { nudge ->
                 NudgeBanner(text = nudge, onDismiss = viewModel::dismissNudge)
                 Spacer(Modifier.height(8.dp))
@@ -141,6 +153,7 @@ fun FamilyTransactionsScreen(
                     items(state.items, key = { it.id }) { tx ->
                         TxCard(
                             tx = tx,
+                            pending = tx.id < 0,
                             onEdit = { viewModel.openEdit(tx) },
                             onDelete = { pendingDelete = tx },
                         )
@@ -192,6 +205,58 @@ private fun TxPayerChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
+private fun OfflineBanner(
+    pendingCount: Int,
+    pendingError: String?,
+    syncing: Boolean,
+    onRetry: () -> Unit,
+) {
+    val text = if (pendingError != null) {
+        "Masalah saat mengirim transaksi yang tersimpan: $pendingError"
+    } else if (pendingCount > 0) {
+        "$pendingCount transaksi tersimpan aman di ponsel dan akan dikirim otomatis saat internet kembali."
+    } else {
+        "Kamu sedang offline. Data terakhir tetap tampil dan transaksi baru akan tersimpan di ponsel dulu."
+    }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        colors = CardDefaults.cardColors(containerColor = Amber100),
+    ) {
+        Row(
+            Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                if (pendingCount > 0) Icons.Filled.Sync else Icons.Filled.CloudOff,
+                contentDescription = null,
+                tint = Amber600,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                text,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f),
+            )
+            if (pendingCount > 0 || pendingError != null) {
+                TextButton(onClick = onRetry, enabled = !syncing) {
+                    if (syncing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text("Kirim sekarang")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun NudgeBanner(text: String, onDismiss: () -> Unit) {
     Card(
         modifier = Modifier
@@ -226,6 +291,7 @@ fun payerName(payer: String): String = when (payer) {
 @Composable
 private fun TxCard(
     tx: FamilyTransactionDto,
+    pending: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -239,6 +305,23 @@ private fun TxCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
+                if (pending) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Filled.CloudOff,
+                            contentDescription = null,
+                            tint = Amber600,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(Modifier.size(4.dp))
+                        Text(
+                            "Belum tersinkron",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Amber600,
+                        )
+                    }
+                    Spacer(Modifier.height(2.dp))
+                }
                 Text(
                     (tx.description?.ifBlank { null } ?: tx.category?.name) ?: "Transaksi",
                     style = MaterialTheme.typography.bodyLarge,
