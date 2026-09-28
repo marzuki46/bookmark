@@ -116,6 +116,7 @@
                                         ['route' => 'keuangan.langganan', 'label' => 'Langganan', 'icon' => 'check', 'active' => request()->routeIs('keuangan.langganan')],
                                         ['route' => 'keuangan.finansial', 'label' => 'Keuangan User', 'icon' => 'bar-chart', 'active' => request()->routeIs('keuangan.finansial')],
                                         ['route' => 'keuangan.log', 'label' => 'Log Akses', 'icon' => 'activity', 'active' => request()->routeIs('keuangan.log')],
+                                        ['route' => 'keuangan.aplikasi', 'label' => 'Rilis Aplikasi', 'icon' => 'globe', 'active' => request()->routeIs('keuangan.aplikasi')],
                                     ]
                                 ],
                                 'system' => [

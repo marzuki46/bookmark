@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AiCenterController;
+use App\Http\Controllers\AppReleaseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FamilyAppController;
@@ -21,6 +22,9 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
+
+Route::middleware('throttle:20,1')->get('/apk/download/{release}', [AppReleaseController::class, 'download'])
+    ->name('app-release.download');
 
 Route::middleware(['auth', 'family.scope'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
@@ -79,6 +83,9 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
         Route::get('/langganan', [KeuanganController::class, 'subscriptions'])->name('langganan');
         Route::get('/finansial', [KeuanganController::class, 'userFinances'])->name('finansial');
         Route::get('/log', [KeuanganController::class, 'logs'])->name('log');
+        Route::get('/aplikasi', [AppReleaseController::class, 'index'])->name('aplikasi');
+        Route::post('/aplikasi', [AppReleaseController::class, 'store'])->name('aplikasi.store');
+        Route::delete('/aplikasi/{release}', [AppReleaseController::class, 'destroy'])->name('aplikasi.destroy');
     });
     Route::view('/companies', 'pages.companies')->name('companies');
     Route::view('/extension', 'pages.extension')->name('extension');

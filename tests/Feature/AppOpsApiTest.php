@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\AppErrorLog;
+use App\Models\AppRelease;
 use App\Models\Family;
 use App\Models\FamilyMember;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -61,6 +64,41 @@ final class AppOpsApiTest extends TestCase
         $this->getJson('/api/app/updates?current_version_code=5')
             ->assertOk()
             ->assertJsonPath('data.update_available', false);
+    }
+
+    public function test_uploaded_release_takes_precedence_over_config(): void
+    {
+        Storage::fake('local');
+        $admin = $this->owner;
+        $admin->update(['is_admin' => true]);
+
+        $apk = UploadedFile::fake()->create('app.apk', 2048);
+        $apk->mimeType('application/vnd.android.package-archive');
+
+        $this->actingAs($admin)->from(route('keuangan.aplikasi'))
+            ->post(route('keuangan.aplikasi.store'), [
+                'apk' => $apk,
+                'version_code' => 24,
+                'version_name' => '3.1.0',
+                'notes' => 'Tema baru dan perbaikan',
+            ])->assertRedirect(route('keuangan.aplikasi'));
+
+        Storage::disk('local')->assertExists('apk/keuangan-3.1.0-24.apk');
+        $this->assertDatabaseHas('app_releases', ['version_code' => 24, 'version_name' => '3.1.0']);
+
+        config(['app.version_code' => 99]);
+
+        $response = $this->getJson('/api/app/updates?current_version_code=23')
+            ->assertOk()
+            ->assertJsonPath('data.latest_version_code', 24)
+            ->assertJsonPath('data.latest_version_name', '3.1.0');
+
+        $this->assertStringContainsString('/apk/download/', (string) $response->json('data.download_url'));
+        $this->assertTrue($response->json('data.update_available'));
+
+        $this->get($response->json('data.download_url'))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.android.package-archive');
     }
 
     // ─── Crash reporting ───
