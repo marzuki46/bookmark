@@ -52,6 +52,6 @@ class FinancialCategorySeeder extends Seeder
             }
         }
 
-        $this->command->info('Default financial categories seeded for ' . $users->count() . ' user(s).');
+        $this->command->info('Default financial categories seeded for '.$users->count().' user(s).');
     }
 }

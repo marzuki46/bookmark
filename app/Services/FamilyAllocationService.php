@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Models\Family;
+use App\Models\FamilyAllocation;
 use App\Models\FamilyDebt;
 use App\Models\FamilyGoal;
 use App\Models\FamilyTransaction;
@@ -126,7 +127,7 @@ final class FamilyAllocationService
      * Persist the confirmed allocation: bump goal.current_amount and record
      * the allocation rows.
      *
-     * @param array<int, array{goal_id: int, amount: float}> $items
+     * @param  array<int, array{goal_id: int, amount: float}>  $items
      */
     public function confirmAllocation(Family $family, int $month, int $year, array $items): void
     {
@@ -144,7 +145,7 @@ final class FamilyAllocationService
                 $goal->update(['status' => 'completed']);
             }
 
-            \App\Models\FamilyAllocation::create([
+            FamilyAllocation::create([
                 'family_id' => $family->id,
                 'month' => $month,
                 'year' => $year,

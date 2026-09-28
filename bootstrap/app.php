@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\EnsureFamilyScope;
+use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\LogRequest;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -18,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             SecurityHeaders::class,
+            LogRequest::class,
+        ]);
+
+        $middleware->api(append: [
+            LogRequest::class,
         ]);
 
         $middleware->api(prepend: [
@@ -27,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'throttle' => ThrottleRequests::class,
             'family.scope' => EnsureFamilyScope::class,
+            'admin' => EnsureUserIsAdmin::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

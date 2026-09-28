@@ -43,10 +43,10 @@ final class AIService
 
     public function summarize(string $content): ?string
     {
-        $prompt = "Anda adalah asisten pengetahuan ahli. Ringkas konten berikut dalam 2-3 kalimat.
+        $prompt = 'Anda adalah asisten pengetahuan ahli. Ringkas konten berikut dalam 2-3 kalimat.
 Fokus pada poin utama yang paling berharga.
 Gunakan Bahasa Indonesia yang ringkas dan jelas.
-Jangan tambahkan informasi yang tidak ada di konten asli.";
+Jangan tambahkan informasi yang tidak ada di konten asli.';
 
         return $this->ask($prompt, $content, 500);
     }
@@ -58,7 +58,7 @@ Jangan tambahkan informasi yang tidak ada di konten asli.";
             $text .= "\n\nKonten:\n".mb_substr($content, 0, 3000);
         }
 
-        $prompt = "Analisis konten berikut dan tentukan SATU kategori yang paling tepat.
+        $prompt = 'Analisis konten berikut dan tentukan SATU kategori yang paling tepat.
 
 Kategori yang tersedia: Technology, Science, Design, Business, Health, Education, Entertainment, News, Reference, Other.
 
@@ -73,7 +73,7 @@ Panduan memilih kategori:
 - News: Berita terkini, politik, sosial
 - Reference: Dokumentasi, referensi, kamus, panduan
 
-Balas HANYA nama kategori, tanpa penjelasan tambahan.";
+Balas HANYA nama kategori, tanpa penjelasan tambahan.';
 
         return $this->ask($prompt, $text, 50);
     }
@@ -115,7 +115,7 @@ Balas HANYA tag yang dipisahkan koma, tanpa nomor atau bullet.";
             $text .= "\n\nKonten:\n".mb_substr($content, 0, 8000);
         }
 
-        $prompt = "Anda adalah asisten pengetahuan ahli. Analisis halaman web berikut dan buat catatan komprehensif.
+        $prompt = 'Anda adalah asisten pengetahuan ahli. Analisis halaman web berikut dan buat catatan komprehensif.
 
 Format output dalam Markdown yang bersih:
 
@@ -136,7 +136,7 @@ Format output dalam Markdown yang bersih:
 - Siapa yang cocok membaca ini
 - Rekomendasi tindakan lanjutan
 
-Jadilah detail namun ringkas. Gunakan Bahasa Indonesia.";
+Jadilah detail namun ringkas. Gunakan Bahasa Indonesia.';
 
         return $this->ask($prompt, $text, 800);
     }
@@ -152,13 +152,13 @@ Jadilah detail namun ringkas. Gunakan Bahasa Indonesia.";
             $list .= ($i + 1).". [{$b['title']}] {$b['url']}\n";
         }
 
-        $prompt = "Anda adalah bookmark organizer ahli. Analisis bookmark berikut dan untuk SETIAP satu (berdasarkan nomor), berikan:
+        $prompt = 'Anda adalah bookmark organizer ahli. Analisis bookmark berikut dan untuk SETIAP satu (berdasarkan nomor), berikan:
 - category: salah satu dari Technology, SEO, Business, Marketing, Design, Education, News, Entertainment, Reference, Other
 - tags: 2-4 tag relevan dipisahkan koma
 - action: keep jika bookmark berguna, remove jika spam/dead/low-quality
 - summary: ringkasan singkat 1 kalimat
 
-Balas sebagai JSON array valid saja, tanpa markdown. Setiap item: {\"id\": <number>, \"category\": \"...\", \"tags\": \"...\", \"action\": \"keep\"|\"remove\", \"summary\": \"...\"}";
+Balas sebagai JSON array valid saja, tanpa markdown. Setiap item: {"id": <number>, "category": "...", "tags": "...", "action": "keep"|"remove", "summary": "..."}';
 
         $result = $this->ask($prompt, $list, 1500);
 

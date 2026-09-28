@@ -8,6 +8,7 @@ use App\Models\Family;
 use App\Models\FamilyTransaction;
 use App\Services\FamilyAIService;
 use Livewire\Component;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class FamilyReport extends Component
 {
@@ -171,7 +172,7 @@ final class FamilyReport extends Component
         $this->aiAnswer = '';
     }
 
-    public function exportCsv(): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function exportCsv(): StreamedResponse
     {
         $family = $this->family;
         $query = FamilyTransaction::with('category')->forFamily($family->id)->whereBetween('date', [$this->dateFrom, $this->dateTo])->orderBy('date');

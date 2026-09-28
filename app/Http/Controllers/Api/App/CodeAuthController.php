@@ -38,6 +38,8 @@ final class CodeAuthController extends Controller
 
         $token = $user->createToken($data['device_name'] ?? 'android')->plainTextToken;
 
+        activity('login')->causedBy($user)->log('App login sukses via kode');
+
         return response()->json([
             'token' => $token,
             'user' => [

@@ -50,7 +50,7 @@ final class InvoiceForm extends Component
     public function mount(?int $id = null): void
     {
         $this->companies = Company::where('user_id', auth()->id())->get()->toArray();
-        $this->mergeSelected = array_map('intval', session("invoice_merge_".auth()->id(), []));
+        $this->mergeSelected = array_map('intval', session('invoice_merge_'.auth()->id(), []));
         $this->dateIssue = now()->format('Y-m-d');
         $this->dateDue = now()->addDays(7)->format('Y-m-d');
         $this->items = [['description' => '', 'qty' => 1, 'price' => 0]];
@@ -131,14 +131,14 @@ final class InvoiceForm extends Component
     public function updatedMergeSelected(): void
     {
         session([
-            "invoice_merge_".auth()->id() => array_map('intval', array_values($this->mergeSelected)),
+            'invoice_merge_'.auth()->id() => array_map('intval', array_values($this->mergeSelected)),
         ]);
     }
 
     public function clearMergeSelection(): void
     {
         $this->mergeSelected = [];
-        session(["invoice_merge_".auth()->id() => []]);
+        session(['invoice_merge_'.auth()->id() => []]);
     }
 
     public function addRow(): void

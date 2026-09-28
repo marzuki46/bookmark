@@ -16,7 +16,7 @@ final class DashboardController extends Controller
         $userId = auth()->id();
 
         $typeCounts = Item::where('user_id', $userId)
-            ->selectRaw("type, COUNT(*) as cnt")
+            ->selectRaw('type, COUNT(*) as cnt')
             ->groupBy('type')
             ->pluck('cnt', 'type')
             ->toArray();

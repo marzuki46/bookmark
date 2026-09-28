@@ -14,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'setup_completed', 'pin_hash'])]
+#[Fillable(['name', 'email', 'password', 'setup_completed', 'pin_hash', 'about', 'is_admin'])]
 #[Hidden(['password', 'remember_token', 'app_login_code'])]
 class User extends Authenticatable
 {
@@ -26,18 +26,29 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'app_login_code_rotated_at' => 'datetime',
+            'is_admin' => 'boolean',
             'password' => 'hashed',
         ];
-    }
-
-    public function items(): HasMany
-    {
-        return $this->hasMany(Item::class);
     }
 
     public function devices(): HasMany
     {
         return $this->hasMany(UserDevice::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function subscriptionPayments(): HasMany
+    {
+        return $this->hasMany(SubscriptionPayment::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(Item::class);
     }
 
     public function folders(): HasMany
@@ -110,5 +121,29 @@ class User extends Authenticatable
         return (bool) $this->familyMemberships()
             ->where('role', 'owner')
             ->exists();
+    }
+
+    /**
+     * The latest usable entitlement (extends on renewal, never stacks).
+     * Falls back to the newest row when nothing is active yet.
+     */
+    public function activeSubscription(): ?Subscription
+    {
+        $usable = $this->subscriptions()
+            ->with('plan')
+            ->active()
+            ->orderByDesc('id')
+            ->get()
+            ->first(fn (Subscription $s) => $s->isUsable());
+
+        return $usable ?? $this->subscriptions()
+            ->with('plan')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        return $this->activeSubscription()?->isUsable() ?? false;
     }
 }

@@ -9,6 +9,7 @@ use App\Models\FamilyDebt;
 use App\Models\FamilyGoal;
 use App\Models\FamilyTransaction;
 use App\Services\FamilyAIService;
+use App\Services\FamilyAllocationService;
 use Livewire\Component;
 
 final class FamilyAppDashboard extends Component
@@ -56,7 +57,7 @@ final class FamilyAppDashboard extends Component
             return ['current' => 0, 'target' => 0, 'percent' => 0];
         }
 
-        $service = new \App\Services\FamilyAllocationService;
+        $service = new FamilyAllocationService;
         $current = (float) FamilyGoal::forFamily($family->id)->where('type', 'emergency_fund')->sum('current_amount');
         $target = $service->emergencyFundTarget($family);
 

@@ -53,7 +53,7 @@ final class AiChatService
 
         $context = $this->buildContext();
 
-        $systemPrompt = "Anda adalah Clips AI, asisten ahli manajemen pengetahuan pribadi.
+        $systemPrompt = 'Anda adalah Clips AI, asisten ahli manajemen pengetahuan pribadi.
 
 IDENTITAS:
 - Nama: Clips AI
@@ -90,18 +90,18 @@ AI: 📊 Ringkasan Knowledge Base Anda:
 • 12 Todos (5 selesai)
 
 Topik utama: Web Development, AI/ML, Design
-Saran: Pertimbangkan untuk menambah tag pada 15 bookmark yang belum punya tag.";
+Saran: Pertimbangkan untuk menambah tag pada 15 bookmark yang belum punya tag.';
 
-$historyText = '';
-if (! empty($history)) {
-    $historyText = "\n\nRiwayat percakapan:\n";
-    foreach (array_slice($history, -8) as $msg) {
-        $role = $msg['role'] === 'user' ? 'Pengguna' : 'AI';
-        $historyText .= "{$role}: {$msg['content']}\n";
-    }
-}
+        $historyText = '';
+        if (! empty($history)) {
+            $historyText = "\n\nRiwayat percakapan:\n";
+            foreach (array_slice($history, -8) as $msg) {
+                $role = $msg['role'] === 'user' ? 'Pengguna' : 'AI';
+                $historyText .= "{$role}: {$msg['content']}\n";
+            }
+        }
 
-$fullMessage = "Konteks knowledge base pengguna:\n{$context}{$historyText}\n\nPertanyaan pengguna: {$message}";
+        $fullMessage = "Konteks knowledge base pengguna:\n{$context}{$historyText}\n\nPertanyaan pengguna: {$message}";
 
         try {
             $reply = $this->ai->askRaw($systemPrompt, $fullMessage, 1200);
@@ -167,7 +167,7 @@ Berdasarkan data di atas, berikan jawaban yang paling membantu.";
     {
         $context = $this->buildContext();
 
-        $prompt = "Anda adalah asisten manajemen pengetahuan. Analisis knowledge base pengguna dan berikan:
+        $prompt = 'Anda adalah asisten manajemen pengetahuan. Analisis knowledge base pengguna dan berikan:
 
 📊 **Ringkasan Data**
 - Jumlah item per kategori
@@ -185,7 +185,7 @@ Berdasarkan data di atas, berikan jawaban yang paling membantu.";
 - Pattern atau insight yang ditemukan
 - Item yang mungkin perlu di-update
 
-Gunakan emoji untuk visual yang menarik. Format markdown. Jawab dalam Bahasa Indonesia. Bersifat actionable dan spesifik.";
+Gunakan emoji untuk visual yang menarik. Format markdown. Jawab dalam Bahasa Indonesia. Bersifat actionable dan spesifik.';
 
         return $this->ai->askRaw($prompt, $context, 800) ?? 'Gagal generate overview.';
     }
@@ -196,7 +196,7 @@ Gunakan emoji untuk visual yang menarik. Format markdown. Jawab dalam Bahasa Ind
             return 'Mohon masukkan teks notulensi/rapat. Contoh: notulensi [paste teks rapat]';
         }
 
-        $prompt = "Anda adalah asisten notulensi rapat ahli. Konversi teks mentah rapat berikut menjadi notulensi terstruktur.
+        $prompt = 'Anda adalah asisten notulensi rapat ahli. Konversi teks mentah rapat berikut menjadi notulensi terstruktur.
 
 Format wajib:
 
@@ -234,7 +234,7 @@ Format wajib:
 ---
 *Dicatat oleh: Clips AI*
 
-Buatlah notulensi yang terstruktur, mudah dibaca, dan actionable. Gunakan Bahasa Indonesia.";
+Buatlah notulensi yang terstruktur, mudah dibaca, dan actionable. Gunakan Bahasa Indonesia.';
 
         return $this->ai->askRaw($prompt, $meetingText, 1500) ?? 'Gagal generate notulensi.';
     }
@@ -257,7 +257,7 @@ Buatlah notulensi yang terstruktur, mudah dibaca, dan actionable. Gunakan Bahasa
             foreach ($items as $type => $typeItems) {
                 $counts[$type] = $typeItems->count();
             }
-            $ctx .= "Total: ".array_sum($counts)." items\n";
+            $ctx .= 'Total: '.array_sum($counts)." items\n";
             foreach ($counts as $type => $count) {
                 $ctx .= ucfirst($type).": {$count} items\n";
             }

@@ -27,9 +27,7 @@ final class AiCenterPage extends Component
 
     public int $timeout = 120;
 
-    public function mount(): void
-    {
-    }
+    public function mount(): void {}
 
     public function summarizeItem(string $itemId): void
     {
@@ -168,7 +166,7 @@ final class AiCenterPage extends Component
         $userId = auth()->id();
 
         $typeCounts = Item::where('user_id', $userId)
-            ->selectRaw("type, COUNT(*) as cnt")
+            ->selectRaw('type, COUNT(*) as cnt')
             ->groupBy('type')
             ->pluck('cnt', 'type')
             ->toArray();

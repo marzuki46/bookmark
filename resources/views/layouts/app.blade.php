@@ -107,6 +107,17 @@
                                         ['route' => 'keluarga.app', 'label' => 'Mode App (HP)', 'icon' => 'globe', 'active' => request()->routeIs('keluarga.app')],
                                     ]
                                 ],
+                                'keuangan' => [
+                                    'label' => 'KEUANGAN',
+                                    'items' => [
+                                        ['route' => 'keuangan.dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard', 'active' => request()->routeIs('keuangan.dashboard')],
+                                        ['route' => 'keuangan.pengguna', 'label' => 'Pengguna', 'icon' => 'file', 'active' => request()->routeIs('keuangan.pengguna')],
+                                        ['route' => 'keuangan.paket', 'label' => 'Paket', 'icon' => 'tag', 'active' => request()->routeIs('keuangan.paket')],
+                                        ['route' => 'keuangan.langganan', 'label' => 'Langganan', 'icon' => 'check', 'active' => request()->routeIs('keuangan.langganan')],
+                                        ['route' => 'keuangan.finansial', 'label' => 'Keuangan User', 'icon' => 'bar-chart', 'active' => request()->routeIs('keuangan.finansial')],
+                                        ['route' => 'keuangan.log', 'label' => 'Log Akses', 'icon' => 'activity', 'active' => request()->routeIs('keuangan.log')],
+                                    ]
+                                ],
                                 'system' => [
                                     'label' => 'System',
                                     'items' => [
@@ -119,6 +130,11 @@
                                     ]
                                 ],
                             ];
+
+                            // KEUANGAN admin menu is only for admins.
+                            if (! (auth()->user()->is_admin ?? false)) {
+                                unset($menuGroups['keuangan']);
+                            }
                         @endphp
 
                         @foreach($menuGroups as $groupKey => $group)
@@ -168,6 +184,7 @@
                                                             'bar-chart' => '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>',
                                                             'table' => '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>',
                                                             'check' => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
+                                                            'wallet' => '<path d="M21 12V7H5a2 2 0 01-2-2 2 2 0 012-2h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 000 4h4v-4z"/>',
                                                         ];
                                                         $iconSvg = $icons[$iconName] ?? $icons['file'];
                                                     @endphp

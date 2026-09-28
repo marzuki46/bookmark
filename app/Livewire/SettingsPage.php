@@ -7,7 +7,6 @@ namespace App\Livewire;
 use App\Models\PasswordChangeRequest;
 use App\Services\ResendMailService;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -231,6 +230,7 @@ final class SettingsPage extends Component
             if ($sent) {
                 $this->statusMessage = 'Email konfirmasi telah dikirim. Cek email Anda untuk menyetujui perubahan.';
                 $this->statusType = 'success';
+
                 return;
             }
         } catch (\Exception $e) {

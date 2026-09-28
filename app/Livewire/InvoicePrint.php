@@ -34,7 +34,7 @@ final class InvoicePrint extends Component
         $this->showPaymentSummary = (bool) $this->invoice->show_payment_summary;
         $this->showPaymentMethod = (bool) $this->invoice->show_payment_method;
 
-        $mergeIds = array_map('intval', session("invoice_merge_".auth()->id(), []));
+        $mergeIds = array_map('intval', session('invoice_merge_'.auth()->id(), []));
 
         if (! empty($mergeIds)) {
             $this->mergeReport = Invoice::with('payments')

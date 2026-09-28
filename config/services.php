@@ -56,4 +56,12 @@ return [
         'project_id' => env('FCM_PROJECT_ID', ''),
     ],
 
+    // Payment gateway for paid app plans. Works in sandbox until
+    // IS_PRODUCTION=true and real keys are set in .env.
+    'midtrans' => [
+        'server_key' => env('MIDTRANS_SERVER_KEY', ''),
+        'client_key' => env('MIDTRANS_CLIENT_KEY', ''),
+        'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
+    ],
+
 ];

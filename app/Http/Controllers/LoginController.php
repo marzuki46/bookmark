@@ -75,6 +75,8 @@ final class LoginController extends Controller
         $request->session()->regenerate();
         $request->session()->migrate(true);
 
+        activity('login')->causedBy(auth()->user())->log('Web login sukses');
+
         if (auth()->user()->isFamilyOnly()) {
             return redirect()->route('keluarga.app');
         }

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\App\CodeAuthController;
 use App\Http\Controllers\Api\App\DeviceController;
+use App\Http\Controllers\Api\App\ProfileController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Family\BudgetController as FamilyBudgetController;
 use App\Http\Controllers\Api\Family\DebtController as FamilyDebtController;
@@ -16,6 +17,9 @@ use App\Http\Controllers\Api\Finance\DashboardController;
 use App\Http\Controllers\Api\Finance\FinanceAiController;
 use App\Http\Controllers\Api\Finance\TransactionController;
 use App\Http\Controllers\Api\ItemController;
+use App\Http\Controllers\Api\Payments\CheckoutController;
+use App\Http\Controllers\Api\Payments\MidtransWebhookController;
+use App\Http\Controllers\Api\Payments\SubscriptionPlanController;
 use App\Http\Controllers\Api\TokenController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -29,9 +33,23 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/app/login', [CodeAuthController::class, 'login'])
     ->middleware('throttle:5,1,login-code');
 
+// Midtrans pushes transaction state changes here (no auth on purpose:
+// authenticity comes from the signature, see MidtransWebhookController).
+Route::post('/payments/midtrans/notification', [MidtransWebhookController::class, 'notification']);
+
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', fn (Request $request) => $request->user());
+
+    // Personal profile + entitlement (Android "personal" menu).
+    Route::get('/me', [ProfileController::class, 'me']);
+    Route::match(['put', 'patch'], '/me', [ProfileController::class, 'update']);
+
+    // Paid plans & purchases (Midtrans Snap).
+    Route::get('/subscription', [SubscriptionPlanController::class, 'current']);
+    Route::get('/subscription/plans', [SubscriptionPlanController::class, 'index']);
+    Route::post('/subscription/charge', [CheckoutController::class, 'charge'])
+        ->middleware('throttle:10,1,checkout');
 
     Route::post('/app/login-code/rotate', [CodeAuthController::class, 'rotate']);
 

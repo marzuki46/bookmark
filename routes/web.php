@@ -12,10 +12,12 @@ use App\Http\Controllers\FamilyReportController;
 use App\Http\Controllers\FamilySettingsController;
 use App\Http\Controllers\FamilyTransactionsController;
 use App\Http\Controllers\FinancialReportController;
+use App\Http\Controllers\KeuanganController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PasswordChangeController;
 use App\Http\Controllers\SetupController;
 use App\Models\Item;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
@@ -67,7 +69,19 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
     Route::get('/keluarga-app/tabungan', [FamilyAppController::class, 'goals'])->name('keluarga.app.goals');
     Route::get('/keluarga-app/hutang', [FamilyAppController::class, 'debts'])->name('keluarga.app.debts');
     Route::get('/keluarga-app/anggaran', [FamilyAppController::class, 'budget'])->name('keluarga.app.budget');
-    Route::view('/companies', 'pages.companies')->name('companies');    Route::view('/extension', 'pages.extension')->name('extension');
+
+    // KEUANGAN (Laravel admin): user management, paid plans, subscriptions
+    // and Midtrans, per-user finance monitoring, and access logs.
+    Route::middleware('admin')->prefix('keuangan')->name('keuangan.')->group(function (): void {
+        Route::get('/', [KeuanganController::class, 'dashboard'])->name('dashboard');
+        Route::get('/pengguna', [KeuanganController::class, 'users'])->name('pengguna');
+        Route::get('/paket', [KeuanganController::class, 'plans'])->name('paket');
+        Route::get('/langganan', [KeuanganController::class, 'subscriptions'])->name('langganan');
+        Route::get('/finansial', [KeuanganController::class, 'userFinances'])->name('finansial');
+        Route::get('/log', [KeuanganController::class, 'logs'])->name('log');
+    });
+    Route::view('/companies', 'pages.companies')->name('companies');
+    Route::view('/extension', 'pages.extension')->name('extension');
     Route::get('/extension/download', function () {
         $zipFile = storage_path('app/clips-extension.zip');
 
@@ -105,7 +119,7 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
         $raw = $exists ? file_get_contents($path) : 'FILE NOT FOUND';
         $data = $exists ? json_decode($raw, true) : null;
         $ai = $data['ai'] ?? null;
-        $configured = !empty($ai['api_key']);
+        $configured = ! empty($ai['api_key']);
 
         $testResult = null;
         $testError = null;
@@ -113,8 +127,8 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
         $testBody = null;
         if ($configured) {
             try {
-                $url = rtrim($ai['api_url'] ?? '', '/') . '/chat/completions';
-                $response = \Illuminate\Support\Facades\Http::timeout(30)
+                $url = rtrim($ai['api_url'] ?? '', '/').'/chat/completions';
+                $response = Http::timeout(30)
                     ->withToken($ai['api_key'])
                     ->post($url, [
                         'model' => $ai['model'],
@@ -131,10 +145,10 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
                 if ($response->successful()) {
                     $testResult = $response->json('choices.0.message.content');
                 } else {
-                    $testError = 'HTTP ' . $testStatus;
+                    $testError = 'HTTP '.$testStatus;
                 }
-            } catch (\Exception $e) {
-                $testError = get_class($e) . ': ' . $e->getMessage();
+            } catch (Exception $e) {
+                $testError = get_class($e).': '.$e->getMessage();
             }
         }
 
@@ -144,7 +158,7 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
             'file_path' => $path,
             'ai_config' => $ai ? [
                 'api_url' => $ai['api_url'] ?? null,
-                'api_key_set' => !empty($ai['api_key']),
+                'api_key_set' => ! empty($ai['api_key']),
                 'model' => $ai['model'] ?? null,
             ] : null,
             'is_configured' => $configured,

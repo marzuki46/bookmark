@@ -154,7 +154,7 @@ final class FamilyDashboard extends Component
 
     public static function formatRupiah(float $amount): string
     {
-        return 'Rp ' . number_format($amount, 0, ',', '.');
+        return 'Rp '.number_format($amount, 0, ',', '.');
     }
 
     private function seedDefaultCategories(Family $family): void
