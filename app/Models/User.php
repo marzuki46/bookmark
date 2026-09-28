@@ -15,7 +15,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'setup_completed', 'pin_hash'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'app_login_code'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -25,6 +25,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'app_login_code_rotated_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -32,6 +33,11 @@ class User extends Authenticatable
     public function items(): HasMany
     {
         return $this->hasMany(Item::class);
+    }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(UserDevice::class);
     }
 
     public function folders(): HasMany
@@ -69,6 +75,27 @@ class User extends Authenticatable
     public function family(): ?Family
     {
         return $this->families()->orderBy('id')->first();
+    }
+
+    /**
+     * The single membership row for this user.
+     *
+     * Preferred over family() whenever the payer role is needed, because
+     * family() goes through the pivot and therefore cannot reach family_members.
+     */
+    public function familyMember(): ?FamilyMember
+    {
+        return $this->familyMemberships()->orderBy('id')->first();
+    }
+
+    public function payerRole(): ?string
+    {
+        return $this->familyMember()?->payer_role;
+    }
+
+    public function payerLabel(): ?string
+    {
+        return $this->familyMember()?->payerLabel();
     }
 
     public function isFamilyOnly(): bool

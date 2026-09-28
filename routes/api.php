@@ -1,6 +1,16 @@
 <?php
 
+use App\Http\Controllers\Api\App\CodeAuthController;
+use App\Http\Controllers\Api\App\DeviceController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\Family\BudgetController as FamilyBudgetController;
+use App\Http\Controllers\Api\Family\DebtController as FamilyDebtController;
+use App\Http\Controllers\Api\Family\FamilyCategoryController;
+use App\Http\Controllers\Api\Family\FamilyController;
+use App\Http\Controllers\Api\Family\GoalController as FamilyGoalController;
+use App\Http\Controllers\Api\Family\IncomeSourceController as FamilyIncomeSourceController;
+use App\Http\Controllers\Api\Family\InsightController as FamilyInsightController;
+use App\Http\Controllers\Api\Family\TransactionController as FamilyTransactionController;
 use App\Http\Controllers\Api\Finance\CategoryController;
 use App\Http\Controllers\Api\Finance\DashboardController;
 use App\Http\Controllers\Api\Finance\FinanceAiController;
@@ -12,9 +22,71 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
 
+// App login by permanent code (no email/password).
+// The third argument is a counter prefix: without it this route would share a
+// counter with the global 60/min API throttle, double-counting every hit and
+// halving the effective limit.
+Route::post('/app/login', [CodeAuthController::class, 'login'])
+    ->middleware('throttle:5,1,login-code');
+
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', fn (Request $request) => $request->user());
+
+    Route::post('/app/login-code/rotate', [CodeAuthController::class, 'rotate']);
+
+    // ─── Devices (FCM push registration) ───
+    Route::get('/app/devices', [DeviceController::class, 'index']);
+    Route::post('/app/devices', [DeviceController::class, 'store']);
+    Route::delete('/app/devices/{device}', [DeviceController::class, 'destroy']);
+
+    // ─── Family (multi-household) ───
+    Route::get('/families', [FamilyController::class, 'index']);
+    Route::get('/families/{family}', [FamilyController::class, 'show']);
+    Route::get('/families/{family}/summary', [FamilyController::class, 'summary']);
+    Route::match(['put', 'patch'], '/families/{family}/me', [FamilyController::class, 'updateMyProfile']);
+
+    Route::prefix('families/{family}')->group(function (): void {
+        Route::get('transactions', [FamilyTransactionController::class, 'index']);
+        Route::post('transactions', [FamilyTransactionController::class, 'store']);
+        Route::get('transactions/{transaction}', [FamilyTransactionController::class, 'show']);
+        Route::match(['put', 'patch'], 'transactions/{transaction}', [FamilyTransactionController::class, 'update']);
+        Route::delete('transactions/{transaction}', [FamilyTransactionController::class, 'destroy']);
+
+        Route::get('debts', [FamilyDebtController::class, 'index']);
+        Route::post('debts', [FamilyDebtController::class, 'store']);
+        Route::get('debts/{debt}', [FamilyDebtController::class, 'show']);
+        Route::match(['put', 'patch'], 'debts/{debt}', [FamilyDebtController::class, 'update']);
+        Route::delete('debts/{debt}', [FamilyDebtController::class, 'destroy']);
+        Route::post('debts/{debt}/pay', [FamilyDebtController::class, 'pay']);
+
+        Route::get('budgets', [FamilyBudgetController::class, 'index']);
+        Route::post('budgets', [FamilyBudgetController::class, 'store']);
+        Route::match(['put', 'patch'], 'budgets/{budget}', [FamilyBudgetController::class, 'update']);
+        Route::delete('budgets/{budget}', [FamilyBudgetController::class, 'destroy']);
+
+        Route::get('goals', [FamilyGoalController::class, 'index']);
+        Route::post('goals', [FamilyGoalController::class, 'store']);
+        Route::match(['put', 'patch'], 'goals/{goal}', [FamilyGoalController::class, 'update']);
+        Route::post('goals/{goal}/contribute', [FamilyGoalController::class, 'contribute']);
+        Route::delete('goals/{goal}', [FamilyGoalController::class, 'destroy']);
+
+        Route::get('income-sources', [FamilyIncomeSourceController::class, 'index']);
+        Route::post('income-sources', [FamilyIncomeSourceController::class, 'store']);
+        Route::match(['put', 'patch'], 'income-sources/{incomeSource}', [FamilyIncomeSourceController::class, 'update']);
+        Route::delete('income-sources/{incomeSource}', [FamilyIncomeSourceController::class, 'destroy']);
+
+        // Insights: weekly AI text (read from cache) + instant free nudges.
+        Route::get('insights', [FamilyInsightController::class, 'index']);
+        Route::get('nudge', [FamilyInsightController::class, 'nudge']);
+        Route::post('insights/read', [FamilyInsightController::class, 'markRead']);
+
+        // Categories are needed to build a transaction and were previously
+        // web-only, so the app could record spending but not categorise it.
+        Route::get('categories', [FamilyCategoryController::class, 'index']);
+        Route::post('categories', [FamilyCategoryController::class, 'store']);
+        Route::match(['put', 'patch'], 'categories/{category}', [FamilyCategoryController::class, 'update']);
+    });
 
     Route::get('/tokens', [TokenController::class, 'index']);
     Route::post('/tokens', [TokenController::class, 'store']);

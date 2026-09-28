@@ -2,6 +2,7 @@ package com.keuangan.app.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
@@ -10,7 +11,7 @@ import kotlinx.coroutines.runBlocking
 private val Context.dataStore by preferencesDataStore(name = "keuangan_session")
 
 /**
- * Holds the Sanctum bearer token.
+ * Holds the Sanctum bearer token and the signed-in user id.
  *
  * The OkHttp interceptor needs the token synchronously on a background thread,
  * so the current value is cached in memory and DataStore is only the durable
@@ -19,28 +20,53 @@ private val Context.dataStore by preferencesDataStore(name = "keuangan_session")
 class TokenStore(private val context: Context) {
 
     @Volatile
-    private var cached: String? = null
+    private var cachedToken: String? = null
+
+    @Volatile
+    private var cachedUserId: Int? = null
 
     val token: String?
-        get() = cached
+        get() = cachedToken
+
+    val userId: Int?
+        get() = cachedUserId
 
     suspend fun restore(): String? {
-        cached = context.dataStore.data.first()[KEY_TOKEN]
-        return cached
+        val data = context.dataStore.data.first()
+        cachedToken = data[KEY_TOKEN]
+        cachedUserId = data[KEY_USER_ID]
+        return cachedToken
     }
 
     suspend fun save(value: String) {
-        cached = value
-        context.dataStore.edit { it[KEY_TOKEN] = value }
+        saveSession(value, cachedUserId)
+    }
+
+    suspend fun saveSession(token: String, userId: Int?) {
+        cachedToken = token
+        cachedUserId = userId
+        context.dataStore.edit {
+            it[KEY_TOKEN] = token
+            if (userId == null) {
+                it.remove(KEY_USER_ID)
+            } else {
+                it[KEY_USER_ID] = userId
+            }
+        }
     }
 
     suspend fun clear() {
-        cached = null
-        context.dataStore.edit { it.remove(KEY_TOKEN) }
+        cachedToken = null
+        cachedUserId = null
+        context.dataStore.edit {
+            it.remove(KEY_TOKEN)
+            it.remove(KEY_USER_ID)
+        }
     }
 
     companion object {
         private val KEY_TOKEN = stringPreferencesKey("token")
+        private val KEY_USER_ID = intPreferencesKey("user_id")
     }
 }
 

@@ -25,6 +25,9 @@ class SessionViewModel(private val repository: KeuanganRepository) : ViewModel()
     }
 
     fun logout() {
-        viewModelScope.launch { repository.logout() }
+        viewModelScope.launch {
+            repository.logout()
+            _authenticated.value = repository.restoreSession()
+        }
     }
 }

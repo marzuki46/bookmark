@@ -13,6 +13,7 @@ class FamilyTransaction extends Model
         'family_id',
         'user_id',
         'category_id',
+        'income_source_id',
         'type',
         'amount',
         'description',
@@ -43,6 +44,11 @@ class FamilyTransaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(FamilyCategory::class, 'category_id');
+    }
+
+    public function incomeSource(): BelongsTo
+    {
+        return $this->belongsTo(IncomeSource::class, 'income_source_id');
     }
 
     public function scopeForFamily($query, int $familyId)

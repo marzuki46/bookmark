@@ -26,9 +26,12 @@ final class FamilyAIService
 
     public function __construct()
     {
-        $this->apiUrl = config('services.nvidia.api_url', 'https://integrate.api.nvidia.com/v1');
-        $this->apiKey = config('services.nvidia.api_key', '');
-        $this->model = config('services.nvidia.model', 'deepseek-ai/deepseek-r1');
+        $this->apiUrl = config('services.nvidia.api_url') ?: 'https://integrate.api.nvidia.com/v1';
+        // Cast rather than rely on the default: a present-but-null config value
+        // would otherwise blow up on the string-typed property instead of
+        // degrading to the rule-based fallback.
+        $this->apiKey = (string) (config('services.nvidia.api_key') ?: '');
+        $this->model = config('services.nvidia.model') ?: 'deepseek-ai/deepseek-r1';
     }
 
     public function isConfigured(): bool
@@ -138,10 +141,10 @@ final class FamilyAIService
         $prompt = "Kamu adalah penasihat keuangan keluarga yang ringkas dan praktis.
 Data keuangan keluarga bulan ini:
 - Skor kesehatan: {$metrics['score']}/100 ({$metrics['grade']})
-- Pemasukan: Rp " . number_format((float) $metrics['income'], 0, ',', '.') . "
-- Pengeluaran: Rp " . number_format((float) $metrics['expense'], 0, ',', '.') . "
-- Dana darurat: Rp " . number_format((float) $metrics['emergency_current'], 0, ',', '.') . " dari target Rp " . number_format((float) $metrics['emergency_target'], 0, ',', '.') . "
-- Total hutang tersisa: Rp " . number_format((float) $metrics['total_debt'], 0, ',', '.') . "
+- Pemasukan: Rp ".number_format((float) $metrics['income'], 0, ',', '.').'
+- Pengeluaran: Rp '.number_format((float) $metrics['expense'], 0, ',', '.').'
+- Dana darurat: Rp '.number_format((float) $metrics['emergency_current'], 0, ',', '.').' dari target Rp '.number_format((float) $metrics['emergency_target'], 0, ',', '.').'
+- Total hutang tersisa: Rp '.number_format((float) $metrics['total_debt'], 0, ',', '.')."
 
 Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris, dimulai dengan '•'. Fokus pada hal paling mendesak, bukan saran umum.";
 
@@ -153,6 +156,29 @@ Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris
             logger()->error('FamilyAI analyze failed', ['error' => $e->getMessage()]);
 
             return $this->ruleSummary($metrics);
+        }
+    }
+
+    /**
+     * Runs a single prompt through the configured provider.
+     *
+     * Exposed so other services (e.g. the weekly insight generator) reuse the
+     * same credentials, caching and error handling instead of reimplementing
+     * an HTTP client. Returns null when unconfigured or on failure — callers
+     * are expected to have a rule-based fallback.
+     */
+    public function chat(string $prompt, int $maxTokens = 200): ?string
+    {
+        if (! $this->isConfigured()) {
+            return null;
+        }
+
+        try {
+            return $this->ask($prompt, $maxTokens);
+        } catch (\Exception $e) {
+            logger()->error('FamilyAI chat failed', ['error' => $e->getMessage()]);
+
+            return null;
         }
     }
 

@@ -13,12 +13,18 @@ class Family extends Model
     protected $fillable = [
         'name',
         'owner_user_id',
+        'housing_complex_id',
         'invite_code',
     ];
 
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_user_id');
+    }
+
+    public function housingComplex(): BelongsTo
+    {
+        return $this->belongsTo(HousingComplex::class);
     }
 
     public function members(): HasMany
@@ -51,6 +57,16 @@ class Family extends Model
         return $this->hasMany(FamilyDebt::class);
     }
 
+    public function incomeSources(): HasMany
+    {
+        return $this->hasMany(IncomeSource::class);
+    }
+
+    public function insights(): HasMany
+    {
+        return $this->hasMany(FamilyInsight::class);
+    }
+
     public function allocations(): HasMany
     {
         return $this->hasMany(FamilyAllocation::class);
@@ -68,5 +84,13 @@ class Family extends Model
     public function isMember(User $user): bool
     {
         return $this->members()->where('user_id', $user->id)->exists();
+    }
+
+    public function isOwner(User $user): bool
+    {
+        return $this->members()
+            ->where('user_id', $user->id)
+            ->where('role', 'owner')
+            ->exists();
     }
 }

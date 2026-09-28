@@ -50,3 +50,9 @@ suspend fun <T> apiCall(block: suspend () -> T): T = try {
     val err = e.toApiError()
     throw ApiException(err.message, err.code)
 }
+
+/** Adapter for "best effort please" call sites that can do without the value. */
+fun <T> ApiResult<T>.getOrNull(): T? = when (this) {
+    is ApiResult.Ok -> value
+    is ApiResult.Err -> null
+}

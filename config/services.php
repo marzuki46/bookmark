@@ -49,4 +49,11 @@ return [
         'model' => env('NVIDIA_MODEL', 'deepseek-ai/deepseek-r1'),
     ],
 
+    // Weekly family insight push. Without a server key the FcmChannel stays
+    // inert and the app relies on the persisted insight it reads on open.
+    'fcm' => [
+        'server_key' => env('FCM_SERVER_KEY', ''),
+        'project_id' => env('FCM_PROJECT_ID', ''),
+    ],
+
 ];

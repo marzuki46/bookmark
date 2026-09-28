@@ -69,6 +69,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | App Login Code Pepper
+    |--------------------------------------------------------------------------
+    |
+    | Mixed into the SHA-256 digest of the Android app's permanent login codes.
+    | Set this to a long random string and never change it once codes have been
+    | issued: rotating it invalidates every code already handed out.
+    |
+    */
+
+    'login_code_pepper' => env('LOGIN_CODE_PEPPER', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |
