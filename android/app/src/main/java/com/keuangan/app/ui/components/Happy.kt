@@ -1,5 +1,8 @@
 package com.keuangan.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,11 +45,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.parseIsoDate
-import com.keuangan.app.ui.theme.HappyHeaderGradient
+import com.keuangan.app.ui.theme.AppThemes
+import com.keuangan.app.ui.theme.ThemeController
 import java.time.Instant
 import java.time.ZoneOffset
 
-/** Happy gradient banner used as the top of every screen. */
+/** Happy gradient banner used as the top of every screen. Follows the theme. */
 @Composable
 fun GradientHeader(
     title: String,
@@ -54,12 +58,14 @@ fun GradientHeader(
     modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
 ) {
+    val appTheme = AppThemes.firstOrNull { it.id == ThemeController.themeId.value }
+        ?: AppThemes.first()
     Box(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-            .background(HappyHeaderGradient)
+            .background(appTheme.gradient)
             .padding(horizontal = 22.dp, vertical = 22.dp),
     ) {
         Box(
@@ -76,21 +82,26 @@ fun GradientHeader(
                 .size(56.dp)
                 .background(Color.White.copy(alpha = 0.08f), CircleShape),
         )
-        Column(Modifier.fillMaxWidth(0.86f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White,
-            )
-            if (subtitle != null) {
-                Spacer(Modifier.height(4.dp))
+        AnimatedVisibility(
+            visible = true,
+            enter = slideInVertically(tween(320), initialOffsetY = { -14 }),
+        ) {
+            Column(Modifier.fillMaxWidth(0.86f)) {
                 Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.92f),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
                 )
+                if (subtitle != null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.92f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
         trailing?.let { action ->

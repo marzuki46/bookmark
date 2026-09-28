@@ -1,5 +1,9 @@
 package com.keuangan.app.ui.family
 
+import android.app.Activity
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,12 +19,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -35,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.keuangan.app.scan.BarcodeScanActivity
 
 /**
  * The one and only sign-in screen: exchange the household's permanent login
@@ -48,6 +56,16 @@ fun CodeLoginScreen(
     onLoggedIn: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val scanLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.getStringExtra(BarcodeScanActivity.EXTRA_CODE)?.let { scanned ->
+                viewModel.onCodeChange(scanned)
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -111,6 +129,24 @@ fun CodeLoginScreen(
             }
 
             Spacer(Modifier.height(20.dp))
+            OutlinedButton(
+                onClick = {
+                    scanLauncher.launch(Intent(context, BarcodeScanActivity::class.java))
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+            ) {
+                Icon(
+                    Icons.Filled.QrCodeScanner,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text("Scan barcode kode keluarga")
+            }
+
+            Spacer(Modifier.height(12.dp))
             Button(
                 onClick = { viewModel.submit(onLoggedIn) },
                 enabled = !state.loading,

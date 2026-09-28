@@ -1,5 +1,8 @@
 package com.keuangan.app.ui.family
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -214,7 +217,12 @@ private fun HealthCard(health: FamilyHealthDto) {
             }
             Spacer(Modifier.width(12.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("${health.score.toInt()}", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = fg)
+                val animatedScore by animateIntAsState(
+                    targetValue = health.score.toInt(),
+                    animationSpec = tween(700),
+                    label = "skor-kesehatan",
+                )
+                Text("$animatedScore", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = fg)
                 Text(
                     "Nilai ${health.grade}",
                     style = MaterialTheme.typography.labelMedium,
@@ -228,20 +236,26 @@ private fun HealthCard(health: FamilyHealthDto) {
 @Composable
 private fun StatRow(income: Double, expense: Double, savings: Double) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StatCard("Masuk", formatShortRupiah(income), Teal100, Teal700, Modifier.weight(1f))
-        StatCard("Keluar", formatShortRupiah(expense), Red100, Red600, Modifier.weight(1f))
-        StatCard("Selisih", formatSignedShort(savings), Amber100, Amber600, Modifier.weight(1f))
+        StatCard("Pemasukan", income, ::formatShortRupiah, Teal100, Teal700, Modifier.weight(1f))
+        StatCard("Pengeluaran", expense, ::formatShortRupiah, Red100, Red600, Modifier.weight(1f))
+        StatCard("Selisih", savings, ::formatSignedShort, Amber100, Amber600, Modifier.weight(1f))
     }
 }
 
 @Composable
 private fun StatCard(
     label: String,
-    value: String,
+    value: Double,
+    format: (Double) -> String,
     bg: Color,
     fg: Color,
     modifier: Modifier = Modifier,
 ) {
+    val animated by animateFloatAsState(
+        targetValue = value.toFloat(),
+        animationSpec = tween(700),
+        label = "kartu-$label",
+    )
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = bg),
@@ -249,7 +263,12 @@ private fun StatCard(
         Column(Modifier.padding(vertical = 12.dp, horizontal = 10.dp)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = fg)
             Spacer(Modifier.height(2.dp))
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = fg)
+            Text(
+                format(animated.toDouble()),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = fg,
+            )
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.keuangan.app.ui.family
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.AlertDialog
@@ -46,13 +48,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import android.widget.Toast
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.keuangan.app.data.FamilyMemberDto
 import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.formatFullDate
@@ -60,6 +66,7 @@ import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
+import com.keuangan.app.util.QrCode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,6 +79,7 @@ fun FamilyProfileScreen(
     val state by viewModel.state.collectAsState()
     var confirmLogout by remember { mutableStateOf(false) }
     var showAddMember by remember { mutableStateOf(false) }
+    var showQr by remember { mutableStateOf(false) }
     var memberName by rememberSaveable { mutableStateOf("") }
     var memberRole by rememberSaveable { mutableStateOf<String?>(null) }
     val clipboard = LocalClipboardManager.current
@@ -289,6 +297,15 @@ fun FamilyProfileScreen(
                                 Spacer(Modifier.size(6.dp))
                                 Text("Salin")
                             }
+                            TextButton(onClick = { showQr = true }) {
+                                Icon(
+                                    Icons.Filled.QrCodeScanner,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                )
+                                Spacer(Modifier.size(6.dp))
+                                Text("QR")
+                            }
                         }
                     } else if (loadingCode) {
                         Row(
@@ -381,6 +398,43 @@ fun FamilyProfileScreen(
                 Toast.makeText(context, "Kode disalin", Toast.LENGTH_SHORT).show()
             },
             onDismiss = viewModel::dismissNewMemberCode,
+        )
+    }
+
+    val qrCode = state.loginCode
+    if (showQr && qrCode != null) {
+        AlertDialog(
+            onDismissRequest = { showQr = false },
+            title = { Text("Kode login keluarga") },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val bitmap = remember(qrCode) { QrCode.bitmap(qrCode, 480) }
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = "Barcode kode login keluarga",
+                        modifier = Modifier
+                            .size(210.dp)
+                            .clip(RoundedCornerShape(12.dp)),
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        qrCode,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Anggota lain (suami/istri) bisa menekan \"Scan barcode\" di layar masuk untuk ikut terhubung ke keluarga.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showQr = false }) { Text("Tutup") }
+            },
         )
     }
 }

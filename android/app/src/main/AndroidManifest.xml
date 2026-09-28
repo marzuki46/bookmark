@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
 
     <!-- Lets the notification from the download manager install the APK. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -25,6 +26,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".scan.BarcodeScanActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Keuangan" />
+
+        <receiver
+            android:name=".update.InstallReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.keuangan.app.ACTION_INSTALL" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
