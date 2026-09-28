@@ -382,6 +382,41 @@
                 });
             });
         })();
+
+        // Preserve page & sidebar scroll position across navigation
+        (function () {
+            const storageKey = (path) => 'wpScroll_' + path;
+            const sidebarInner = document.querySelector('.wp-sidebar-inner');
+            const save = () => {
+                try {
+                    sessionStorage.setItem(storageKey(location.pathname), JSON.stringify({
+                        y: window.scrollY,
+                        side: sidebarInner ? sidebarInner.scrollTop : 0,
+                    }));
+                } catch (_) {}
+            };
+            const restore = () => {
+                let saved = null;
+                try {
+                    saved = JSON.parse(sessionStorage.getItem(storageKey(location.pathname)) || 'null');
+                } catch (_) {}
+                if (!saved) return;
+                const apply = () => {
+                    window.scrollTo(0, saved.y);
+                    if (sidebarInner && saved.side) sidebarInner.scrollTop = saved.side;
+                };
+                if (document.readyState === 'complete') {
+                    apply();
+                } else {
+                    window.addEventListener('load', apply, { once: true });
+                }
+            };
+            window.addEventListener('pagehide', save);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') save();
+            });
+            restore();
+        })();
     </script>
 </body>
 </html>
