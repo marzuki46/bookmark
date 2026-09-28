@@ -101,10 +101,10 @@ final class UserFinances extends Component
         $debts = FamilyDebt::forFamily($family->id)
             ->where('type', 'payable')
             ->where('status', '!=', 'settled')
-            ->get(['remaining', 'installment']);
+            ->get(['amount', 'paid_amount', 'installment']);
 
         return [
-            'total' => (float) $debts->sum('remaining'),
+            'total' => (float) $debts->sum(fn (FamilyDebt $debt) => $debt->remaining),
             'installment' => (float) $debts->sum('installment'),
             'count' => $debts->count(),
         ];
@@ -142,7 +142,8 @@ final class UserFinances extends Component
                 'description' => $t->description,
                 'user' => $t->user?->name,
                 'problem' => $t->category_id === null ? 'tanpa kategori' : 'nominal tidak wajar',
-            ]);
+            ])
+            ->all();
     }
 
     public function getRecentTransactionsProperty()

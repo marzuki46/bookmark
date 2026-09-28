@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Livewire\Admin\UserFinances;
 use App\Livewire\Admin\UserManager;
+use App\Models\Family;
+use App\Models\FamilyDebt;
+use App\Models\FamilyMember;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
@@ -242,5 +246,39 @@ final class AdminKeuanganTest extends TestCase
         app(SubscriptionService::class)->activate($user, $plan);
 
         $this->assertTrue($user->fresh()->hasActiveSubscription());
+    }
+
+    public function test_user_finances_debt_total_uses_remaining_accessor(): void
+    {
+        $admin = $this->admin();
+        $user = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Uji',
+            'owner_user_id' => $user->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $user->id, 'role' => 'owner']);
+        FamilyDebt::create([
+            'family_id' => $family->id,
+            'name' => 'KPR',
+            'type' => 'payable',
+            'amount' => 100_000,
+            'paid_amount' => 40_000,
+            'installment' => 25_000,
+        ]);
+        FamilyDebt::create([
+            'family_id' => $family->id,
+            'name' => 'Lunas',
+            'type' => 'payable',
+            'amount' => 30_000,
+            'status' => 'settled',
+        ]);
+
+        $component = Livewire::actingAs($admin)->test(UserFinances::class, ['userId' => $user->id]);
+
+        $component->assertOk();
+        $component->assertSet('debts.total', 60_000.0);
+        $component->assertSet('debts.installment', 25_000.0);
+        $component->assertSet('debts.count', 1);
     }
 }
