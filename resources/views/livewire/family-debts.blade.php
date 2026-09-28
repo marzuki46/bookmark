@@ -63,7 +63,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     </div>
                 </div>
-                <div class="stat-value text-emerald-600">{{ $projection['next_due']?->format('d M') ?? '-' }}</div>
+                <div class="stat-value text-emerald-600">{{ data_get($projection, 'next_due')?->format('d M') ?? '-' }}</div>
             </div>
         </div>
 

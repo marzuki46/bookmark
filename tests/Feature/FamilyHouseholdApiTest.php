@@ -60,6 +60,39 @@ final class FamilyHouseholdApiTest extends TestCase
         return $family;
     }
 
+    public function test_create_forms_default_missing_type_for_older_app_clients(): void
+    {
+        $category = $this->postJson("/api/families/{$this->family->id}/categories", [
+            'name' => 'Belanja lama',
+        ])->assertCreated()->json('data');
+
+        $source = $this->postJson("/api/families/{$this->family->id}/income-sources", [
+            'name' => 'Pemasukan lama',
+        ])->assertCreated()->json('data');
+
+        $transaction = $this->postJson("/api/families/{$this->family->id}/transactions", [
+            'amount' => 25_000,
+            'description' => 'Transaksi dari aplikasi lama',
+            'date' => now()->toDateString(),
+        ])->assertCreated()->json('data');
+
+        $debt = $this->postJson("/api/families/{$this->family->id}/debts", [
+            'name' => 'Utang lama',
+            'amount' => 100_000,
+        ])->assertCreated()->json('data');
+
+        $goal = $this->postJson("/api/families/{$this->family->id}/goals", [
+            'name' => 'Target lama',
+            'target_amount' => 500_000,
+        ])->assertCreated()->json('data');
+
+        $this->assertSame('expense', $category['type']);
+        $this->assertSame('other', $source['type']);
+        $this->assertSame('expense', $transaction['type']);
+        $this->assertSame('payable', $debt['type']);
+        $this->assertSame('custom', $goal['type']);
+    }
+
     // â”€â”€ DEBTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     public function test_can_create_a_debt(): void

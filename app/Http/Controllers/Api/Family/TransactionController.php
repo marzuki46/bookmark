@@ -56,6 +56,12 @@ final class TransactionController extends Controller
     {
         $this->authorize('view', $family);
 
+        // Older APKs did not include type in the payload. Expense is the
+        // safest default for a transaction created without an explicit type.
+        if (! $request->filled('type')) {
+            $request->merge(['type' => 'expense']);
+        }
+
         $data = $this->validated($request, $family);
 
         $transaction = $family->transactions()->create(

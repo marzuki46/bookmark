@@ -69,6 +69,13 @@ final class FamilySingleHouseholdTest extends TestCase
         return $family;
     }
 
+    public function test_debt_page_renders_when_projection_has_no_data(): void
+    {
+        $this->actingAs($this->husband)
+            ->get(route('keluarga.hutang'))
+            ->assertOk();
+    }
+
     // ------------------------------------------------- one household per user
 
     public function test_a_user_cannot_belong_to_a_second_family(): void

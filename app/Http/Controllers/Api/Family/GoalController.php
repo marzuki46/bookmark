@@ -35,6 +35,10 @@ final class GoalController extends Controller
     {
         $this->authorize('view', $family);
 
+        if (! $request->filled('type')) {
+            $request->merge(['type' => 'custom']);
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'type' => ['required', 'in:emergency_fund,custom'],

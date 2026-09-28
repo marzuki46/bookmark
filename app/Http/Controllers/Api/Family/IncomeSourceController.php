@@ -46,6 +46,10 @@ final class IncomeSourceController extends Controller
     {
         $this->authorize('view', $family);
 
+        if (! $request->filled('type')) {
+            $request->merge(['type' => 'other']);
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:80'],
             'type' => ['required', 'in:salary,side,business,other'],

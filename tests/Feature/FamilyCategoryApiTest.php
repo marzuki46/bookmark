@@ -91,11 +91,11 @@ final class FamilyCategoryApiTest extends TestCase
         ])->assertCreated();
     }
 
-    public function test_it_validates_input(): void
+    public function test_it_validates_input_while_defaulting_legacy_type(): void
     {
         $this->postJson("/api/families/{$this->family->id}/categories", [])
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['name', 'type']);
+            ->assertJsonValidationErrors('name');
 
         $this->postJson("/api/families/{$this->family->id}/categories", [
             'name' => str_repeat('a', 61),

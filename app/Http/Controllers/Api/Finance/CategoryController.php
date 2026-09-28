@@ -31,6 +31,10 @@ final class CategoryController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if (! $request->filled('type')) {
+            $request->merge(['type' => 'expense']);
+        }
+
         $data = $this->validated($request);
         $data['user_id'] = auth()->id();
         $data['is_system'] = false;

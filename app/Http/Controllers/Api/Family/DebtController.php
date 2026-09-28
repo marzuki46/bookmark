@@ -37,6 +37,10 @@ final class DebtController extends Controller
     {
         $this->authorize('view', $family);
 
+        if (! $request->filled('type')) {
+            $request->merge(['type' => 'payable']);
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'type' => ['required', 'in:payable,receivable'],

@@ -49,6 +49,10 @@ final class FamilyCategoryController extends Controller
     {
         $this->authorize('view', $family);
 
+        if (! $request->filled('type')) {
+            $request->merge(['type' => 'expense']);
+        }
+
         $data = $request->validate([
             'name' => ['required', 'string', 'max:60'],
             'type' => ['required', 'in:income,expense'],

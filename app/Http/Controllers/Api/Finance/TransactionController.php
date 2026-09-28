@@ -58,6 +58,10 @@ final class TransactionController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        if (! $request->filled('type')) {
+            $request->merge(['type' => 'expense']);
+        }
+
         $data = $this->validated($request);
 
         $data['category_id'] = $this->resolveOwnedCategory($data['category_id'] ?? null, $data['type']);
