@@ -79,7 +79,7 @@
                         <th class="px-5 py-3">Analisis AI</th>
                         <th class="px-5 py-3">Harga</th>
                         <th class="px-5 py-3">Status</th>
-                        <th class="px-5 py-3">Langganan</th>
+                        <th class="px-5 py-3">Keluarga berlangganan</th>
                         <th class="px-5 py-3 text-right">Aksi</th>
                     </tr>
                 </thead>
@@ -96,7 +96,7 @@
                                     {{ $plan->is_active ? 'aktif' : 'nonaktif' }}
                                 </button>
                             </td>
-                            <td class="px-5 py-3 text-[var(--text-tertiary)]">{{ $plan->subscriptions_count }}</td>
+                            <td class="px-5 py-3 text-[var(--text-tertiary)]">{{ $plan->families_count }}</td>
                             <td class="px-5 py-3 text-right">
                                 <button wire:click="edit({{ $plan->id }})" class="btn-secondary !py-1 text-xs">Edit</button>
                             </td>

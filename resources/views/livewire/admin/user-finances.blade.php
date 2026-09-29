@@ -526,13 +526,14 @@
             <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
                 <div class="px-5 py-4 border-b border-[var(--color-border)]">
                     <h3 class="text-sm font-semibold text-[var(--text-primary)]">Anggota Keluarga</h3>
-                    <p class="text-xs text-[var(--text-tertiary)] mt-1">Lisensi berlaku untuk seluruh anggota keluarga ini.</p>
+                    <p class="text-xs text-[var(--text-tertiary)] mt-1">Semua akun di bawah ini menginduk pada kepala keluarga: {{ $selectedFamily?->owner?->name ?? '-' }}.</p>
                 </div>
                 <div class="divide-y divide-[var(--color-border)]">
                     @foreach($selectedFamily?->members ?? [] as $member)
                         <div class="px-5 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
                             <div>
                                 <p class="font-medium text-[var(--text-primary)]">{{ $member->user?->name ?? '-' }}</p>
+                                <p class="text-xs text-[var(--text-secondary)]">{{ $member->user?->email ?? '-' }}</p>
                                 <p class="text-xs text-[var(--text-tertiary)]">
                                     {{ $member->role === 'owner' ? 'Kepala keluarga' : ($member->relationship === 'child' ? 'Anak' : 'Dewasa') }}
                                     Â· Pemasukan {{ ($member->visibility['income'] ?? true) ? 'terlihat' : 'disembunyikan' }}

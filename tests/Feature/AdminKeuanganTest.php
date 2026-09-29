@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Livewire\Admin\AdminDashboard;
 use App\Livewire\Admin\LicenseManager;
 use App\Livewire\Admin\PlanManager;
 use App\Livewire\Admin\UserFinances;
@@ -542,5 +543,37 @@ final class AdminKeuanganTest extends TestCase
         $this->assertDatabaseHas('family_budgets', ['family_id' => $family->id, 'category_id' => $category->id, 'amount' => 500000]);
         $this->assertDatabaseHas('family_goals', ['family_id' => $family->id, 'name' => 'Dana Liburan']);
         $this->assertDatabaseHas('family_debts', ['family_id' => $family->id, 'name' => 'Pinjaman']);
+    }
+
+    public function test_sales_dashboard_counts_families_not_members(): void
+    {
+        $admin = $this->admin();
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Penjualan',
+            'owner_user_id' => $owner->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $member->id, 'role' => 'member']);
+        $plan = $this->plan('monthly', 9_900);
+        $subscription = app(SubscriptionService::class)->activate($owner, $plan);
+        SubscriptionPayment::create([
+            'user_id' => $owner->id,
+            'family_id' => $family->id,
+            'subscription_id' => $subscription->id,
+            'plan_id' => $plan->id,
+            'order_id' => 'ORDER-DASHBOARD-1',
+            'gross_amount' => 9_900,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(AdminDashboard::class)
+            ->assertSet('activeFamilies', 1)
+            ->assertSet('paidFamilies', 1)
+            ->assertSet('salesCount', 1);
     }
 }

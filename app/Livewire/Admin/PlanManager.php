@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -111,7 +112,16 @@ final class PlanManager extends Component
 
     public function getPlansProperty()
     {
-        return SubscriptionPlan::query()->withCount('subscriptions')->orderBy('price')->get();
+        $familyCounts = Subscription::query()
+            ->whereNotNull('family_id')
+            ->selectRaw('plan_id, COUNT(DISTINCT family_id) as families_count')
+            ->groupBy('plan_id')
+            ->pluck('families_count', 'plan_id');
+
+        return SubscriptionPlan::query()
+            ->orderBy('price')
+            ->get()
+            ->each(fn (SubscriptionPlan $plan) => $plan->setAttribute('families_count', (int) ($familyCounts[$plan->id] ?? 0)));
     }
 
     public function render()

@@ -19,17 +19,33 @@ final class SubscriptionManager extends Component
 
     public ?int $grantPlanId = null;
 
+    public string $search = '';
+
     public string $statusMessage = '';
 
     public string $statusType = 'success';
 
     public function getFamiliesProperty()
     {
-        return Family::query()
-            ->with(['owner:id,name,email', 'members.user:id,name,email'])
+        $families = Family::query()
+            ->with(['owner:id,name,email', 'members.user:id,name,email', 'subscriptions.plan'])
             ->withCount('members')
+            ->when($this->search !== '', fn ($q) => $q->where('name', 'like', "%{$this->search}%"))
             ->orderBy('name')
             ->paginate(20);
+
+        $families->getCollection()->transform(function (Family $family): Family {
+            $family->setAttribute('latest_subscription', $family->subscriptions->sortByDesc('id')->first());
+
+            return $family;
+        });
+
+        return $families;
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->resetPage();
     }
 
     public function getPlansProperty()
