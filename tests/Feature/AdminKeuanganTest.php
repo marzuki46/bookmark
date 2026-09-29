@@ -398,6 +398,31 @@ final class AdminKeuanganTest extends TestCase
             ->assertSee('Belum ditautkan');
     }
 
+    public function test_admin_can_request_a_member_login_code_from_family_detail(): void
+    {
+        $admin = $this->admin();
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['name' => 'Anggota Kode']);
+        $family = Family::create([
+            'name' => 'Keluarga Kode',
+            'owner_user_id' => $owner->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $member->id, 'role' => 'member']);
+
+        $component = Livewire::actingAs($admin)
+            ->test(UserFinances::class, ['familyId' => $family->id])
+            ->call('requestMemberLoginCode', $member->id)
+            ->assertSet('issuedLoginCodeName', 'Anggota Kode');
+
+        $this->assertMatchesRegularExpression(
+            '/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/',
+            $component->instance()->issuedLoginCode,
+        );
+        $this->assertNotNull($member->fresh()->app_login_code);
+    }
+
     public function test_license_manager_can_grant_family_license(): void
     {
         $admin = $this->admin();

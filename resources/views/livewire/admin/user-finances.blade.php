@@ -638,10 +638,22 @@
         @endif
 
         @if($section === 'anggota')
+            @if($issuedLoginCode)
+                <div class="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="font-semibold">Kode login untuk {{ $issuedLoginCodeName }}</p>
+                            <p class="mt-1">Berikan kode ini kepada anggota untuk masuk ke aplikasi.</p>
+                            <p class="mt-3 font-mono text-lg tracking-widest">{{ $issuedLoginCode }}</p>
+                        </div>
+                        <button type="button" wire:click="clearIssuedLoginCode" class="text-xs underline">Tutup</button>
+                    </div>
+                </div>
+            @endif
             <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
                 <div class="px-5 py-4 border-b border-[var(--color-border)]">
                     <h3 class="text-sm font-semibold text-[var(--text-primary)]">Anggota Keluarga</h3>
-                    <p class="text-xs text-[var(--text-tertiary)] mt-1">Semua akun di bawah ini menginduk pada kepala keluarga: {{ $selectedFamily?->owner?->name ?? '-' }}.</p>
+                    <p class="text-xs text-[var(--text-tertiary)] mt-1">Semua akun di bawah ini menginduk pada kepala keluarga: {{ $selectedFamily?->owner?->name ?? '-' }}. Minta kode login jika anggota perlu masuk ke aplikasi.</p>
                 </div>
                 <div class="divide-y divide-[var(--color-border)]">
                     @foreach($selectedFamily?->members ?? [] as $member)
@@ -656,9 +668,12 @@
                                     Â· Hutang {{ ($member->visibility['debts'] ?? true) ? 'terlihat' : 'disembunyikan' }}
                                 </p>
                             </div>
-                            @if($member->role !== 'owner')
-                                <button type="button" wire:click="editMember({{ $member->user_id }})" class="btn-secondary !py-1.5 text-xs">Atur Permission</button>
-                            @endif
+                            <div class="flex items-center gap-2">
+                                <button type="button" wire:click="requestMemberLoginCode({{ $member->user_id }})" class="btn-secondary !py-1.5 text-xs">Request kode login</button>
+                                @if($member->role !== 'owner')
+                                    <button type="button" wire:click="editMember({{ $member->user_id }})" class="btn-secondary !py-1.5 text-xs">Atur Permission</button>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>

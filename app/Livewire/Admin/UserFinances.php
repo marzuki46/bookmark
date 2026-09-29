@@ -67,6 +67,12 @@ final class UserFinances extends Component
 
     public ?string $createdAppDownloadUrl = null;
 
+    public ?int $issuedLoginCodeUserId = null;
+
+    public ?string $issuedLoginCode = null;
+
+    public ?string $issuedLoginCodeName = null;
+
     public ?int $licensePlanId = null;
 
     public ?string $licenseExpiry = null;
@@ -338,6 +344,28 @@ final class UserFinances extends Component
 
         $this->editingMemberId = null;
         $this->statusMessage = 'Permission anggota diperbarui.';
+    }
+
+    public function requestMemberLoginCode(int $memberUserId): void
+    {
+        $this->authorizeAdmin();
+
+        $member = $this->family()?->members()->with('user')->where('user_id', $memberUserId)->firstOrFail();
+        $user = $member->user;
+
+        abort_if($user === null, 404, 'Akun anggota tidak ditemukan.');
+
+        $this->issuedLoginCodeUserId = $user->id;
+        $this->issuedLoginCodeName = $user->name;
+        $this->issuedLoginCode = app(LoginCodeService::class)->issueFor($user);
+        $this->statusMessage = 'Kode login baru diterbitkan untuk '.$user->name.'.';
+    }
+
+    public function clearIssuedLoginCode(): void
+    {
+        $this->issuedLoginCodeUserId = null;
+        $this->issuedLoginCodeName = null;
+        $this->issuedLoginCode = null;
     }
 
     public function grantLicense(): void
