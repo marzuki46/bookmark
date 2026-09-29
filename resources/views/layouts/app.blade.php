@@ -387,25 +387,36 @@
 
         // Preserve page & sidebar scroll position across navigation
         (function () {
-            const storageKey = (path) => 'wpScroll_' + path;
+            const pageKey = (path) => 'wpScroll_' + path;
+            const sidebarKey = 'wpSidebarScroll';
             const sidebarInner = document.querySelector('.wp-sidebar-inner');
             const save = () => {
                 try {
-                    sessionStorage.setItem(storageKey(location.pathname), JSON.stringify({
+                    sessionStorage.setItem(pageKey(location.pathname), JSON.stringify({
                         y: window.scrollY,
                         side: sidebarInner ? sidebarInner.scrollTop : 0,
                     }));
+                    // The sidebar is the same on every admin page, so keep its
+                    // scroll while this tab is alive, across all navigations.
+                    if (sidebarInner) sessionStorage.setItem(sidebarKey, String(sidebarInner.scrollTop));
                 } catch (_) {}
             };
             const restore = () => {
+                // Restore the sidebar scroll immediately (no "jump back to top").
+                let side = 0;
+                try {
+                    side = parseInt(sessionStorage.getItem(sidebarKey) || '0', 10);
+                } catch (_) {}
+                if (sidebarInner && side > 0) sidebarInner.scrollTop = side;
+
+                // Page scroll stays per-pathname.
                 let saved = null;
                 try {
-                    saved = JSON.parse(sessionStorage.getItem(storageKey(location.pathname)) || 'null');
+                    saved = JSON.parse(sessionStorage.getItem(pageKey(location.pathname)) || 'null');
                 } catch (_) {}
                 if (!saved) return;
                 const apply = () => {
                     window.scrollTo(0, saved.y);
-                    if (sidebarInner && saved.side) sidebarInner.scrollTop = saved.side;
                 };
                 if (document.readyState === 'complete') {
                     apply();
