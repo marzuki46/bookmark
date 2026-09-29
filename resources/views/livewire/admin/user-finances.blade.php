@@ -20,16 +20,17 @@
 
             <div class="divide-y divide-[var(--color-border)] max-h-96 overflow-y-auto rounded-lg border border-[var(--color-border)]">
                 @forelse($families as $family)
-                    <button type="button" wire:click="selectFamily({{ $family->id }})"
-                            class="w-full text-left px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--color-bg)] transition">
+                    <div class="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--color-bg)] transition">
                         <span>
-                            <span class="block font-medium text-[var(--text-primary)]">{{ $family->name }}</span>
+                            <a href="{{ route('keuangan.keluarga.detail', $family) }}" class="block font-medium text-[var(--text-primary)] hover:text-indigo-600">
+                                {{ $family->name }}
+                            </a>
                             <span class="block text-xs text-[var(--text-tertiary)]">
                                 {{ $family->members_count }} anggota &middot; {{ $family->owner?->name ?? '-' }}
                             </span>
                         </span>
-                        <span class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700">Kelola</span>
-                    </button>
+                        <a href="{{ route('keuangan.keluarga.detail', $family) }}" class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700">Kelola</a>
+                    </div>
                 @empty
                     <p class="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">Tidak ada keluarga ditemukan.</p>
                 @endforelse
@@ -59,7 +60,7 @@
     @else
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 flex items-center justify-between gap-3 flex-wrap">
             <div class="flex items-center gap-4">
-                <button type="button" wire:click="backToList" class="btn-secondary !py-1.5 text-xs">&larr; Kembali</button>
+                <a href="{{ route('keuangan.keluarga') }}" class="btn-secondary !py-1.5 text-xs">&larr; Kembali</a>
                 <div>
                     <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Keluarga terpilih</p>
                     <p class="text-lg font-bold text-[var(--text-primary)]">{{ $selectedFamily?->name }}</p>

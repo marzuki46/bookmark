@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\AppRelease;
+use App\Models\Family;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -33,6 +34,11 @@ final class KeuanganController extends Controller
     public function userFinances(): View
     {
         return view('pages.keuangan-user-finances');
+    }
+
+    public function familyDetail(Family $family): View
+    {
+        return view('pages.keuangan-family-detail', compact('family'));
     }
 
     public function logs(): View

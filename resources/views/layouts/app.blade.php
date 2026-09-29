@@ -113,7 +113,7 @@
                                         ['route' => 'keuangan.pengguna', 'label' => 'Pengguna', 'icon' => 'file', 'active' => request()->routeIs('keuangan.pengguna')],
                                         ['route' => 'keuangan.paket', 'label' => 'Paket', 'icon' => 'tag', 'active' => request()->routeIs('keuangan.paket')],
                                         ['route' => 'keuangan.langganan', 'label' => 'Langganan', 'icon' => 'check', 'active' => request()->routeIs('keuangan.langganan')],
-                                        ['route' => 'keuangan.keluarga', 'label' => 'Manajemen Keluarga', 'icon' => 'bar-chart', 'active' => request()->routeIs('keuangan.keluarga') || request()->routeIs('keuangan.finansial')],
+                                        ['route' => 'keuangan.keluarga', 'label' => 'Manajemen Keluarga', 'icon' => 'bar-chart', 'active' => request()->routeIs('keuangan.keluarga*') || request()->routeIs('keuangan.finansial')],
                                         ['route' => 'keuangan.aplikasi-manajemen', 'label' => 'Manajemen Aplikasi', 'icon' => 'globe', 'active' => request()->routeIs('keuangan.aplikasi-manajemen') || request()->routeIs('keuangan.aplikasi') || request()->routeIs('keuangan.log')],
                                     ]
                                 ],

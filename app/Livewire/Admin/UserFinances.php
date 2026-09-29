@@ -44,9 +44,11 @@ final class UserFinances extends Component
 
     public string $familySearch = '';
 
-    public function mount(): void
+    public function mount(?int $familyId = null, ?int $userId = null): void
     {
         $this->month = now()->format('Y-m');
+        $this->familyId = $familyId;
+        $this->userId = $userId;
     }
 
     public function updatedFamilySearch(): void

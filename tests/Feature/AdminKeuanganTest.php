@@ -234,9 +234,22 @@ final class AdminKeuanganTest extends TestCase
         User::factory()->create();
         $this->plan('monthly');
 
+        $owner = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Detail',
+            'owner_user_id' => $owner->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
+
         foreach (['', '/pengguna', '/paket', '/langganan', '/finansial', '/keluarga', '/log', '/aplikasi-manajemen', '/aplikasi'] as $path) {
             $this->actingAs($admin)->get('/keuangan'.$path)->assertOk();
         }
+
+        $this->actingAs($admin)
+            ->get(route('keuangan.keluarga.detail', $family))
+            ->assertOk()
+            ->assertSee('Keluarga Detail');
     }
 
     public function test_admin_can_grant_subscription(): void

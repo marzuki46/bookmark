@@ -82,7 +82,8 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
         Route::get('/paket', [KeuanganController::class, 'plans'])->name('paket');
         Route::get('/langganan', [KeuanganController::class, 'subscriptions'])->name('langganan');
         Route::get('/finansial', [KeuanganController::class, 'userFinances'])->name('finansial');
-        Route::get('/keluarga', [KeuanganController::class, 'userFinances'])->name('keluarga');
+Route::get('/keluarga', [KeuanganController::class, 'userFinances'])->name('keluarga');
+Route::get('/keluarga/{family}', [KeuanganController::class, 'familyDetail'])->name('keluarga.detail');
         Route::get('/log', [KeuanganController::class, 'logs'])->name('log');
         Route::get('/aplikasi-manajemen', [KeuanganController::class, 'appManager'])->name('aplikasi-manajemen');
         Route::get('/aplikasi', [AppReleaseController::class, 'index'])->name('aplikasi');
