@@ -59,6 +59,7 @@ import com.keuangan.app.ui.components.ChoiceDropdown
 import com.keuangan.app.ui.components.ChoiceItem
 import com.keuangan.app.ui.components.DateField
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -162,6 +163,12 @@ fun FamilyTransactionsScreen(
                             pending = tx.id < 0,
                             onEdit = { viewModel.openEdit(tx) },
                             onDelete = { pendingDelete = tx },
+                        )
+                    }
+                    item {
+                        Spacer(Modifier.height(2.dp))
+                        KangCuanTipCard(
+                            message = "Catat pengeluaran sekecil apa pun hari ini juga. Data yang rapi bikin laporan dan saran Kang Cuan lebih bisa diandalkan.",
                         )
                     }
                 }

@@ -17,6 +17,7 @@ data class AppUpdateDto(
     @SerialName("latest_version_name") val latestVersionName: String = "",
     @SerialName("download_url") val downloadUrl: String = "",
     val notes: String = "",
+    @SerialName("is_mandatory") val isMandatory: Boolean = false,
     @SerialName("update_available") val updateAvailable: Boolean = false,
 )
 
@@ -54,6 +55,8 @@ data class FamilyMemberRequest(
     val name: String,
     @SerialName("payer_role") val payerRole: String? = null,
     val email: String? = null,
+    val relationship: String? = null,
+    val visibility: Map<String, Boolean>? = null,
 )
 
 @Serializable

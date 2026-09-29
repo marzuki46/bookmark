@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyDebtDto
 import com.keuangan.app.ui.components.DateField
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.formatShortDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -151,6 +152,12 @@ fun FamilyDebtsScreen(
                             onEdit = { viewModel.openEdit(debt) },
                             onDelete = { pendingDelete = debt },
                             onPay = { viewModel.openPayment(debt) },
+                        )
+                    }
+                    item {
+                        Spacer(Modifier.height(2.dp))
+                        KangCuanTipCard(
+                            message = "Bayar cicilan yang bunganya paling tinggi lebih dulu (strategi avalanche). Setiap pembayaran yang dicatat mengurangi beban bulan depan.",
                         )
                     }
                 }

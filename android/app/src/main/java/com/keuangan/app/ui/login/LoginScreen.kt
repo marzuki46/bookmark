@@ -70,9 +70,9 @@ fun LoginScreen(
                 modifier = Modifier.size(64.dp),
             )
             Spacer(Modifier.height(12.dp))
-            Text("Keuangan", fontSize = 30.sp, fontWeight = FontWeight.Bold)
+            Text("Kang Cuan", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Masuk untuk melihat ringkasan keuanganmu",
+                "Soal cuan, urusan Kang Cuan",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

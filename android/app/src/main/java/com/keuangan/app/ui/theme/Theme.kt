@@ -296,6 +296,48 @@ val AppThemes: List<AppTheme> = listOf(
             bg = Color(0xFF10120C),
         ),
     ),
+    AppTheme(
+        id = "cuan",
+        title = "Cuan",
+        gradient = Brush.verticalGradient(listOf(Color(0xFFF59E0B), Color(0xFFB45309))),
+        light = lightScheme(
+            primary = Color(0xFFB45309),
+            container = Color(0xFFFDE68A),
+            onContainer = Color(0xFF713F12),
+            focus = Color(0xFF10B981),
+            focusContainer = Color(0xFFD1FAE5),
+            bg = Color(0xFFFBF6EC),
+        ),
+        dark = darkScheme(
+            primary = Color(0xFFFCD34D),
+            container = Color(0xFF78350F),
+            onContainer = Color(0xFFFDE68A),
+            focus = Color(0xFF34D399),
+            focusContainer = Color(0xFF064E3B),
+            bg = Color(0xFF17120A),
+        ),
+    ),
+    AppTheme(
+        id = "angpao",
+        title = "Angpao",
+        gradient = Brush.verticalGradient(listOf(Color(0xFFEF4444), Color(0xFF991B1B))),
+        light = lightScheme(
+            primary = Color(0xFFDC2626),
+            container = Color(0xFFFEE2E2),
+            onContainer = Color(0xFF7F1D1D),
+            focus = Color(0xFFD97706),
+            focusContainer = Color(0xFFFEF3C7),
+            bg = Color(0xFFFDF2F2),
+        ),
+        dark = darkScheme(
+            primary = Color(0xFFF87171),
+            container = Color(0xFF7F1D1D),
+            onContainer = Color(0xFFFECACA),
+            focus = Color(0xFFFBBF24),
+            focusContainer = Color(0xFF5A3E00),
+            bg = Color(0xFF1B0B0B),
+        ),
+    ),
 )
 
 /**
@@ -336,9 +378,9 @@ private val AppShapes = Shapes(
 )
 
 private val AppTypography = Typography(
-    headlineSmall = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.ExtraBold),
-    titleLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold),
+    headlineSmall = TextStyle(fontSize = 22.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
+    titleLarge = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
+    titleMedium = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
     bodyLarge = TextStyle(fontSize = 16.sp),
     bodyMedium = TextStyle(fontSize = 14.sp),
     labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),

@@ -649,13 +649,45 @@ class KeuanganRepository(
         apiCall { api.createFamilyMember(familyId, FamilyMemberRequest(name.trim(), payerRole)) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
-    suspend fun updateFamilyMember(familyId: Int, userId: Int, name: String, payerRole: String?): ApiResult<NewFamilyMemberDto> = runCatching {
-        apiCall { api.updateFamilyMember(familyId, userId, FamilyMemberRequest(name.trim(), payerRole)) }.data
+    suspend fun updateFamilyMember(
+        familyId: Int,
+        userId: Int,
+        name: String,
+        payerRole: String?,
+        relationship: String,
+        visibility: Map<String, Boolean>,
+    ): ApiResult<NewFamilyMemberDto> = runCatching {
+        apiCall {
+            api.updateFamilyMember(
+                familyId,
+                userId,
+                FamilyMemberRequest(
+                    name = name.trim(),
+                    payerRole = payerRole,
+                    relationship = relationship,
+                    visibility = visibility,
+                ),
+            )
+        }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
     suspend fun deleteFamilyMember(familyId: Int, userId: Int): ApiResult<Unit> = runCatching {
         apiCall { api.deleteFamilyMember(familyId, userId) }
     }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
+
+    // --- Kang Cuan: family financial advisor ("Pendamping Keuangan") ---
+
+    suspend fun advisorStatus(familyId: Int): ApiResult<AdvisorStatusDto> = runCatching {
+        apiCall { api.advisorStatus(familyId).data }
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun setAdvisorEnabled(familyId: Int, enabled: Boolean): ApiResult<AdvisorStatusDto> = runCatching {
+        apiCall { api.setAdvisorEnabled(familyId, AdvisorToggleRequest(enabled)).data }
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun saveAdvisorProfile(familyId: Int, body: AdvisorProfileRequest): ApiResult<AdvisorStatusDto> = runCatching {
+        apiCall { api.saveAdvisorProfile(familyId, body).data }
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 }
 
 /** Result of a transaction load plus whether it came from the offline cache. */

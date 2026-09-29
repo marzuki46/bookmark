@@ -136,6 +136,23 @@ interface KeuanganApi {
     @GET("api/families/{family}/summary")
     suspend fun familySummary(@Path("family") familyId: Int): FamilySummaryResponse
 
+    // Kang Cuan — the family financial advisor ("Pendamping Keuangan").
+
+    @GET("api/families/{family}/advisor")
+    suspend fun advisorStatus(@Path("family") familyId: Int): AdvisorStatusResponse
+
+    @POST("api/families/{family}/advisor")
+    suspend fun setAdvisorEnabled(
+        @Path("family") familyId: Int,
+        @Body body: AdvisorToggleRequest,
+    ): AdvisorToggleResponse
+
+    @PUT("api/families/{family}/advisor/profile")
+    suspend fun saveAdvisorProfile(
+        @Path("family") familyId: Int,
+        @Body body: AdvisorProfileRequest,
+    ): AdvisorStatusResponse
+
     @GET("api/families/{family}/transactions/trend")
     suspend fun familyTrend(
         @Path("family") familyId: Int,

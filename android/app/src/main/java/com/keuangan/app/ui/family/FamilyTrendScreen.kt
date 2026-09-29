@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.TrendPointDto
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
@@ -76,6 +77,12 @@ fun FamilyTrendScreen(
             }
             else -> TrendContent(points = state.points)
         }
+
+        Spacer(Modifier.height(16.dp))
+        KangCuanTipCard(
+            message = "Kalau rata-rata pengeluaranmu naik 3 bulan berturut-turut, biasanya ada satu kebiasaan kecil yang bisa dikurangi dulu sebelum memangkas yang besar.",
+        )
+        Spacer(Modifier.height(16.dp))
     }
 }
 

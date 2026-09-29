@@ -459,9 +459,9 @@ fun FamilyProfileScreen(
         EditMemberDialog(
             member = member,
             onDismiss = { editingMember = null },
-            onSave = { name, role ->
+            onSave = { name, role, relationship, visibility ->
                 editingMember = null
-                viewModel.updateMember(familyId, member, name, role)
+                viewModel.updateMember(familyId, member, name, role, relationship, visibility)
             },
         )
     }
@@ -542,10 +542,14 @@ private fun AddMemberDialog(
 private fun EditMemberDialog(
     member: FamilyMemberDto,
     onDismiss: () -> Unit,
-    onSave: (String, String?) -> Unit,
+    onSave: (String, String?, String, Map<String, Boolean>) -> Unit,
 ) {
     var name by rememberSaveable(member.userId) { mutableStateOf(member.name.orEmpty()) }
     var role by rememberSaveable(member.userId) { mutableStateOf(member.payerRole) }
+    var relationship by rememberSaveable(member.userId) { mutableStateOf(member.relationship) }
+    var canViewIncome by rememberSaveable(member.userId) { mutableStateOf(member.visibility["income"] ?: true) }
+    var canViewExpense by rememberSaveable(member.userId) { mutableStateOf(member.visibility["expense"] ?: true) }
+    var canViewDebts by rememberSaveable(member.userId) { mutableStateOf(member.visibility["debts"] ?: true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -564,11 +568,45 @@ private fun EditMemberDialog(
                     FilterChip(selected = role == "husband", onClick = { role = if (role == "husband") null else "husband" }, label = { Text("Suami") })
                     FilterChip(selected = role == "wife", onClick = { role = if (role == "wife") null else "wife" }, label = { Text("Istri") })
                 }
+                Text("Hubungan", style = MaterialTheme.typography.bodySmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = relationship == "adult", onClick = { relationship = "adult" }, label = { Text("Dewasa") })
+                    FilterChip(selected = relationship == "child", onClick = { relationship = "child" }, label = { Text("Anak") })
+                }
+                Text("Data yang boleh dilihat", style = MaterialTheme.typography.bodySmall)
+                PermissionToggle("Pemasukan", canViewIncome) { canViewIncome = it }
+                PermissionToggle("Pengeluaran", canViewExpense) { canViewExpense = it }
+                PermissionToggle("Hutang", canViewDebts) { canViewDebts = it }
             }
         },
-        confirmButton = { TextButton(onClick = { onSave(name.trim(), role) }, enabled = name.isNotBlank()) { Text("Simpan") } },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onSave(
+                        name.trim(),
+                        role,
+                        relationship,
+                        mapOf("income" to canViewIncome, "expense" to canViewExpense, "debts" to canViewDebts),
+                    )
+                },
+                enabled = name.isNotBlank(),
+            ) { Text("Simpan") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } },
     )
+}
+
+@Composable
+private fun PermissionToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+    }
 }
 
 @Composable

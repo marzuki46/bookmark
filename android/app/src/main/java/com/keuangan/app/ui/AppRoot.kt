@@ -1,11 +1,18 @@
 package com.keuangan.app.ui
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
@@ -38,12 +45,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Balance
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,7 +63,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import com.keuangan.app.ui.theme.AppearanceController
+import com.keuangan.app.ui.theme.MotionStyle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -145,8 +161,10 @@ private val TABS = listOf(
     Tab(Routes.TRANSACTIONS, "Transaksi", Icons.AutoMirrored.Filled.ReceiptLong),
     Tab(Routes.DEBTS, "Utang", Icons.Filled.Balance),
     Tab(Routes.GOALS, "Target", Icons.Filled.Flag),
-    Tab(Routes.MORE, "Lainnya", Icons.Filled.MoreVert),
+    Tab(Routes.MORE, "Lainnya", Icons.Filled.GridView),
 )
+
+private const val KEY_ASKED_NOTIFICATIONS = "asked_notifications"
 
 @Composable
 fun AppRoot() {
@@ -199,9 +217,13 @@ private fun FamilyShell(
     val backStack by navController.currentBackStackEntryAsState()
     val currentDestination = backStack?.destination
 
+    NotificationPermissionRequest()
+
     val selectedTab = TABS.firstOrNull { tab ->
         currentDestination?.hierarchy?.any { it.route == tab.route } == true
     }
+
+    val motion = AppearanceController.motion.value
 
     Scaffold(
         bottomBar = {
@@ -222,16 +244,67 @@ private fun FamilyShell(
             navController = navController,
             startDestination = Routes.HOME,
             modifier = Modifier.padding(padding),
-            // Keep navigation responsive on low-end phones. Screen content can
-            // still load progressively without waiting behind long transitions.
-            enterTransition = { fadeIn(tween(100)) },
-            exitTransition = { fadeOut(tween(70)) },
-            popEnterTransition = { fadeIn(tween(100)) },
-            popExitTransition = { fadeOut(tween(70)) },
+            // A wide, unhurried glide by default ("siput halus"); the reader
+            // can pick a snappier or motion-free style in Lainnya.
+            enterTransition = {
+                when (motion) {
+                    MotionStyle.SLOW -> slideInHorizontally(tween(520, easing = FastOutSlowInEasing)) { it / 2 } +
+                        fadeIn(tween(420))
+
+                    MotionStyle.FAST -> slideInHorizontally(tween(260, easing = FastOutSlowInEasing)) { it / 4 } +
+                        fadeIn(tween(220))
+
+                    MotionStyle.NONE -> EnterTransition.None
+                }
+            },
+            exitTransition = {
+                when (motion) {
+                    MotionStyle.SLOW -> slideOutHorizontally(tween(520, easing = FastOutSlowInEasing)) { -it / 2 } +
+                        fadeOut(tween(380))
+
+                    MotionStyle.FAST -> slideOutHorizontally(tween(260, easing = FastOutSlowInEasing)) { -it / 4 } +
+                        fadeOut(tween(200))
+
+                    MotionStyle.NONE -> ExitTransition.None
+                }
+            },
+            popEnterTransition = {
+                when (motion) {
+                    MotionStyle.SLOW -> slideInHorizontally(tween(520, easing = FastOutSlowInEasing)) { -it / 2 } +
+                        fadeIn(tween(420))
+
+                    MotionStyle.FAST -> slideInHorizontally(tween(260, easing = FastOutSlowInEasing)) { -it / 4 } +
+                        fadeIn(tween(220))
+
+                    MotionStyle.NONE -> EnterTransition.None
+                }
+            },
+            popExitTransition = {
+                when (motion) {
+                    MotionStyle.SLOW -> slideOutHorizontally(tween(520, easing = FastOutSlowInEasing)) { it / 2 } +
+                        fadeOut(tween(380))
+
+                    MotionStyle.FAST -> slideOutHorizontally(tween(260, easing = FastOutSlowInEasing)) { it / 4 } +
+                        fadeOut(tween(200))
+
+                    MotionStyle.NONE -> ExitTransition.None
+                }
+            },
         ) {
             composable(Routes.HOME) {
                 val vm: FamilyDashboardViewModel = viewModel(factory = appFactory())
-                FamilyDashboardScreen(familyId = familyId!!, family = family, viewModel = vm)
+                FamilyDashboardScreen(
+                    familyId = familyId!!,
+                    family = family,
+                    viewModel = vm,
+                    onOpenTransactions = { navController.navigate(Routes.TRANSACTIONS) },
+                    onOpenBudgets = { navController.navigate(Routes.BUDGETS) },
+                    onOpenDebts = { navController.navigate(Routes.DEBTS) },
+                    onOpenGoals = { navController.navigate(Routes.GOALS) },
+                    onOpenTrend = { navController.navigate(Routes.TREND) },
+                    onOpenProfile = { navController.navigate(Routes.PROFILE) },
+                    onOpenMore = { navController.navigate(Routes.MORE) },
+                )
             }
             composable(Routes.TRANSACTIONS) {
                 val vm: FamilyTransactionsViewModel = viewModel(factory = appFactory())
@@ -248,6 +321,7 @@ private fun FamilyShell(
             composable(Routes.MORE) {
                 val vm: FamilyMoreViewModel = viewModel(factory = appFactory())
                 FamilyMoreScreen(
+                    familyId = familyId!!,
                     viewModel = vm,
                     onOpenBudgets = { navController.navigate(Routes.BUDGETS) },
                     onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
@@ -291,6 +365,33 @@ private fun FamilyShell(
 }
 
 /**
+ * Asks once, in context (right after the family opens the app), for the
+ * notification permission that keeps the daily "belum mencatat transaksi"
+ * nudge working. If the reader declines, Lainnya offers the settings shortcut.
+ */
+@Composable
+private fun NotificationPermissionRequest() {
+    if (Build.VERSION.SDK_INT < 33) return
+
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences("app_appearance", Context.MODE_PRIVATE)
+    }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+        PackageManager.PERMISSION_GRANTED
+    var asked by remember { mutableStateOf(prefs.getBoolean(KEY_ASKED_NOTIFICATIONS, false)) }
+
+    LaunchedEffect(granted) {
+        if (!granted && !asked) {
+            asked = true
+            prefs.edit().putBoolean(KEY_ASKED_NOTIFICATIONS, true).apply()
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+}
+
+/**
  * Apple-style navigation rail: a floating glass pill with a soft ring, a smooth
  * growing highlighter around the active icon, and the label fading in beneath it.
  * Pure Compose — no external libs needed for the glassy look.
@@ -312,7 +413,7 @@ private fun AppleNavBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(66.dp)
+                .height(82.dp)
                 .drawBehind {
                     // Frosted glass: translucent base + soft edge highlight.
                     drawRoundRect(
@@ -354,8 +455,8 @@ private fun AppleNavItem(
     val pressed by interaction.collectIsPressedAsState()
 
     val springy = spring<androidx.compose.ui.unit.Dp>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-    val pillSize by animateDpAsState(if (selected) 56.dp else 44.dp, animationSpec = springy)
-    val iconScale by animateDpAsState(if (selected) 26.dp else 20.dp, animationSpec = springy)
+    val pillSize by animateDpAsState(if (selected) 48.dp else 40.dp, animationSpec = springy)
+    val iconScale by animateDpAsState(if (selected) 25.dp else 20.dp, animationSpec = springy)
     val pillColor by androidx.compose.animation.animateColorAsState(
         if (selected) scheme.primary.copy(alpha = 0.16f) else Color.Transparent,
         animationSpec = tween(220),
@@ -392,10 +493,13 @@ private fun AppleNavItem(
         }
         Text(
             tab.label,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = iconTint,
             maxLines = 1,
+            softWrap = false,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 3.dp),
         )
     }
 }

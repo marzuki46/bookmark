@@ -87,9 +87,9 @@ fun CodeLoginScreen(
                 modifier = Modifier.size(64.dp),
             )
             Spacer(Modifier.height(12.dp))
-            Text("Keuangan Keluarga", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text("Kang Cuan", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Text(
-                "Masukkan kode keluarga untuk mulai mengelola keuangan bersama",
+                "Soal cuan, urusan Kang Cuan",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

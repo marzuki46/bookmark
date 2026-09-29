@@ -50,7 +50,12 @@ class ReminderWorker(
                     }
             }
         }
-        val lines = reminders.map { it.message } + listOfNotNull(licenseReminder)
+        val updateReminder = app.repository.appUpdates().getOrNull()
+            ?.takeIf { it.updateAvailable }
+            ?.let {
+                "Update KEUANGAN ${it.latestVersionName} tersedia. Segera lakukan update${if (it.isMandatory) " wajib" else ""}."
+            }
+        val lines = reminders.map { it.message } + listOfNotNull(licenseReminder, updateReminder)
         if (lines.isEmpty()) return Result.success()
 
         val prefs = applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)

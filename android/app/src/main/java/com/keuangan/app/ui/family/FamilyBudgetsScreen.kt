@@ -51,6 +51,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyBudgetDto
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
@@ -157,6 +158,12 @@ fun FamilyBudgetsScreen(
                             budget = budget,
                             onEdit = { viewModel.openEdit(budget) },
                             onDelete = { pendingDelete = budget },
+                        )
+                    }
+                    item {
+                        Spacer(Modifier.height(2.dp))
+                        KangCuanTipCard(
+                            message = "Batas anggaran paling berguna kalau ditinjau mingguan. Kalau sudah 80% terpakai, sisanya bisa menahan godaan belanja.",
                         )
                     }
                 }

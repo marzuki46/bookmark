@@ -97,13 +97,20 @@ class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewM
         }
     }
 
-    fun updateMember(familyId: Int, member: FamilyMemberDto, name: String, payerRole: String?) {
+    fun updateMember(
+        familyId: Int,
+        member: FamilyMemberDto,
+        name: String,
+        payerRole: String?,
+        relationship: String,
+        visibility: Map<String, Boolean>,
+    ) {
         if (name.isBlank()) {
             showMessage("Nama anggota harus diisi.")
             return
         }
         viewModelScope.launch {
-            when (val result = repository.updateFamilyMember(familyId, member.userId, name, payerRole)) {
+            when (val result = repository.updateFamilyMember(familyId, member.userId, name, payerRole, relationship, visibility)) {
                 is ApiResult.Ok -> {
                     showMessage("Data anggota diperbarui.")
                     load(familyId)

@@ -34,15 +34,13 @@ class InstallReceiver : BroadcastReceiver() {
                     context.startActivity(confirmation)
                 }
             }
-            PackageInstaller.STATUS_FAILURE,
-            PackageInstaller.STATUS_FAILURE_ABORTED,
-            -> {
-                // The install dialog explains itself; the update dialog is
-                // still open so the user can simply try again.
-            }
-            else -> {
-                // STATUS_SUCCESS is normally covered by the system dialog.
-            }
+            PackageInstaller.STATUS_SUCCESS -> Unit
+            else -> android.widget.Toast.makeText(
+                context,
+                "Pembaruan gagal: " + (intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)
+                    ?: "Pemasangan dibatalkan atau APK tidak kompatibel."),
+                android.widget.Toast.LENGTH_LONG,
+            ).show()
         }
     }
 }
@@ -88,6 +86,19 @@ object AppUpdater {
 
     /** Uses [PackageInstaller.SessionParams.MODE_FULL_INSTALL] on our own package. */
     fun install(context: Context, apk: File) {
+        val archive = context.packageManager.getPackageArchiveInfo(apk.absolutePath, 0)
+            ?: throw IOException("File unduhan bukan APK yang valid.")
+        if (archive.packageName != context.packageName) {
+            throw IOException("APK ditujukan untuk aplikasi berbeda. Hubungi pengelola rilis.")
+        }
+        val installed = context.packageManager.getPackageInfo(context.packageName, 0)
+        @Suppress("DEPRECATION")
+        val newVersion = if (Build.VERSION.SDK_INT >= 28) archive.longVersionCode else archive.versionCode.toLong()
+        @Suppress("DEPRECATION")
+        val oldVersion = if (Build.VERSION.SDK_INT >= 28) installed.longVersionCode else installed.versionCode.toLong()
+        if (newVersion <= oldVersion) {
+            throw IOException("Versi di dalam APK tidak lebih baru. Metadata rilis server perlu diperbaiki.")
+        }
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
         params.setAppPackageName(context.packageName)
@@ -117,7 +128,7 @@ object AppUpdater {
     }
 
     private fun pendingSender(context: Context): android.content.IntentSender {
-        val intent = Intent(ACTION_INSTALL)
+        val intent = Intent(context, InstallReceiver::class.java).setAction(ACTION_INSTALL)
         val pending = PendingIntent.getBroadcast(
             context,
             0,

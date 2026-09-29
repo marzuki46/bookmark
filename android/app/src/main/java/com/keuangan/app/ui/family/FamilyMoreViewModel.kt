@@ -3,6 +3,8 @@ package com.keuangan.app.ui.family
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.keuangan.app.data.AdvisorProfileRequest
+import com.keuangan.app.data.AdvisorStatusDto
 import com.keuangan.app.data.ApiResult
 import com.keuangan.app.data.AppUpdateDto
 import com.keuangan.app.data.KeuanganRepository
@@ -21,6 +23,10 @@ data class FamilyMoreUiState(
     val downloading: Boolean = false,
     val installProgress: Float = 0f,
     val installError: String? = null,
+    val advisor: AdvisorStatusDto? = null,
+    val advisorLoading: Boolean = false,
+    val advisorToggling: Boolean = false,
+    val advisorError: String? = null,
 )
 
 class FamilyMoreViewModel(private val repository: KeuanganRepository) : ViewModel() {
@@ -42,6 +48,20 @@ class FamilyMoreViewModel(private val repository: KeuanganRepository) : ViewMode
     /** Store-style install: stream the APK, hand it to PackageInstaller. */
     fun applyUpdate(context: Context, url: String) {
         if (_state.value.downloading) return
+        if (!context.packageManager.canRequestPackageInstalls()) {
+            _state.update { it.copy(installError = "Izinkan pemasangan dari aplikasi ini, lalu kembali dan tekan Perbarui lagi.") }
+            try {
+                context.startActivity(
+                    android.content.Intent(
+                        android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        android.net.Uri.parse("package:${context.packageName}"),
+                    ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            } catch (e: android.content.ActivityNotFoundException) {
+                _state.update { it.copy(installError = "Buka Pengaturan Android untuk mengizinkan pemasangan aplikasi dari sumber ini.") }
+            }
+            return
+        }
         _state.update { it.copy(downloading = true, installProgress = 0f, installError = null) }
         viewModelScope.launch {
             try {
@@ -70,5 +90,38 @@ class FamilyMoreViewModel(private val repository: KeuanganRepository) : ViewMode
             updateError = null,
             installError = null,
         )
+    }
+
+    fun loadAdvisor(familyId: Int) {
+        if (_state.value.advisorLoading || _state.value.advisor != null) return
+        _state.update { it.copy(advisorLoading = true, advisorError = null) }
+        viewModelScope.launch {
+            when (val result = repository.advisorStatus(familyId)) {
+                is ApiResult.Ok -> _state.update {
+                    it.copy(advisorLoading = false, advisor = result.value)
+                }
+                is ApiResult.Err -> _state.update {
+                    it.copy(advisorLoading = false, advisorError = result.message)
+                }
+            }
+        }
+    }
+
+    fun setAdvisorEnabled(familyId: Int, enabled: Boolean) {
+        if (_state.value.advisorToggling) return
+        _state.update { it.copy(advisorToggling = true, advisorError = null) }
+        viewModelScope.launch {
+            when (val result = repository.setAdvisorEnabled(familyId, enabled)) {
+                is ApiResult.Ok -> _state.update {
+                    it.copy(
+                        advisorToggling = false,
+                        advisor = it.advisor?.copy(enabled = result.value.enabled) ?: result.value,
+                    )
+                }
+                is ApiResult.Err -> _state.update {
+                    it.copy(advisorToggling = false, advisorError = result.message)
+                }
+            }
+        }
     }
 }

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyGoalDto
 import com.keuangan.app.ui.components.DateField
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.formatShortDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -139,6 +140,12 @@ fun FamilyGoalsScreen(
                             onEdit = { viewModel.openEdit(goal) },
                             onDelete = { pendingDelete = goal },
                             onContribute = { viewModel.openContribute(goal) },
+                        )
+                    }
+                    item {
+                        Spacer(Modifier.height(2.dp))
+                        KangCuanTipCard(
+                            message = "Target yang kecil tapi rutin lebih cepat tercapai daripada target besar yang berhenti di tengah jalan. Sisihkan mulai dari sisa bulan ini.",
                         )
                     }
                 }

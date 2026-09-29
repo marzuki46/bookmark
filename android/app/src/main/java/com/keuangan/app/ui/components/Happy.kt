@@ -6,6 +6,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +19,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -66,43 +70,100 @@ fun GradientHeader(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
+            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
             .background(appTheme.gradient)
-            .padding(horizontal = 22.dp, vertical = 22.dp),
+            .padding(horizontal = 18.dp, vertical = 13.dp),
     ) {
         Box(
             Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = 34.dp, y = 46.dp)
-                .size(140.dp)
+                .offset(x = 26.dp, y = 34.dp)
+                .size(96.dp)
                 .background(Color.White.copy(alpha = 0.10f), CircleShape),
         )
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = 18.dp, y = (-18).dp)
-                .size(56.dp)
+                .offset(x = 14.dp, y = (-12).dp)
+                .size(38.dp)
                 .background(Color.White.copy(alpha = 0.08f), CircleShape),
         )
         Column(Modifier.fillMaxWidth(0.86f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleLarge,
                 color = Color.White,
             )
             if (subtitle != null) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.92f),
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
         }
         trailing?.let { action ->
             Box(Modifier.align(Alignment.CenterEnd)) { action() }
+        }
+    }
+}
+
+/**
+ * The closing card every list page ends with. It fills what used to be dead
+ * space under short lists, and stays identical on every screen so the app reads
+ * as one surface. [icon] lets a page pick a matching glyph.
+ */
+@Composable
+fun KangCuanTipCard(
+    message: String,
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Rounded.Lightbulb,
+    action: (@Composable () -> Unit)? = null,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(34.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(19.dp),
+                )
+            }
+            Spacer(Modifier.size(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    "Tips Kang Cuan",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                action?.let {
+                    Spacer(Modifier.height(6.dp))
+                    it()
+                }
+            }
         }
     }
 }

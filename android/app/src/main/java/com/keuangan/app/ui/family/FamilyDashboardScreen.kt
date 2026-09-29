@@ -3,6 +3,8 @@ package com.keuangan.app.ui.family
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,15 +14,27 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,31 +50,48 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.keuangan.app.data.FamilyDto
+import com.keuangan.app.data.FamilyGoalDto
 import com.keuangan.app.data.FamilyHealthDto
 import com.keuangan.app.data.InsightDto
 import com.keuangan.app.data.IncomeBySourceDto
 import com.keuangan.app.data.NudgeDto
-import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.formatCompact
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
-import com.keuangan.app.ui.theme.Red100
+import com.keuangan.app.ui.theme.AppThemes
 import com.keuangan.app.ui.theme.Red600
-import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
+import com.keuangan.app.ui.theme.ThemeController
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
+/**
+ * Home — Gojek-style dashboard. A glassy gradient hero that owns the "Selisih
+ * bulan ini" number, a grid of shortcuts, a compact family summary (hutang,
+ * dana darurat, target tabungan), Kang Cuan's nudge and the weekly insights.
+ * The financial health score lives in Pendamping Keuangan.
+ */
 @Composable
 fun FamilyDashboardScreen(
     familyId: Int,
     family: FamilyDto?,
     viewModel: FamilyDashboardViewModel,
+    onOpenTransactions: () -> Unit = {},
+    onOpenBudgets: () -> Unit = {},
+    onOpenDebts: () -> Unit = {},
+    onOpenGoals: () -> Unit = {},
+    onOpenTrend: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    onOpenMore: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -74,38 +105,9 @@ fun FamilyDashboardScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp, 16.dp, 16.dp, 96.dp),
+        contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item {
-            GradientHeader(
-                title = family?.name ?: "Keluarga",
-                subtitle = family?.members?.let { members ->
-                    listOfNotNull(
-                        members.count { it.payerRole == "husband" }.takeIf { it > 0 }?.let { "Suami ✓" },
-                        members.count { it.payerRole == "wife" }.takeIf { it > 0 }?.let { "Istri ✓" },
-                    ).joinToString("  ·  ").ifBlank { "Satu sentuhan untuk keuangan bersama" }
-                } ?: "Satu sentuhan untuk keuangan bersama",
-                trailing = {
-                    IconButton(onClick = { viewModel.refresh(familyId) }, enabled = !state.refreshing) {
-                        if (state.refreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = Color.White,
-                            )
-                        } else {
-                            Icon(
-                                Icons.Filled.Refresh,
-                                contentDescription = "Muat ulang",
-                                tint = Color.White,
-                            )
-                        }
-                    }
-                },
-            )
-        }
-
         if (initialLoading) {
             item { LoadingRow() }
         } else {
@@ -120,16 +122,32 @@ fun FamilyDashboardScreen(
             }
 
             state.health?.let { health ->
-                item { HealthCard(health) }
                 item {
-                    StatRow(
-                        income = health.income,
-                        expense = health.expense,
-                        savings = health.savings,
+                    HeroHeader(
+                        familyName = family?.name ?: "Keluarga",
+                        health = health,
+                        refreshing = state.refreshing,
+                        onRefresh = { viewModel.refresh(familyId) },
                     )
                 }
                 item {
-                    EmergencyCard(health)
+                    FeatureGrid(
+                        onTransactions = onOpenTransactions,
+                        onBudgets = onOpenBudgets,
+                        onDebts = onOpenDebts,
+                        onGoals = onOpenGoals,
+                        onTrend = onOpenTrend,
+                        onProfile = onOpenProfile,
+                        onMore = onOpenMore,
+                    )
+                }
+                item {
+                    FamilySummaryCard(
+                        health = health,
+                        goals = state.goals,
+                        onOpenDebts = onOpenDebts,
+                        onOpenGoals = onOpenGoals,
+                    )
                 }
             }
 
@@ -187,132 +205,350 @@ private fun SectionTitle(text: String) {
     )
 }
 
+/**
+ * Glassy gradient hero: greeting on top, the month's balance front and centre,
+ * and both inputs underneath — so the header space does real work.
+ */
 @Composable
-private fun HealthCard(health: FamilyHealthDto) {
-    val (bg, fg) = gradeTint(health.grade)
+private fun HeroHeader(
+    familyName: String,
+    health: FamilyHealthDto,
+    refreshing: Boolean,
+    onRefresh: () -> Unit,
+) {
+    val savings = health.income - health.expense
+    val status = when {
+        health.income == 0.0 && health.expense == 0.0 -> "Belum ada catatan bulan ini."
+        savings < 0 -> "Defisit — pengeluaran melebihi pemasukan."
+        savings == 0.0 -> "Seimbang — pemasukan sama dengan pengeluaran."
+        else -> "Surplus — pemasukan melebihi pengeluaran."
+    }
+    val appTheme = AppThemes.firstOrNull { it.id == ThemeController.themeId.value }
+        ?: AppThemes.first()
+    val contentOn = Color.White
+    val mutedOn = Color.White.copy(alpha = 0.85f)
+    val savingsColor = if (savings < 0) Color(0xFFFFF3CD) else Color.White
+
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = bg),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(appTheme.gradient)
         ) {
-            Column(Modifier.weight(1f)) {
+            // Glassmorphism decorations.
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 26.dp, y = (-22).dp)
+                    .size(96.dp)
+                    .background(Color.White.copy(alpha = 0.14f), CircleShape),
+            )
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-20).dp, y = 26.dp)
+                    .size(72.dp)
+                    .background(Color.White.copy(alpha = 0.10f), CircleShape),
+            )
+
+            Column(Modifier.padding(18.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Soal cuan, urusan Kang Cuan",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = mutedOn,
+                        )
+                        Text(
+                            familyName,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = contentOn,
+                            maxLines = 1,
+                        )
+                    }
+                    IconButton(onClick = onRefresh, enabled = !refreshing) {
+                        if (refreshing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White,
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.Refresh,
+                                contentDescription = "Muat ulang",
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    "Kesehatan keuangan keluarga",
+                    "Selisih bulan ini · ${SimpleDateFormat("MMMM yyyy", Locale("id", "ID")).format(Date())}",
                     style = MaterialTheme.typography.labelLarge,
-                    color = fg,
+                    color = mutedOn,
                 )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    when {
-                        health.income >= health.expense && health.savings >= 0 ->
-                            "Kondisi sehat — pemasukan menutupi pengeluaran dan tabungan berjalan."
-                        health.savings < 0 -> "Tabungan negatif — bicarakan anggaran bulan ini."
-                        else -> "Berjalan cukup — dorong tabungan darurat agar lebih aman."
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = fg,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                val animatedScore by animateIntAsState(
-                    targetValue = health.score.toInt(),
+                Spacer(Modifier.height(2.dp))
+                val animated by animateIntAsState(
+                    targetValue = savings.toInt(),
                     animationSpec = tween(700),
-                    label = "skor-kesehatan",
+                    label = "selisih-bulan",
                 )
-                Text("$animatedScore", fontSize = 40.sp, fontWeight = FontWeight.Bold, color = fg)
                 Text(
-                    "Nilai ${health.grade}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = fg,
+                    formatSignedFull(animated.toDouble()),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = savingsColor,
                 )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    status,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = mutedOn,
+                )
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                    MiniAmount("Pemasukan", health.income, contentOn, mutedOn)
+                    MiniAmount("Pengeluaran", health.expense, contentOn, mutedOn)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun StatRow(income: Double, expense: Double, savings: Double) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StatCard("Pemasukan", income, ::formatShortRupiah, Teal100, Teal700, Modifier.weight(1f))
-        StatCard("Pengeluaran", expense, ::formatShortRupiah, Red100, Red600, Modifier.weight(1f))
-        StatCard("Selisih", savings, ::formatSignedShort, Amber100, Amber600, Modifier.weight(1f))
+private fun MiniAmount(label: String, value: Double, fg: Color, muted: Color) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = muted)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            formatRupiah(value),
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.Bold,
+            color = fg,
+        )
     }
 }
 
+/** Gojek-style shortcut grid: four tiles a row, two rows. */
 @Composable
-private fun StatCard(
-    label: String,
-    value: Double,
-    format: (Double) -> String,
-    bg: Color,
-    fg: Color,
-    modifier: Modifier = Modifier,
+private fun FeatureGrid(
+    onTransactions: () -> Unit,
+    onBudgets: () -> Unit,
+    onDebts: () -> Unit,
+    onGoals: () -> Unit,
+    onTrend: () -> Unit,
+    onProfile: () -> Unit,
+    onMore: () -> Unit,
 ) {
-    val animated by animateFloatAsState(
-        targetValue = value.toFloat(),
-        animationSpec = tween(700),
-        label = "kartu-$label",
+    val tiles = listOf(
+        FeatureTile("Catat", "Catat transaksi", Icons.Filled.Add, onTransactions),
+        FeatureTile("Anggaran", "Atur batas pengeluaran", Icons.Filled.Wallet, onBudgets),
+        FeatureTile("Hutang", "Hutang & cicilan", Icons.Filled.Balance, onDebts),
+        FeatureTile("Tabungan", "Target tabungan", Icons.Filled.Flag, onGoals),
+        FeatureTile("Tren", "Pemasukan vs pengeluaran", Icons.AutoMirrored.Filled.TrendingUp, onTrend),
+        FeatureTile("Saran", "Saran dari Kang Cuan", Icons.Filled.ChildCare, onMore),
+        FeatureTile("Keluarga", "Anggota & kode login", Icons.Filled.Group, onProfile),
+        FeatureTile("Semua", "Kategori, tema & lainnya", Icons.Filled.GridView, onMore),
     )
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        tiles.chunked(4).forEach { rowTiles ->
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowTiles.forEach { tile ->
+                    Tile(tile, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+private data class FeatureTile(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit,
+)
+
+@Composable
+private fun Tile(tile: FeatureTile, modifier: Modifier = Modifier) {
     Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = bg),
+        modifier = modifier.clickable(onClick = tile.onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(16.dp),
     ) {
-        Column(Modifier.padding(vertical = 12.dp, horizontal = 10.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = fg)
-            Spacer(Modifier.height(2.dp))
+        // A fixed-ish height keeps both rows even, and the label is allowed two
+        // lines on narrow phones so "Anggaran" is never cut in half.
+        Column(
+            Modifier
+                .height(96.dp)
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                Modifier
+                    .size(34.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    tile.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            Spacer(Modifier.height(8.dp))
             Text(
-                format(animated.toDouble()),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = fg,
+                tile.title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                lineHeight = 14.sp,
             )
         }
     }
 }
 
+/** One card that summarises where the family stands: hutang, darurat, target. */
 @Composable
-private fun EmergencyCard(health: FamilyHealthDto) {
+private fun FamilySummaryCard(
+    health: FamilyHealthDto,
+    goals: List<FamilyGoalDto>,
+    onOpenDebts: () -> Unit,
+    onOpenGoals: () -> Unit,
+) {
+    val activeGoals = goals.filter { it.status == "active" }
+    val goalTarget = activeGoals.sumOf { it.targetAmount }
+    val goalCurrent = activeGoals.sumOf { it.currentAmount }
+    val goalFraction = if (goalTarget > 0) (goalCurrent / goalTarget).coerceIn(0.0, 1.0) else 0.0
+    val emergencyFraction = if (health.emergencyTarget > 0) {
+        (health.emergencyCurrent / health.emergencyTarget).coerceIn(0.0, 1.0)
+    } else {
+        0.0
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(18.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("Dana darurat", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "${formatRupiah(health.emergencyCurrent)} dari target ${formatRupiah(health.emergencyTarget)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (health.totalDebt > 0) {
-                    Text(
-                        "Hutang ${formatCompact(health.totalDebt)}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Red600,
-                    )
-                }
-            }
+            Text(
+                "Ringkasan keluarga",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
             Spacer(Modifier.height(8.dp))
-            val fraction = if (health.emergencyTarget > 0) {
-                (health.emergencyCurrent / health.emergencyTarget).coerceIn(0.0, 1.0)
-            } else {
-                0.0
-            }
+
+            ClickableSummaryRow(
+                label = "Total hutang",
+                value = if (health.totalDebt > 0) {
+                    formatRupiah(health.totalDebt)
+                } else {
+                    "Bersih dari hutang"
+                },
+                valueColor = if (health.totalDebt > 0) Red600 else Teal700,
+                onClick = onOpenDebts,
+            )
+
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "Dana darurat — ${formatCompact(health.emergencyCurrent)} dari target ${formatCompact(health.emergencyTarget)}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(6.dp))
             LinearProgressIndicator(
-                progress = { fraction.toFloat() },
+                progress = { emergencyFraction.toFloat() },
                 modifier = Modifier.fillMaxWidth().height(8.dp),
-                color = if (fraction >= 1f) Teal700 else Amber600,
+                color = if (emergencyFraction >= 1f) Teal700 else Amber600,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
             )
+
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Target tabungan",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    if (activeGoals.isEmpty()) {
+                        "Belum ada target"
+                    } else {
+                        "${formatCompact(goalCurrent)} dari ${formatCompact(goalTarget)}"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            if (activeGoals.isNotEmpty()) {
+                Spacer(Modifier.height(6.dp))
+                val animatedGoal by animateFloatAsState(
+                    targetValue = goalFraction.toFloat(),
+                    animationSpec = tween(700),
+                    label = "target-tabungan",
+                )
+                LinearProgressIndicator(
+                    progress = { animatedGoal },
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                    color = Teal700,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun ClickableSummaryRow(
+    label: String,
+    value: String,
+    valueColor: Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold,
+            color = valueColor,
+        )
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 
@@ -333,7 +569,7 @@ private fun NudgeCard(nudge: NudgeDto, onDismiss: () -> Unit) {
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    "Saran lembut dari KEUANGAN",
+                    "Saran Kang Cuan untukmu",
                     style = MaterialTheme.typography.labelLarge,
                     color = Amber600,
                 )
@@ -413,14 +649,8 @@ private fun IncomeSourceRow(row: IncomeBySourceDto) {
     }
 }
 
-private fun formatShortRupiah(value: Double): String = if (kotlin.math.abs(value) >= 1_000_000) {
-    formatCompact(value)
+private fun formatSignedFull(value: Double): String = if (value >= 0) {
+    "Rp ${formatCompact(value)}"
 } else {
-    formatRupiah(value)
-}
-
-private fun formatSignedShort(value: Double): String = if (value >= 0) {
-    "+${formatShortRupiah(value)}"
-} else {
-    "-${formatShortRupiah(kotlin.math.abs(value))}"
+    "-Rp ${formatCompact(kotlin.math.abs(value))}"
 }

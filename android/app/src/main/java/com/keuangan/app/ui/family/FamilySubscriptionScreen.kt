@@ -235,7 +235,7 @@ private fun StatusBanner(
                             when {
                                 days < 0 -> "Lisensi sudah berakhir. Segera lakukan pembayaran."
                                 days == 0L -> "Lisensi berakhir hari ini. Segera lakukan pembayaran."
-                                else -> "Sisa masa lisensi: $days hari${if (expiringSoon) ". Segera lakukan pembayaran." else ""}",
+                                else -> "Sisa masa lisensi: $days hari${if (expiringSoon) ". Segera lakukan pembayaran." else ""}"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = if (expiringSoon || days < 0) FontWeight.Bold else FontWeight.Normal,
