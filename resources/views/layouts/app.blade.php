@@ -104,7 +104,6 @@
                                         ['route' => 'keluarga.hutang', 'label' => 'Hutang', 'icon' => 'shield', 'active' => request()->routeIs('keluarga.hutang')],
                                         ['route' => 'keluarga.laporan', 'label' => 'Laporan', 'icon' => 'bar-chart', 'active' => request()->routeIs('keluarga.laporan')],
                                         ['route' => 'keluarga.pengaturan', 'label' => 'Pengaturan', 'icon' => 'cog', 'active' => request()->routeIs('keluarga.pengaturan')],
-                                        ['route' => 'keluarga.app', 'label' => 'Mode App (HP)', 'icon' => 'globe', 'active' => request()->routeIs('keluarga.app')],
                                     ]
                                 ],
                                 'keuangan' => [
@@ -388,16 +387,16 @@
         (function () {
             const pageKey = (path) => 'wpScroll_' + path;
             const sidebarKey = 'wpSidebarScroll';
-            const sidebarInner = document.querySelector('.wp-sidebar-inner');
+            const sidebarNav = document.querySelector('.wp-sidebar-nav');
             const save = () => {
                 try {
                     sessionStorage.setItem(pageKey(location.pathname), JSON.stringify({
                         y: window.scrollY,
-                        side: sidebarInner ? sidebarInner.scrollTop : 0,
+                        side: sidebarNav ? sidebarNav.scrollTop : 0,
                     }));
                     // The sidebar is the same on every admin page, so keep its
                     // scroll while this tab is alive, across all navigations.
-                    if (sidebarInner) sessionStorage.setItem(sidebarKey, String(sidebarInner.scrollTop));
+                    if (sidebarNav) sessionStorage.setItem(sidebarKey, String(sidebarNav.scrollTop));
                 } catch (_) {}
             };
             const restore = () => {
@@ -406,7 +405,15 @@
                 try {
                     side = parseInt(sessionStorage.getItem(sidebarKey) || '0', 10);
                 } catch (_) {}
-                if (sidebarInner && side > 0) sidebarInner.scrollTop = side;
+                if (sidebarNav && side > 0) sidebarNav.scrollTop = side;
+
+                // Keep the clicked menu visible: scroll the active item into view.
+                const active = sidebarNav && sidebarNav.querySelector('.wp-menu-item.current');
+                if (active) {
+                    try {
+                        active.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+                    } catch (_) { active.scrollIntoView(true); }
+                }
 
                 // Page scroll stays per-pathname.
                 let saved = null;

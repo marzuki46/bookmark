@@ -14,9 +14,14 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Services\FamilyAIService;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 final class UserFinances extends Component
 {
+    use WithPagination;
+
+    protected $paginationTheme = 'tailwind';
+
     public ?int $userId = null;
 
     public ?int $familyId = null;
@@ -37,13 +42,41 @@ final class UserFinances extends Component
 
     public string $month = '';
 
+    public string $familySearch = '';
+
     public function mount(): void
     {
         $this->month = now()->format('Y-m');
     }
 
+    public function updatedFamilySearch(): void
+    {
+        $this->resetPage();
+        $this->familyId = null;
+        $this->userId = null;
+        $this->editingMemberId = null;
+    }
+
     public function updatedFamilyId(): void
     {
+        $this->editingMemberId = null;
+        $this->statusMessage = '';
+        $this->section = 'ringkasan';
+    }
+
+    public function selectFamily(int $familyId): void
+    {
+        $this->familyId = $familyId;
+        $this->userId = null;
+        $this->editingMemberId = null;
+        $this->statusMessage = '';
+        $this->section = 'ringkasan';
+    }
+
+    public function backToList(): void
+    {
+        $this->familyId = null;
+        $this->userId = null;
         $this->editingMemberId = null;
         $this->statusMessage = '';
         $this->section = 'ringkasan';
@@ -68,8 +101,9 @@ final class UserFinances extends Component
         return Family::query()
             ->with(['owner:id,name,email', 'members.user:id,name,email'])
             ->withCount('members')
+            ->when($this->familySearch !== '', fn ($q) => $q->where('name', 'like', "%{$this->familySearch}%"))
             ->orderBy('name')
-            ->get();
+            ->paginate(20);
     }
 
     private function family(): ?Family

@@ -7,26 +7,64 @@
         @endif
     </div>
 
-    <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 max-w-lg">
-        <label class="wp-form-label">Pilih keluarga</label>
-        <select wire:model.live="familyId" class="wp-form-input">
-            <option value="">Pilih keluarga...</option>
-            @foreach($families as $family)
-                <option value="{{ $family->id }}">{{ $family->name }} Â· {{ $family->members_count }} anggota</option>
-            @endforeach
-        </select>
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+        <h2 class="text-base font-semibold text-[var(--text-primary)]">Daftar Keluarga</h2>
     </div>
 
     @if(! $familyId && ! $userId)
-        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 text-center text-sm text-[var(--text-tertiary)]">
-            Pilih keluarga untuk melihat sub-menu kelolaannya.
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 max-w-lg space-y-4">
+            <div>
+                <label class="wp-form-label">Cari keluarga</label>
+                <input type="search" wire:model.live.debounce.300ms="familySearch" class="wp-form-input" placeholder="Cari nama keluarga atau pilih dari daftar">
+            </div>
+
+            <div class="divide-y divide-[var(--color-border)] max-h-96 overflow-y-auto rounded-lg border border-[var(--color-border)]">
+                @forelse($families as $family)
+                    <button type="button" wire:click="selectFamily({{ $family->id }})"
+                            class="w-full text-left px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--color-bg)] transition">
+                        <span>
+                            <span class="block font-medium text-[var(--text-primary)]">{{ $family->name }}</span>
+                            <span class="block text-xs text-[var(--text-tertiary)]">
+                                {{ $family->members_count }} anggota &middot; {{ $family->owner?->name ?? '-' }}
+                            </span>
+                        </span>
+                        <span class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700">Kelola</span>
+                    </button>
+                @empty
+                    <p class="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">Tidak ada keluarga ditemukan.</p>
+                @endforelse
+            </div>
+
+            <div class="flex items-center justify-between gap-3 flex-wrap">
+                <p class="text-xs text-[var(--text-tertiary)]">
+                    Menampilkan {{ $families->firstItem() ?? 0 }}&ndash;{{ $families->lastItem() ?? 0 }} dari {{ $families->total() }} keluarga
+                </p>
+                @if($families->hasPages())
+                    <nav class="flex items-center gap-1" aria-label="Paginasi keluarga">
+                        @if($families->onFirstPage())
+                            <span class="px-2 py-1 text-xs text-[var(--text-tertiary)]">&laquo;</span>
+                        @else
+                            <button type="button" wire:click="previousPage" class="px-2 py-1 text-xs rounded hover:bg-[var(--color-bg)]">&laquo;</button>
+                        @endif
+                        <span class="px-2 py-1 text-xs font-medium">Hal. {{ $families->currentPage() }} / {{ $families->lastPage() }}</span>
+                        @if($families->hasMorePages())
+                            <button type="button" wire:click="nextPage" class="px-2 py-1 text-xs rounded hover:bg-[var(--color-bg)]">&raquo;</button>
+                        @else
+                            <span class="px-2 py-1 text-xs text-[var(--text-tertiary)]">&raquo;</span>
+                        @endif
+                    </nav>
+                @endif
+            </div>
         </div>
     @else
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 flex items-center justify-between gap-3 flex-wrap">
-            <div>
-                <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Keluarga terpilih</p>
-                <p class="text-lg font-bold text-[var(--text-primary)]">{{ $selectedFamily?->name }}</p>
-                <p class="text-sm text-[var(--text-tertiary)]">Kepala keluarga: {{ $selectedFamily?->owner?->name ?? '-' }}</p>
+            <div class="flex items-center gap-4">
+                <button type="button" wire:click="backToList" class="btn-secondary !py-1.5 text-xs">&larr; Kembali</button>
+                <div>
+                    <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Keluarga terpilih</p>
+                    <p class="text-lg font-bold text-[var(--text-primary)]">{{ $selectedFamily?->name }}</p>
+                    <p class="text-sm text-[var(--text-tertiary)]">Kepala keluarga: {{ $selectedFamily?->owner?->name ?? '-' }}</p>
+                </div>
             </div>
             <div class="text-right">
                 <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Lisensi</p>
@@ -491,7 +529,7 @@
                         <div class="flex items-center justify-between gap-4 flex-wrap">
                             <div>
                                 <p class="text-xl font-bold text-[var(--text-primary)]">{{ $license->plan?->name ?? 'Paket' }}</p>
-                                <p class="text-sm {{ $license->isUsable() ? 'text-emerald-600' : 'text-red-500' }}>
+                                <p class="text-sm {{ $license->isUsable() ? 'text-emerald-600' : 'text-red-500' }}">
                                     {{ $license->expires_at?->format('d M Y') ?? 'Seumur hidup' }}
                                     Â· {{ $license->isUsable() ? 'aktif' : 'habis' }}
                                 </p>

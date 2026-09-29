@@ -130,7 +130,6 @@
                         <p class="text-xs text-[var(--text-quaternary)] text-center py-4">Belum ada transaksi.</p>
                     @endforelse
                 </div>
-                <a href="{{ route('keluarga.app') }}" class="mt-4 block text-center text-xs text-[var(--indigo-600)] font-medium">Buka App Keluarga (mode apk) →</a>
             </div>
         </div>
     @endif
