@@ -132,6 +132,9 @@
                             // KEUANGAN admin menu is only for admins.
                             if (! (auth()->user()->is_admin ?? false)) {
                                 unset($menuGroups['keuangan']);
+                            } else {
+                                // Admins manage households from KEUANGAN > Manajemen Keluarga.
+                                unset($menuGroups['keluarga']);
                             }
                         @endphp
 
