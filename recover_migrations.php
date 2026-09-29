@@ -77,7 +77,7 @@ function recordMigration(string $name): void
 function replayFamilyScopeBackfill(): void
 {
     $count = 0;
-    DB::table('family_members')->select(['user_id', 'family_id'])->orderBy('id')->eachById(
+    DB::table('family_members')->orderBy('id')->eachById(
         function (object $membership) use (&$count): void {
             $count += DB::table('subscriptions')
                 ->where('user_id', $membership->user_id)
@@ -169,10 +169,6 @@ foreach ($pending as $path) {
         recordMigration($name);
         $recorded[] = $name;
         echo "  [RECORDED] already applied:          $name\n";
-
-        if ($base === '2026_09_28_170000_add_family_scope_to_subscriptions.php') {
-            replayFamilyScopeBackfill();
-        }
     } else {
         $toRun[] = $path;
         echo "  [MISSING]  queued to run:             $name\n";
@@ -182,6 +178,12 @@ foreach ($pending as $path) {
 if ($toRun !== []) {
     echo "Running genuinely missing migrations...\n";
     $migrator->runPending($toRun);
+}
+
+$backfillPrereq = $prereqs['2026_09_28_170000_add_family_scope_to_subscriptions.php'] ?? static fn (): bool => false;
+if ($backfillPrereq()
+    && ! in_array(basename('2026_09_28_170000_add_family_scope_to_subscriptions.php'), array_map('basename', $toRun), true)) {
+    replayFamilyScopeBackfill();
 }
 
 $left = 0;
