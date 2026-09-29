@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -50,6 +51,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -64,12 +66,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
 import com.keuangan.app.BuildConfig
 import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.AppearanceController
+import com.keuangan.app.ui.theme.AppLockController
 import com.keuangan.app.ui.theme.AppThemes
 import com.keuangan.app.ui.theme.MotionStyle
 import com.keuangan.app.ui.theme.ThemeController
@@ -79,6 +85,11 @@ private data class MenuItem(
     val subtitle: String,
     val icon: ImageVector,
     val onOpen: () -> Unit,
+)
+
+private data class MenuGroup(
+    val title: String,
+    val items: List<MenuItem>,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -98,6 +109,7 @@ fun FamilyMoreScreen(
     var showThemePicker by remember { mutableStateOf(false) }
     var showMotionPicker by remember { mutableStateOf(false) }
     var showTextSizePicker by remember { mutableStateOf(false) }
+    var showLockPicker by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
 
     androidx.compose.runtime.LaunchedEffect(familyId) {
@@ -112,19 +124,28 @@ fun FamilyMoreScreen(
             )
         },
     ) { padding ->
-        val menu = listOf(
-            MenuItem("Anggaran", "Atur batas pengeluaran per bulan", Icons.Filled.AccountBalanceWallet, onOpenBudgets),
-            MenuItem("Sumber Pemasukan", "Gaji, usaha, sampingan", Icons.Filled.AttachMoney, onOpenIncomeSources),
-            MenuItem("Kategori", "Kelompok pengeluaran & pemasukan", Icons.Filled.Category, onOpenCategories),
-            MenuItem("Tren Keluarga", "Grafik pemasukan vs pengeluaran", Icons.AutoMirrored.Filled.TrendingUp, onOpenTrend),
-            MenuItem("Tema", "Delapan pilihan warna untuk aplikasi", Icons.Filled.Palette, { showThemePicker = true }),
-            MenuItem("Gaya animasi", AppearanceController.motion.value.label, Icons.Filled.Animation, { showMotionPicker = true }),
-            MenuItem("Ukuran tulisan", AppearanceController.textSizeLabel(), Icons.Filled.FormatSize, { showTextSizePicker = true }),
-            MenuItem("Izin notifikasi", notificationRowSubtitle(context), Icons.Filled.NotificationsActive, { openNotificationSettings(context) }),
-            MenuItem("Langganan", "Status paket & pembayaran", Icons.Filled.WorkspacePremium, onOpenSubscription),
-            MenuItem("Keluarga & Akun", "Anggota, peran, kode login & barcode", Icons.Filled.Group, onOpenProfile),
-            MenuItem("Periksa Pembaruan", "Versi ${BuildConfig.VERSION_NAME} · pasang versi baru", Icons.Filled.SystemUpdate, viewModel::checkUpdates),
-            MenuItem("Tentang Kang Cuan", "Privasi, keamanan & bantuan", Icons.Filled.Info, { showAbout = true }),
+        val menuGroups = listOf(
+            MenuGroup("Keuangan", listOf(
+                MenuItem("Anggaran", "Atur batas pengeluaran per bulan", Icons.Filled.AccountBalanceWallet, onOpenBudgets),
+                MenuItem("Sumber Pemasukan", "Gaji, usaha, sampingan", Icons.Filled.AttachMoney, onOpenIncomeSources),
+                MenuItem("Kategori", "Kelompok pengeluaran & pemasukan", Icons.Filled.Category, onOpenCategories),
+                MenuItem("Tren Keluarga", "Grafik pemasukan vs pengeluaran", Icons.AutoMirrored.Filled.TrendingUp, onOpenTrend),
+            )),
+            MenuGroup("Tampilan", listOf(
+                MenuItem("Tema", "Delapan pilihan warna untuk aplikasi", Icons.Filled.Palette, { showThemePicker = true }),
+                MenuItem("Gaya animasi", AppearanceController.motion.value.label, Icons.Filled.Animation, { showMotionPicker = true }),
+                MenuItem("Ukuran tulisan", AppearanceController.textSizeLabel(), Icons.Filled.FormatSize, { showTextSizePicker = true }),
+                MenuItem("Kunci aplikasi", if (AppLockController.enabled.value) "Aktif" else "Nonaktif", Icons.Filled.Lock, { showLockPicker = true }),
+            )),
+            MenuGroup("Keluarga & Aplikasi", listOf(
+                MenuItem("Izin notifikasi", notificationRowSubtitle(context), Icons.Filled.NotificationsActive, { openNotificationSettings(context) }),
+                MenuItem("Langganan", "Status paket & pembayaran", Icons.Filled.WorkspacePremium, onOpenSubscription),
+                MenuItem("Keluarga & Akun", "Anggota, peran, kode login & barcode", Icons.Filled.Group, onOpenProfile),
+                MenuItem("Periksa Pembaruan", "Versi ${BuildConfig.VERSION_NAME} · pasang versi baru", Icons.Filled.SystemUpdate, viewModel::checkUpdates),
+            )),
+            MenuGroup("Bantuan", listOf(
+                MenuItem("Tentang Kang Cuan", "Privasi, keamanan & bantuan", Icons.Filled.Info, { showAbout = true }),
+            )),
         )
 
         LazyColumn(
@@ -156,8 +177,17 @@ fun FamilyMoreScreen(
                     onToggle = { viewModel.setAdvisorEnabled(familyId, it) },
                 )
             }
-            items(menu, key = { it.title }) { item ->
-                MoreRow(item)
+            items(menuGroups, key = { it.title }) { group ->
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        group.title,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                    group.items.forEach { item -> MoreRow(item) }
+                }
             }
             item {
                 Spacer(Modifier.height(2.dp))
@@ -284,7 +314,7 @@ fun FamilyMoreScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        "Perbesar kalauAutowired membaca terasa Rabat. Berlaku untuk semua halaman.",
+                        "Atur ukuran tulisan agar nyaman dibaca. Berlaku untuk semua halaman.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -329,6 +359,14 @@ fun FamilyMoreScreen(
             confirmButton = {
                 TextButton(onClick = { showTextSizePicker = false }) { Text("Tutup") }
             },
+        )
+    }
+
+    if (showLockPicker) {
+        AppLockDialog(
+            enabled = AppLockController.enabled.value,
+            context = context,
+            onDismiss = { showLockPicker = false },
         )
     }
 
@@ -472,6 +510,62 @@ if (state.checkingUpdate) {
             )
         }
     }
+}
+
+@Composable
+private fun AppLockDialog(
+    enabled: Boolean,
+    context: android.content.Context,
+    onDismiss: () -> Unit,
+) {
+    var pin by remember { mutableStateOf("") }
+    var confirmation by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (enabled) "Kunci aplikasi aktif" else "Kunci aplikasi") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("PIN melindungi data keluarga saat aplikasi dibuka kembali.", style = MaterialTheme.typography.bodySmall)
+                if (!enabled) {
+                    OutlinedTextField(
+                        value = pin,
+                        onValueChange = { pin = it.filter(Char::isDigit).take(6); error = null },
+                        label = { Text("PIN 4-6 digit") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    )
+                    OutlinedTextField(
+                        value = confirmation,
+                        onValueChange = { confirmation = it.filter(Char::isDigit).take(6); error = null },
+                        label = { Text("Ulangi PIN") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    )
+                } else {
+                    Text("Kunci akan aktif saat aplikasi dibuka kembali.", style = MaterialTheme.typography.bodySmall)
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            }
+        },
+        confirmButton = {
+            if (enabled) {
+                TextButton(onClick = { AppLockController.disable(context); onDismiss() }) { Text("Matikan") }
+            } else {
+                TextButton(onClick = {
+                    when {
+                        pin.length !in 4..6 -> error = "PIN harus 4-6 digit."
+                        pin != confirmation -> error = "PIN tidak sama."
+                        else -> { AppLockController.setPin(context, pin); onDismiss() }
+                    }
+                }) { Text("Aktifkan") }
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } },
+    )
 }
 
 @Composable

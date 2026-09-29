@@ -32,7 +32,6 @@ class FamilySubscriptionViewModel(private val repository: KeuanganRepository) : 
     val pendingRedirect: StateFlow<String?> = _pendingRedirect.asStateFlow()
 
     fun load() {
-        if (!_state.value.loading && (_state.value.subscription != null || _state.value.error != null)) return
         refresh()
     }
 

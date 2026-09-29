@@ -70,28 +70,28 @@ fun GradientHeader(
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+            .clip(RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp))
             .background(appTheme.gradient)
-            .padding(horizontal = 18.dp, vertical = 13.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     ) {
         Box(
             Modifier
                 .align(Alignment.BottomEnd)
-                .offset(x = 26.dp, y = 34.dp)
-                .size(96.dp)
+                .offset(x = 18.dp, y = 24.dp)
+                .size(64.dp)
                 .background(Color.White.copy(alpha = 0.10f), CircleShape),
         )
         Box(
             Modifier
                 .align(Alignment.TopEnd)
-                .offset(x = 14.dp, y = (-12).dp)
-                .size(38.dp)
+                .offset(x = 10.dp, y = (-8).dp)
+                .size(28.dp)
                 .background(Color.White.copy(alpha = 0.08f), CircleShape),
         )
-        Column(Modifier.fillMaxWidth(0.86f)) {
+        Column(Modifier.fillMaxWidth(0.82f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
                 color = Color.White,
             )
             if (subtitle != null) {

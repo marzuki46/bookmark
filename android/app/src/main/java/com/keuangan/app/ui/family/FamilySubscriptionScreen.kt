@@ -17,9 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -183,7 +183,7 @@ Scaffold(
                     }
                     item {
                         Text(
-                            "Pembayaran diproses Midtrans dan dibuka di browser. Status langganan diperbarui otomatis setelah pembayaran selesai.",
+                            "Pembayaran dibuka di browser melalui gateway yang aktif. Setelah selesai, tekan muat ulang untuk mengambil status dan masa aktif terbaru dari server.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -246,7 +246,7 @@ private fun StatusBanner(
             }
             IconButton(onClick = onRefresh) {
                 Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    Icons.Filled.Refresh,
                     contentDescription = "Muat ulang",
                     tint = fg,
                     modifier = Modifier.size(20.dp),

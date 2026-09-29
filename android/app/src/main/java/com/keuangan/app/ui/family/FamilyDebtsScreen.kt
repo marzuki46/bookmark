@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,7 +63,7 @@ import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FamilyDebtsScreen(
     familyId: Int,
@@ -92,14 +94,15 @@ fun FamilyDebtsScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
+            FlowRow(
+                modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                item { DebtsFilterChip("Utang", state.typeFilter == "payable") { viewModel.setTypeFilter("payable") } }
-                item { DebtsFilterChip("Piutang", state.typeFilter == "receivable") { viewModel.setTypeFilter("receivable") } }
-                item { DebtsFilterChip("Belum lunas", state.statusFilter == null) { viewModel.setStatusFilter(null) } }
-                item { DebtsFilterChip("Lunas", state.statusFilter == "settled") { viewModel.setStatusFilter("settled") } }
+                DebtsFilterChip("Utang", state.typeFilter == "payable") { viewModel.setTypeFilter("payable") }
+                DebtsFilterChip("Piutang", state.typeFilter == "receivable") { viewModel.setTypeFilter("receivable") }
+                DebtsFilterChip("Belum lunas", state.statusFilter == null) { viewModel.setStatusFilter(null) }
+                DebtsFilterChip("Lunas", state.statusFilter == "settled") { viewModel.setStatusFilter("settled") }
             }
             Spacer(Modifier.height(8.dp))
 
@@ -289,12 +292,13 @@ private fun DebtCard(
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Filled.Edit, contentDescription = "Ubah")
                 }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Filled.Delete,
-                        contentDescription = "Hapus",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = "Hapus",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(19.dp),
+                        )
                 }
             }
             Spacer(Modifier.height(6.dp))

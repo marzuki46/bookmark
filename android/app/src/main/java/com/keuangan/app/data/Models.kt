@@ -240,8 +240,10 @@ data class ChargeRequest(@SerialName("plan_id") val planId: Int)
 
 @Serializable
 data class ChargeResponse(
-    @SerialName("order_id") val orderId: String,
-    val token: String,
-    @SerialName("redirect_url") val redirectUrl: String,
+    @SerialName("order_id") val orderId: String = "",
+    val token: String? = null,
+    @SerialName("redirect_url") val redirectUrl: String = "",
     val price: Double = 0.0,
+    val provider: String? = null,
+    val reference: String? = null,
 )

@@ -32,6 +32,8 @@ object AppearanceController {
     private const val KEY_MOTION = "motion"
 
     val TextSizes: List<TextSizeOption> = listOf(
+        TextSizeOption(0.8f, "Sangat kecil"),
+        TextSizeOption(0.9f, "Kecil"),
         TextSizeOption(1.0f, "Normal"),
         TextSizeOption(1.15f, "Besar"),
         TextSizeOption(1.3f, "Sangat besar"),

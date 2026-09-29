@@ -16,6 +16,7 @@ data class FamilyTrendUiState(
     val loading: Boolean = true,
     val points: List<TrendPointDto> = emptyList(),
     val error: String? = null,
+    val months: Int = 6,
 )
 
 class FamilyTrendViewModel(private val repository: KeuanganRepository) : ViewModel() {
@@ -24,6 +25,7 @@ class FamilyTrendViewModel(private val repository: KeuanganRepository) : ViewMod
     val state: StateFlow<FamilyTrendUiState> = _state.asStateFlow()
 
     fun load(familyId: Int, months: Int = 6) {
+        _state.update { it.copy(loading = true, error = null, months = months) }
         viewModelScope.launch {
             repository.familyTrend(familyId, months).let { result ->
                 _state.update {
@@ -38,6 +40,10 @@ class FamilyTrendViewModel(private val repository: KeuanganRepository) : ViewMod
 
     fun retry(familyId: Int) {
         _state.update { it.copy(loading = true, error = null) }
-        load(familyId)
+        load(familyId, _state.value.months)
+    }
+
+    fun setPeriod(familyId: Int, months: Int) {
+        load(familyId, months)
     }
 }

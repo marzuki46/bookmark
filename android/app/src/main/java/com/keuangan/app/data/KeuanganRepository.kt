@@ -280,6 +280,8 @@ class KeuanganRepository(
         val filtered = cached.filter { tx ->
             (type == null || tx.type == type) &&
                 (payer == null || tx.payer == payer) &&
+                (from == null || tx.date >= from) &&
+                (to == null || tx.date <= to) &&
                 (query.isNullOrBlank() || (tx.description?.contains(query, ignoreCase = true) == true))
         }
         return OfflineLoad(ApiResult.Ok(FamilyTransactionListResponse(data = filtered)), offline = true)

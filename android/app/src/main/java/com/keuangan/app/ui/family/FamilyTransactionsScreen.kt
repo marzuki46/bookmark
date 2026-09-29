@@ -3,6 +3,8 @@ package com.keuangan.app.ui.family
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -67,7 +69,7 @@ import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FamilyTransactionsScreen(
     familyId: Int,
@@ -111,16 +113,21 @@ fun FamilyTransactionsScreen(
             )
             Spacer(Modifier.height(8.dp))
 
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
+            FlowRow(
+                modifier = Modifier.padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                item { TxTypeChip("Semua", state.typeFilter == null) { viewModel.setTypeFilter(null) } }
-                item { TxTypeChip("Pengeluaran", state.typeFilter == "expense") { viewModel.setTypeFilter("expense") } }
-                item { TxTypeChip("Pemasukan", state.typeFilter == "income") { viewModel.setTypeFilter("income") } }
-                item { TxPayerChip("Umum", state.payerFilter == "shared") { viewModel.setPayerFilter("shared") } }
-                item { TxPayerChip("Suami", state.payerFilter == "husband") { viewModel.setPayerFilter("husband") } }
-                item { TxPayerChip("Istri", state.payerFilter == "wife") { viewModel.setPayerFilter("wife") } }
+                TxTypeChip("Semua", state.typeFilter == null) { viewModel.setTypeFilter(null) }
+                TxTypeChip("Pengeluaran", state.typeFilter == "expense") { viewModel.setTypeFilter("expense") }
+                TxTypeChip("Pemasukan", state.typeFilter == "income") { viewModel.setTypeFilter("income") }
+                TxPayerChip("Umum", state.payerFilter == "shared") { viewModel.setPayerFilter("shared") }
+                TxPayerChip("Suami", state.payerFilter == "husband") { viewModel.setPayerFilter("husband") }
+                TxPayerChip("Istri", state.payerFilter == "wife") { viewModel.setPayerFilter("wife") }
+                TxPayerChip("Bulan ini", state.periodFilter == "month") { viewModel.setPeriodFilter("month") }
+                TxPayerChip("3 bulan", state.periodFilter == "quarter") { viewModel.setPeriodFilter("quarter") }
+                TxPayerChip("Tahun ini", state.periodFilter == "year") { viewModel.setPeriodFilter("year") }
+                TxPayerChip("Semua waktu", state.periodFilter == "all") { viewModel.setPeriodFilter("all") }
             }
 
             Spacer(Modifier.height(8.dp))
@@ -358,11 +365,12 @@ private fun TxCard(
             IconButton(onClick = onEdit) {
                 Icon(Icons.Filled.Edit, contentDescription = "Ubah")
             }
-            IconButton(onClick = onDelete) {
+            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                 Icon(
                     Icons.Filled.Delete,
                     contentDescription = "Hapus",
                     tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(19.dp),
                 )
             }
         }

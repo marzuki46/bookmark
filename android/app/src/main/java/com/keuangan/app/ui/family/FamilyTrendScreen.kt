@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +38,7 @@ import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FamilyTrendScreen(
     familyId: Int,
@@ -53,8 +57,22 @@ fun FamilyTrendScreen(
     ) {
         GradientHeader(
             title = "Tren Keluarga",
-            subtitle = "Pemasukan vs pengeluaran, 6 bulan terakhir",
+            subtitle = "Pemasukan, pengeluaran, dan selisih",
         )
+
+        FlowRow(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            listOf(3 to "3 bulan", 6 to "6 bulan", 12 to "1 tahun").forEach { (months, label) ->
+                FilterChip(
+                    selected = state.months == months,
+                    onClick = { viewModel.setPeriod(familyId, months) },
+                    label = { Text(label) },
+                )
+            }
+        }
 
         when {
             state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -92,6 +110,9 @@ private fun TrendContent(points: List<TrendPointDto>) {
     val totalExpense = points.sumOf { it.expense }
     val allTime = totalIncome - totalExpense
     val maxValue = maxOf(points.maxOfOrNull { it.income } ?: 0.0, points.maxOfOrNull { it.expense } ?: 0.0, 1.0)
+    val averageIncome = totalIncome / points.size
+    val averageExpense = totalExpense / points.size
+    val bestMonth = points.maxByOrNull { it.net }
 
     Column(Modifier.padding(16.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -103,6 +124,19 @@ private fun TrendContent(points: List<TrendPointDto>) {
                 if (allTime >= 0) Teal700 else Red600,
                 Modifier.weight(1f),
             )
+        }
+
+        Spacer(Modifier.height(10.dp))
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("Bacaan cepat", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+                Text("Rata-rata pemasukan: ${formatRupiah(averageIncome)} / bulan", style = MaterialTheme.typography.bodySmall)
+                Text("Rata-rata pengeluaran: ${formatRupiah(averageExpense)} / bulan", style = MaterialTheme.typography.bodySmall)
+                bestMonth?.let { Text("Bulan surplus terbaik: ${it.label} (${formatRupiah(it.net)})", style = MaterialTheme.typography.bodySmall) }
+            }
         }
 
         Spacer(Modifier.height(20.dp))

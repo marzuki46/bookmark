@@ -259,11 +259,12 @@ private fun GoalCard(
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Filled.Edit, contentDescription = "Ubah")
                 }
-                IconButton(onClick = onDelete) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Filled.Delete,
                         contentDescription = "Hapus",
                         tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(19.dp),
                     )
                 }
             }

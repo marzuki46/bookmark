@@ -157,8 +157,8 @@ private fun CategoryRow(
                 Icon(Icons.Filled.Edit, contentDescription = "Ubah")
             }
             if (!category.isSystem) {
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
+                IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(19.dp))
                 }
             }
         }

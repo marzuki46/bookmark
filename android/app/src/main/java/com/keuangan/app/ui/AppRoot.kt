@@ -105,6 +105,8 @@ import com.keuangan.app.ui.family.FamilyTransactionsScreen
 import com.keuangan.app.ui.family.FamilyTransactionsViewModel
 import com.keuangan.app.ui.family.FamilyTrendScreen
 import com.keuangan.app.ui.family.FamilyTrendViewModel
+import com.keuangan.app.ui.theme.AppLockController
+import com.keuangan.app.ui.theme.AppLockScreen
 
 object Routes {
     const val HOME = "home"
@@ -181,8 +183,13 @@ fun AppRoot() {
         }
 
         true -> {
-            val shell: FamilyAppViewModel = viewModel(factory = appFactory())
-            FamilyShell(viewModel = shell, onLogout = session::logout)
+            var unlocked by remember { mutableStateOf(!AppLockController.enabled.value) }
+            if (AppLockController.enabled.value && !unlocked) {
+                AppLockScreen { unlocked = true }
+            } else {
+                val shell: FamilyAppViewModel = viewModel(factory = appFactory())
+                FamilyShell(viewModel = shell, onLogout = session::logout)
+            }
         }
     }
 }
@@ -231,10 +238,14 @@ private fun FamilyShell(
                 tabs = TABS,
                 selectedRoute = selectedTab?.route,
                 onSelect = { route ->
-                    navController.navigate(route) {
-                        popUpTo(Routes.HOME) { saveState = true }
-                        launchSingleTop = true
-                        restoreState = true
+                    if (route == Routes.HOME) {
+                        navController.popBackStack(Routes.HOME, inclusive = false)
+                    } else {
+                        navController.navigate(route) {
+                            popUpTo(Routes.HOME) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
                 },
             )

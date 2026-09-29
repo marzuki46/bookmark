@@ -9,6 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.keuangan.app.ui.AppRoot
 import com.keuangan.app.ui.theme.AppearanceController
+import com.keuangan.app.ui.theme.AppLockController
 import com.keuangan.app.ui.theme.KeuanganTheme
 import com.keuangan.app.ui.theme.ProvideAppTextScale
 import com.keuangan.app.ui.theme.ThemeController
@@ -19,6 +20,7 @@ class MainActivity : ComponentActivity() {
         ErrorReporter.install(application as KeuanganApp)
         ThemeController.init(this)
         AppearanceController.init(this)
+        AppLockController.init(this)
         setContent {
             val themeId = ThemeController.themeId.value
             KeuanganTheme(themeId = themeId) {
