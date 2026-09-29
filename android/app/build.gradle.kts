@@ -13,8 +13,8 @@ android {
         applicationId = "com.keuangan.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = providers.gradleProperty("appVersionCode").orElse("8").get().toInt()
-        versionName = providers.gradleProperty("appVersionName").orElse("1.0.6").get()
+        versionCode = providers.gradleProperty("appVersionCode").orElse("9").get().toInt()
+        versionName = providers.gradleProperty("appVersionName").orElse("1.0.7").get()
 
         // Single place to change the backend. Override without editing the file:
         //   ./gradlew assembleDebug -PapiBaseUrl=https://api.example.com
