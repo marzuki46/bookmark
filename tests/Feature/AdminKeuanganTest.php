@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Livewire\Admin\LicenseManager;
+use App\Livewire\Admin\PlanManager;
 use App\Livewire\Admin\UserFinances;
 use App\Livewire\Admin\UserManager;
 use App\Models\Family;
@@ -392,5 +393,43 @@ final class AdminKeuanganTest extends TestCase
             ->assertStatus(200);
 
         $this->assertSame('cancelled', Subscription::query()->where('family_id', $family->id)->latest('id')->first()->status);
+    }
+
+    public function test_plan_manager_create_shows_form_and_saves(): void
+    {
+        $admin = $this->admin();
+
+        $component = Livewire::actingAs($admin)
+            ->test(PlanManager::class)
+            ->call('create')
+            ->assertSet('showForm', true);
+
+        $component->set('name', 'Paket Premium')
+            ->set('slug', 'premium-pro')
+            ->set('description', 'Akses semua fitur')
+            ->set('durationType', 'yearly')
+            ->set('price', 250_000)
+            ->call('save')
+            ->assertSet('showForm', false)
+            ->assertHasNoErrors();
+
+        $plan = SubscriptionPlan::query()->where('slug', 'premium-pro')->first();
+        $this->assertNotNull($plan);
+        $this->assertSame('Paket Premium', $plan->name);
+        $this->assertSame('yearly', $plan->duration_type);
+        $this->assertSame(250_000, $plan->price);
+        $this->assertTrue($plan->is_active);
+    }
+
+    public function test_plan_manager_cancel_hides_form(): void
+    {
+        $admin = $this->admin();
+
+        Livewire::actingAs($admin)
+            ->test(PlanManager::class)
+            ->call('create')
+            ->assertSet('showForm', true)
+            ->call('cancel')
+            ->assertSet('showForm', false);
     }
 }

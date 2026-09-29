@@ -24,6 +24,8 @@ final class PlanManager extends Component
 
     public bool $isActive = true;
 
+    public bool $showForm = false;
+
     public string $statusMessage = '';
 
     public string $statusType = 'success';
@@ -31,6 +33,13 @@ final class PlanManager extends Component
     public function create(): void
     {
         $this->resetForm();
+        $this->showForm = true;
+    }
+
+    public function cancel(): void
+    {
+        $this->resetForm();
+        $this->clearValidation();
     }
 
     public function edit(int $id): void
@@ -44,6 +53,7 @@ final class PlanManager extends Component
         $this->durationType = $plan->duration_type;
         $this->price = (string) $plan->price;
         $this->isActive = (bool) $plan->is_active;
+        $this->showForm = true;
     }
 
     public function save(): void
@@ -108,6 +118,7 @@ final class PlanManager extends Component
         $this->durationType = 'monthly';
         $this->price = '';
         $this->isActive = true;
+        $this->showForm = false;
     }
 
     private function flash(string $message): void

@@ -11,11 +11,11 @@
         <div class="px-4 py-3 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $statusMessage }}</div>
     @endif
 
-    @if($editingId || $name !== '')
+    @if($showForm)
         <form wire:submit="save" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-[var(--text-primary)]">{{ $editingId ? 'Edit Paket' : 'Tambah Paket' }}</h3>
-                <button type="button" wire:click="create" class="btn-secondary !py-1.5 text-xs">Batal</button>
+                <button type="button" wire:click="cancel" class="btn-secondary !py-1.5 text-xs">Batal</button>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
