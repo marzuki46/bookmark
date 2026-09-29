@@ -23,8 +23,7 @@ final class FamilyAdvisorController extends Controller
 {
     public function __construct(
         private readonly FamilyAdvisorService $advisor = new FamilyAdvisorService,
-    ) {
-    }
+    ) {}
 
     public function status(Request $request, Family $family): JsonResponse
     {

@@ -16,8 +16,8 @@ use App\Services\FamilyAIService;
 use App\Services\FamilyVisibilityService;
 use App\Services\LoginCodeService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Response;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Str;
 
 final class FamilyController extends Controller
@@ -371,9 +371,10 @@ final class FamilyController extends Controller
 
     /**
      * Gentle, family-toned reminders built purely from the household's own data:
-     * debts whose due date is close (or past), goals nearing their deadline, and
-     * monthly budgets that are already 80%+ spent. Used by the app's background
-     * worker to wake a local notification — no FCM service required.
+     * a nudge when nothing was recorded today, debts whose due date is close (or
+     * past), goals nearing their deadline, and monthly budgets that are already
+     * 80%+ spent. Used by the app's background worker to wake a local
+     * notification — no FCM service required.
      */
     public function reminders(Request $request, Family $family): JsonResponse
     {
@@ -435,6 +436,28 @@ final class FamilyController extends Controller
         }
 
         $now = now();
+        $monthNames = [
+            1 => 'Jan', 2 => 'Feb', 3 => 'Mar', 4 => 'Apr', 5 => 'Mei', 6 => 'Jun',
+            7 => 'Jul', 8 => 'Agu', 9 => 'Sep', 10 => 'Okt', 11 => 'Nov', 12 => 'Des',
+        ];
+        if ($canSeeExpenses && ! $this->visibility->scopeTransactions(
+            FamilyTransaction::query(),
+            $request->user(),
+            $family
+        )
+            ->where('family_id', $family->id)
+            ->whereDate('date', $now->toDateString())
+            ->exists()) {
+            $reminders->unshift([
+                'type' => 'freshness',
+                'message' => sprintf(
+                    'Belum ada transaksi yang tercatat hari ini (%d %s). Catat pengeluaran atau pemasukanmu sekarang biar laporan keluarga tetap akurat. 🗒️',
+                    (int) $now->day,
+                    $monthNames[(int) $now->month] ?? ''
+                ),
+            ]);
+        }
+
         $budgets = $canSeeExpenses ? FamilyBudget::query()
             ->where('family_id', $family->id)
             ->where('month', $now->month)

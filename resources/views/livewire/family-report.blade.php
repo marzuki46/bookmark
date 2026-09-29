@@ -118,7 +118,9 @@
                 <h3 class="text-sm font-semibold text-[var(--text-primary)] mb-4">Skor Kesehatan</h3>
                 <div class="text-center">
                     <div class="w-32 h-32 mx-auto rounded-full flex flex-col items-center justify-center border-8
-                        {{ $healthScore['score'] >= 80 ? 'border-emerald-400 text-emerald-600' : ($healthScore['score'] >= 50 ? 'border-amber-400 text-amber-600' : 'border-red-400 text-red-600') }}">
+                        {{ ($healthScore['insufficient_data'] ?? false)
+                            ? 'border-slate-300 text-slate-500'
+                            : ($healthScore['score'] >= 80 ? 'border-emerald-400 text-emerald-600' : ($healthScore['score'] >= 50 ? 'border-amber-400 text-amber-600' : 'border-red-400 text-red-600')) }}">
                         <span class="text-3xl font-bold">{{ $healthScore['score'] }}</span>
                         <span class="text-xs font-semibold">{{ $healthScore['grade'] }}</span>
                     </div>

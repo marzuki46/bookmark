@@ -33,6 +33,7 @@ final class FamilyVisibilityService
             foreach (['income', 'expense'] as $type) {
                 if ($member->canView($type)) {
                     $visible->orWhere('type', $type);
+
                     continue;
                 }
 

@@ -7,8 +7,8 @@ namespace App\Http\Controllers\Api\Family;
 use App\Http\Controllers\Controller;
 use App\Models\Family;
 use App\Models\FamilyInsight;
-use App\Services\NudgeService;
 use App\Services\FamilyVisibilityService;
+use App\Services\NudgeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 

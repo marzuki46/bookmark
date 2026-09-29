@@ -1,18 +1,18 @@
 <div class="space-y-6">
     <div>
         <h1 class="text-2xl font-bold text-[var(--text-primary)]">Langganan</h1>
-        <p class="text-sm text-[var(--text-tertiary)] mt-1">Beri akses berbayar secara manual atau pantau status tiap pengguna</p>
+        <p class="text-sm text-[var(--text-tertiary)] mt-1">Lisensi dimiliki keluarga dan berlaku untuk seluruh anggotanya</p>
     </div>
 
     @if($statusMessage)
         <div class="px-4 py-3 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $statusMessage }}</div>
     @endif
 
-    @if($grantUserId)
+    @if($grantFamilyId)
         <form wire:submit="grant" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 max-w-lg">
             <div class="flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Beri akses ke {{ \App\Models\User::find($grantUserId)?->name }}</h3>
-                <button type="button" wire:click="$set('grantUserId', null)" class="btn-secondary !py-1.5 text-xs">Batal</button>
+                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Beri lisensi ke keluarga {{ \App\Models\Family::find($grantFamilyId)?->name }}</h3>
+                <button type="button" wire:click="$set('grantFamilyId', null)" class="btn-secondary !py-1.5 text-xs">Batal</button>
             </div>
             <div>
                 <label class="wp-form-label">Pilih paket</label>
@@ -33,24 +33,24 @@
     <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">
         <div class="lg:col-span-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
             <div class="px-5 py-3 border-b border-[var(--color-border)]">
-                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Pengguna &amp; Status</h3>
+                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Keluarga &amp; Status Lisensi</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-left text-xs uppercase tracking-wide text-[var(--text-tertiary)] border-b border-[var(--color-border)]">
-                            <th class="px-5 py-3">Pengguna</th>
+                            <th class="px-5 py-3">Keluarga</th>
                             <th class="px-5 py-3">Aktif Sampai</th>
                             <th class="px-5 py-3 text-right">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($users as $user)
-                            @php $sub = $user->activeSubscription(); @endphp
+                        @forelse($families as $family)
+                            @php $sub = \App\Models\Subscription::query()->with('plan')->where('family_id', $family->id)->latest('id')->first(); @endphp
                             <tr class="border-b border-[var(--color-border)] last:border-0">
                                 <td class="px-5 py-3">
-                                    <p class="font-medium text-[var(--text-primary)]">{{ $user->name }}</p>
-                                    <p class="text-xs text-[var(--text-tertiary)]">{{ $user->email }}</p>
+                                    <p class="font-medium text-[var(--text-primary)]">{{ $family->name }}</p>
+                                    <p class="text-xs text-[var(--text-tertiary)]">Kepala: {{ $family->owner?->name ?? '-' }} · {{ $family->members_count }} anggota</p>
                                 </td>
                                 <td class="px-5 py-3">
                                     @if($sub)
@@ -64,20 +64,20 @@
                                     @endif
                                 </td>
                                 <td class="px-5 py-3 text-right whitespace-nowrap">
-                                    <button wire:click="openGrant({{ $user->id }})" class="btn-secondary !py-1 text-xs mr-1">Beri Akses</button>
+                                    <button wire:click="openGrant({{ $family->id }})" class="btn-secondary !py-1 text-xs mr-1">Beri Lisensi</button>
                                     @if($sub)
-                                        <button wire:click="revoke({{ $user->id }})" class="btn-secondary !py-1 text-xs"
-                                            wire:confirm="Cabut akses {{ $user->name }}?">Cabut</button>
+                                        <button wire:click="revoke({{ $family->id }})" class="btn-secondary !py-1 text-xs"
+                                            wire:confirm="Cabut lisensi keluarga {{ $family->name }}?">Cabut</button>
                                     @endif
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="3" class="px-5 py-8 text-center text-[var(--text-tertiary)]">Belum ada pengguna.</td></tr>
+                            <tr><td colspan="3" class="px-5 py-8 text-center text-[var(--text-tertiary)]">Belum ada keluarga.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
-            <div class="px-5 py-3">{{ $users->links() }}</div>
+            <div class="px-5 py-3">{{ $families->links() }}</div>
         </div>
 
         <div class="lg:col-span-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">

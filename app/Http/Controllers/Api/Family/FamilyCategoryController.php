@@ -9,6 +9,7 @@ use App\Models\Family;
 use App\Models\FamilyCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * Expense/income categories for a household.
@@ -109,7 +110,7 @@ final class FamilyCategoryController extends Controller
         ]]);
     }
 
-    public function destroy(Request $request, Family $family, FamilyCategory $category): \Illuminate\Http\Response|JsonResponse
+    public function destroy(Request $request, Family $family, FamilyCategory $category): Response|JsonResponse
     {
         $this->authorize('manage', $family);
         $this->assertSameFamily($family, $category->id);

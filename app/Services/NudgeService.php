@@ -103,7 +103,7 @@ final class NudgeService
                     'tone' => 'critical',
                     'code' => 'budget_exceeded',
                     'message' => sprintf(
-                         '%s sudah melewati batas anggaran bulan ini (%s dari %s). Masih ada %d hari; mungkin ini waktu yang baik untuk meninjau pilihan berikutnya.',
+                        '%s sudah melewati batas anggaran bulan ini (%s dari %s). Masih ada %d hari; mungkin ini waktu yang baik untuk meninjau pilihan berikutnya.',
                         $name,
                         $this->rp($spent),
                         $this->rp($limit),
@@ -114,7 +114,7 @@ final class NudgeService
                     'tone' => 'warning',
                     'code' => 'budget_near_limit',
                     'message' => sprintf(
-                         '%s sudah memakai sekitar %d%% anggaran (%s dari %s). Masih ada %d hari; rata-rata %s/hari bisa membantu menjaga ruang sampai akhir bulan.',
+                        '%s sudah memakai sekitar %d%% anggaran (%s dari %s). Masih ada %d hari; rata-rata %s/hari bisa membantu menjaga ruang sampai akhir bulan.',
                         $name,
                         (int) round($ratio * 100),
                         $this->rp($spent),
@@ -169,7 +169,7 @@ final class NudgeService
             'tone' => 'warning',
             'code' => 'projected_deficit',
             'message' => sprintf(
-                 'Perkiraan akhir bulan: pengeluaran %s dan pemasukan %s. Masih ada %d hari; yuk pertimbangkan prioritas pengeluaran berikutnya bersama.',
+                'Perkiraan akhir bulan: pengeluaran %s dan pemasukan %s. Masih ada %d hari; yuk pertimbangkan prioritas pengeluaran berikutnya bersama.',
                 $this->rp($projected),
                 $this->rp($income),
                 $daysLeft

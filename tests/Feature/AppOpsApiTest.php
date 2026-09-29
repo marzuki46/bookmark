@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\AppErrorLog;
-use App\Models\AppRelease;
 use App\Models\Family;
 use App\Models\FamilyDebt;
 use App\Models\FamilyMember;
@@ -398,8 +397,54 @@ final class AppOpsApiTest extends TestCase
 
         $response = $this->getJson("/api/families/{$this->family->id}/reminders")->assertOk();
 
-        $this->assertNotEmpty($response->json('data'));
-        $this->assertStringContainsString('Cicilan Motor', $response->json('data.0.message'));
+        $messages = array_column($response->json('data'), 'message');
+        $this->assertNotEmpty($messages);
+        $this->assertTrue(
+            collect($messages)->contains(fn (string $message) => str_contains($message, 'Cicilan Motor')),
+            'Pengingat utang yang jatuh tempo harus muncul di daftar pengingat.'
+        );
+    }
+
+    public function test_reminders_nudge_when_no_transaction_recorded_today(): void
+    {
+        FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $this->owner->id,
+            'type' => 'expense',
+            'amount' => 25000,
+            'description' => 'Kemarin',
+            'date' => now()->subDay()->toDateString(),
+        ]);
+
+        Sanctum::actingAs($this->owner);
+
+        $response = $this->getJson("/api/families/{$this->family->id}/reminders")->assertOk();
+
+        $types = array_column($response->json('data'), 'type');
+        $this->assertContains('freshness', $types);
+        $this->assertStringContainsString(
+            'Belum ada transaksi yang tercatat hari ini',
+            $response->json('data.0.message')
+        );
+    }
+
+    public function test_reminders_skip_freshness_when_transaction_recorded_today(): void
+    {
+        FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $this->owner->id,
+            'type' => 'expense',
+            'amount' => 25000,
+            'description' => 'Kopi',
+            'date' => now()->toDateString(),
+        ]);
+
+        Sanctum::actingAs($this->owner);
+
+        $response = $this->getJson("/api/families/{$this->family->id}/reminders")->assertOk();
+
+        $types = array_column($response->json('data'), 'type');
+        $this->assertNotContains('freshness', $types);
     }
 
     public function test_trend_returns_monthly_buckets(): void

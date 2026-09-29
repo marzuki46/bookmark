@@ -12,6 +12,7 @@ use App\Models\FamilyMember;
 use App\Models\FamilyTransaction;
 use App\Models\IncomeSource;
 use App\Models\User;
+use App\Services\FamilyAllocationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -538,7 +539,7 @@ final class FamilyHouseholdApiTest extends TestCase
             ])->assertStatus(201);
         }
 
-        $service = new \App\Services\FamilyAllocationService;
+        $service = new FamilyAllocationService;
 
         $this->assertSame(1_500_000.0, $service->emergencyFundTarget($this->family));
     }

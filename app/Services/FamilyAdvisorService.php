@@ -22,8 +22,7 @@ final class FamilyAdvisorService
 {
     public function __construct(
         private readonly FamilyAllocationService $allocation = new FamilyAllocationService,
-    ) {
-    }
+    ) {}
 
     /**
      * Current-month income and expense for the family, avoiding double counting
@@ -276,7 +275,7 @@ final class FamilyAdvisorService
             'fun' => ['Hiburan', 'Jajan'],
         ];
 
-        $categories = \App\Models\FamilyCategory::forFamily($family->id)
+        $categories = FamilyCategory::forFamily($family->id)
             ->where('type', 'expense')->pluck('name', 'id');
 
         $suggestions = [];

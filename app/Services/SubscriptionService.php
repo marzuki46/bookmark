@@ -69,6 +69,7 @@ final class SubscriptionService
             Subscription::query()->where('family_id', $family->id)
                 ->where('status', 'active')
                 ->update(['status' => 'cancelled']);
+
             return;
         }
 

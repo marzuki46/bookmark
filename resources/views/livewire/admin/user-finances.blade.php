@@ -1,24 +1,108 @@
 <div class="space-y-6">
     <div>
-        <h1 class="text-2xl font-bold text-[var(--text-primary)]">Keuangan per Pengguna</h1>
-        <p class="text-sm text-[var(--text-tertiary)] mt-1">Pantau transaksi keluarga, kesehatan finansial, dan keganjilan data</p>
+        <h1 class="text-2xl font-bold text-[var(--text-primary)]">Manajemen Keluarga</h1>
+        <p class="text-sm text-[var(--text-tertiary)] mt-1">Kelola anggota, lisensi, laporan, perangkat, dan kesehatan keluarga</p>
+        @if($statusMessage)
+            <p class="text-sm text-emerald-600 mt-2">{{ $statusMessage }}</p>
+        @endif
     </div>
 
     <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 max-w-lg">
-        <label class="wp-form-label">Pilih pengguna</label>
-        <select wire:model.live="userId" class="wp-form-input">
-            <option value="">Pilih pengguna...</option>
-            @foreach($users as $u)
-                <option value="{{ $u['id'] }}">{{ $u['name'] }} ({{ $u['email'] }}){{ $u['has_family'] ? '' : ' - belum punya keluarga' }}</option>
+        <label class="wp-form-label">Pilih keluarga</label>
+        <select wire:model.live="familyId" class="wp-form-input">
+            <option value="">Pilih keluarga...</option>
+            @foreach($families as $family)
+                <option value="{{ $family->id }}">{{ $family->name }} · {{ $family->members_count }} anggota</option>
             @endforeach
         </select>
     </div>
 
-    @if(! $userId)
+    @if(! $familyId && ! $userId)
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-8 text-center text-sm text-[var(--text-tertiary)]">
-            Pilih pengguna untuk melihat keuangannya.
+            Pilih keluarga untuk melihat anggota, lisensi, dan laporan keuangannya.
         </div>
     @else
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 lg:col-span-2">
+                <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Keluarga</p>
+                <p class="text-xl font-bold text-[var(--text-primary)] mt-1">{{ $selectedFamily?->name }}</p>
+                <p class="text-sm text-[var(--text-tertiary)] mt-1">Kepala keluarga: {{ $selectedFamily?->owner?->name ?? '-' }}</p>
+                <div class="flex flex-wrap gap-2 mt-3">
+                    @foreach($selectedFamily?->members ?? [] as $member)
+                        <span class="text-xs rounded-full bg-[var(--color-bg)] px-3 py-1 text-[var(--text-secondary)]">
+                            {{ $member->user?->name ?? '-' }} · {{ $member->role === 'owner' ? 'Kepala keluarga' : ($member->payerLabel() ?? 'Anggota') }}
+                        </span>
+                    @endforeach
+                </div>
+            </div>
+            <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
+                <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Lisensi keluarga</p>
+                @if($license)
+                    <p class="font-semibold text-[var(--text-primary)] mt-1">{{ $license->plan?->name ?? 'Paket' }}</p>
+                    <p class="text-sm {{ $license->isUsable() ? 'text-emerald-600' : 'text-red-500' }}">
+                        {{ $license->expires_at?->format('d M Y') ?? 'Seumur hidup' }} · {{ $license->isUsable() ? 'aktif' : 'habis' }}
+                    </p>
+                @else
+                    <p class="text-sm text-[var(--text-tertiary)] mt-1">Belum berlisensi</p>
+                @endif
+            </div>
+        </div>
+
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-[var(--color-border)]">
+                <h3 class="text-sm font-semibold text-[var(--text-primary)]">Akses Anggota</h3>
+                <p class="text-xs text-[var(--text-tertiary)] mt-1">Atur data keuangan yang dapat dilihat setiap anggota.</p>
+            </div>
+            <div class="divide-y divide-[var(--color-border)]">
+                @foreach($selectedFamily?->members ?? [] as $member)
+                    <div class="px-5 py-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                        <div>
+                            <p class="font-medium text-[var(--text-primary)]">{{ $member->user?->name ?? '-' }}</p>
+                            <p class="text-xs text-[var(--text-tertiary)]">
+                                {{ $member->role === 'owner' ? 'Kepala keluarga' : ($member->relationship === 'child' ? 'Anak' : 'Dewasa') }}
+                                · Pemasukan {{ ($member->visibility['income'] ?? true) ? 'terlihat' : 'disembunyikan' }}
+                                · Pengeluaran {{ ($member->visibility['expense'] ?? true) ? 'terlihat' : 'disembunyikan' }}
+                                · Hutang {{ ($member->visibility['debts'] ?? true) ? 'terlihat' : 'disembunyikan' }}
+                            </p>
+                        </div>
+                        @if($member->role !== 'owner')
+                            <button type="button" wire:click="editMember({{ $member->user_id }})" class="btn-secondary !py-1.5 text-xs">Atur Permission</button>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </div>
+
+        @if($editingMemberId)
+            <form wire:submit="saveMemberSettings" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 max-w-xl">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-[var(--text-primary)]">Permission Anggota</h3>
+                    <button type="button" wire:click="$set('editingMemberId', null)" class="btn-secondary !py-1.5 text-xs">Batal</button>
+                </div>
+                <div>
+                    <label class="wp-form-label">Hubungan</label>
+                    <select wire:model="memberRelationship" class="wp-form-input">
+                        <option value="adult">Dewasa</option>
+                        <option value="child">Anak</option>
+                    </select>
+                </div>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-3 text-sm text-[var(--text-primary)]">
+                        <input type="checkbox" wire:model="memberCanViewIncome"> Dapat melihat pemasukan
+                    </label>
+                    <label class="flex items-center gap-3 text-sm text-[var(--text-primary)]">
+                        <input type="checkbox" wire:model="memberCanViewExpense"> Dapat melihat pengeluaran
+                    </label>
+                    <label class="flex items-center gap-3 text-sm text-[var(--text-primary)]">
+                        <input type="checkbox" wire:model="memberCanViewDebts"> Dapat melihat hutang
+                    </label>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="btn-primary">Simpan Permission</button>
+                </div>
+            </form>
+        @endif
+
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
                 <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Pemasukan Bulan Ini</p>

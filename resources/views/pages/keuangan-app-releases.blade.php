@@ -43,6 +43,10 @@
             <label class="wp-form-label">Catatan Rilis</label>
             <textarea name="notes" rows="3" maxlength="5000" placeholder="Apa yang baru? Ditampilkan di layar Periksa Pembaruan" class="wp-form-input"></textarea>
         </div>
+        <label class="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+            <input type="checkbox" name="is_mandatory" value="1" class="rounded border-[var(--color-border)]">
+            Wajib update (untuk perbaikan keamanan kritis)
+        </label>
         <div id="apk-upload-status" class="hidden rounded-xl border border-teal-200 bg-teal-50 px-4 py-3" aria-live="polite">
             <div class="flex items-center justify-between gap-4 text-sm font-medium text-teal-800">
                 <span id="apk-upload-status-text">Menyiapkan upload…</span>
@@ -65,6 +69,7 @@
                         <th class="px-5 py-3">Nama</th>
                         <th class="px-5 py-3">Ukuran</th>
                         <th class="px-5 py-3">SHA-256</th>
+                        <th class="px-5 py-3">Status</th>
                         <th class="px-5 py-3">Diupload</th>
                         <th class="px-5 py-3">Aksi</th>
                     </tr>
@@ -76,6 +81,13 @@
                             <td class="px-5 py-2.5">{{ $release->version_name }}@if($loop->first)<span class="ml-2 text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700">Terbaru</span>@endif</td>
                             <td class="px-5 py-2.5 text-[var(--text-tertiary)]">{{ number_format($release->file_size / 1048576, 1) }} MB</td>
                             <td class="px-5 py-2.5 text-xs font-mono text-[var(--text-tertiary)] max-w-[220px] truncate" title="{{ $release->sha256 }}">{{ $release->sha256 }}</td>
+                            <td class="px-5 py-2.5">
+                                @if($release->is_mandatory)
+                                    <span class="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700">Wajib update</span>
+                                @else
+                                    <span class="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">Disarankan</span>
+                                @endif
+                            </td>
                             <td class="px-5 py-2.5 text-[var(--text-tertiary)]">{{ $release->created_at->format('d M Y H:i') }}</td>
                             <td class="px-5 py-2.5 whitespace-nowrap">
                                 <a href="{{ route('app-release.download', $release) }}" class="btn-secondary !py-1 !px-2 text-xs">Unduh</a>
@@ -89,7 +101,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-8 text-center text-[var(--text-tertiary)]">
+                            <td colspan="7" class="px-5 py-8 text-center text-[var(--text-tertiary)]">
                                 Belum ada rilis. Unggah APK pertama di form di atas.
                             </td>
                         </tr>
