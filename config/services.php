@@ -64,4 +64,11 @@ return [
         'is_production' => env('MIDTRANS_IS_PRODUCTION', false),
     ],
 
+    'duitku' => [
+        'merchant_code' => env('DUITKU_MERCHANT_CODE', ''),
+        'api_key' => env('DUITKU_API_KEY', ''),
+        'production' => env('DUITKU_PRODUCTION', false),
+        'payment_method' => env('DUITKU_PAYMENT_METHOD', 'VC'),
+    ],
+
 ];

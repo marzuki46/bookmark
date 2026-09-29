@@ -25,6 +25,8 @@ Route::get('/', fn () => view('welcome'));
 
 Route::middleware('throttle:20,1')->get('/apk/download/{release}', [AppReleaseController::class, 'download'])
     ->name('app-release.download');
+Route::get('/payments/duitku/return', fn () => redirect('/keuangan/langganan'))
+    ->name('payments.duitku.return');
 
 Route::middleware(['auth', 'family.scope'])->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');

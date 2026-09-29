@@ -1,8 +1,8 @@
 <?php
 
-use App\Http\Controllers\Api\App\CodeAuthController;
 use App\Http\Controllers\Api\App\AppErrorController;
 use App\Http\Controllers\Api\App\AppUpdateController;
+use App\Http\Controllers\Api\App\CodeAuthController;
 use App\Http\Controllers\Api\App\DeviceController;
 use App\Http\Controllers\Api\App\ProfileController;
 use App\Http\Controllers\Api\AuthController;
@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\Finance\FinanceAiController;
 use App\Http\Controllers\Api\Finance\TransactionController;
 use App\Http\Controllers\Api\ItemController;
 use App\Http\Controllers\Api\Payments\CheckoutController;
+use App\Http\Controllers\Api\Payments\DuitkuWebhookController;
 use App\Http\Controllers\Api\Payments\MidtransWebhookController;
 use App\Http\Controllers\Api\Payments\SubscriptionPlanController;
 use App\Http\Controllers\Api\TokenController;
@@ -39,6 +40,8 @@ Route::post('/app/login', [CodeAuthController::class, 'login'])
 // Midtrans pushes transaction state changes here (no auth on purpose:
 // authenticity comes from the signature, see MidtransWebhookController).
 Route::post('/payments/midtrans/notification', [MidtransWebhookController::class, 'notification']);
+Route::post('/payments/duitku/callback', [DuitkuWebhookController::class, 'callback'])
+    ->name('payments.duitku.callback');
 
 // App diagnostics & updates are public so the app can report crashes and
 // check for updates before/without a login. Both are throttled.

@@ -7,13 +7,19 @@ namespace App\Http\Controllers\Api\Payments;
 use App\Http\Controllers\Controller;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
+use App\Services\DuitkuService;
 use App\Services\MidtransService;
+use App\Services\PaymentGatewaySettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final class CheckoutController extends Controller
 {
-    public function __construct(private readonly MidtransService $midtrans) {}
+    public function __construct(
+        private readonly MidtransService $midtrans,
+        private readonly DuitkuService $duitku,
+        private readonly PaymentGatewaySettings $gatewaySettings,
+    ) {}
 
     /**
      * Starts a purchase: create the pending payment row first, then ask Snap
@@ -46,6 +52,21 @@ final class CheckoutController extends Controller
         ]);
 
         try {
+            if ($this->gatewaySettings->provider() === 'duitku') {
+                $duitku = $this->duitku->charge($user, $plan, $orderId);
+
+                return response()->json([
+                    'data' => [
+                        'order_id' => $orderId,
+                        'token' => null,
+                        'redirect_url' => $duitku['payment_url'],
+                        'price' => $plan->price,
+                        'provider' => 'duitku',
+                        'reference' => $duitku['reference'],
+                    ],
+                ]);
+            }
+
             $snap = $this->midtrans->charge($user, $plan, $orderId);
         } catch (\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
@@ -57,6 +78,7 @@ final class CheckoutController extends Controller
                 'token' => $snap['token'],
                 'redirect_url' => $snap['redirect_url'],
                 'price' => $plan->price,
+                'provider' => 'midtrans',
             ],
         ]);
     }

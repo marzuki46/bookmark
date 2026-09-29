@@ -14,6 +14,8 @@
             $tabs = [
                 'rilis' => ['label' => 'Rilis Aplikasi', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'rilis'])],
                 'lisensi' => ['label' => 'Manajemen Lisensi', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'lisensi'])],
+                'pembayaran' => ['label' => 'Pembayaran', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'pembayaran'])],
+                'ai' => ['label' => 'AI Sistem Hub', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'ai'])],
                 'log' => ['label' => 'Log Akses', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'log'])],
             ];
         @endphp
@@ -31,6 +33,10 @@
         @include('partials.keuangan-app-releases', ['releases' => $releases])
     @elseif($activeTab === 'lisensi')
         <livewire:admin.license-manager />
+    @elseif($activeTab === 'pembayaran')
+        <livewire:admin.payment-gateway-settings />
+    @elseif($activeTab === 'ai')
+        <livewire:admin.ai-system-overview />
     @else
         <livewire:admin.access-logs />
     @endif

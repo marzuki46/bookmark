@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Livewire\Admin\AdminDashboard;
 use App\Livewire\Admin\LicenseManager;
+use App\Livewire\Admin\PaymentGatewaySettings;
 use App\Livewire\Admin\PlanManager;
 use App\Livewire\Admin\UserFinances;
 use App\Livewire\Admin\UserManager;
@@ -21,10 +22,12 @@ use App\Models\FamilyMember;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\FamilyEntitlementService;
 use App\Services\SubscriptionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -113,6 +116,36 @@ final class AdminKeuanganTest extends TestCase
         $this->assertNotSame('', $code);
     }
 
+    public function test_admin_can_save_duitku_payment_settings_without_exposing_the_api_key(): void
+    {
+        $admin = $this->admin();
+
+        Livewire::actingAs($admin)
+            ->test(PaymentGatewaySettings::class)
+            ->set('provider', 'duitku')
+            ->set('duitkuMerchantCode', 'DTEST123')
+            ->set('duitkuApiKey', 'secret-api-key')
+            ->set('duitkuProduction', false)
+            ->set('duitkuPaymentMethod', 'VC')
+            ->call('save');
+
+        $this->assertSame('duitku', SystemSetting::query()->where('key', 'payment.provider')->firstOrFail()->value);
+        $stored = SystemSetting::query()->where('key', 'payment.duitku.api_key')->firstOrFail();
+        $this->assertSame('secret-api-key', $stored->value);
+        $this->assertStringNotContainsString('secret-api-key', (string) $stored->getRawOriginal('value'));
+    }
+
+    public function test_admin_can_open_ai_system_tab(): void
+    {
+        $admin = $this->admin();
+
+        $this->actingAs($admin)
+            ->get('/keuangan/aplikasi-manajemen?tab=ai')
+            ->assertOk()
+            ->assertSee('AI Sistem Hub')
+            ->assertSee('Provider tersedia');
+    }
+
     public function test_admin_can_create_family_with_owner_and_issue_app_login_code(): void
     {
         $admin = $this->admin();
@@ -164,6 +197,48 @@ final class AdminKeuanganTest extends TestCase
             'plan_id' => $plan->id,
             'status' => 'pending',
         ]);
+    }
+
+    public function test_duitku_checkout_and_signed_callback_activate_subscription(): void
+    {
+        $owner = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Duitku',
+            'owner_user_id' => $owner->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
+        $plan = $this->plan('monthly', 25_000);
+        SystemSetting::query()->create(['key' => 'payment.provider', 'value' => 'duitku']);
+        SystemSetting::query()->create(['key' => 'payment.duitku.merchant_code', 'value' => 'DTEST123']);
+        SystemSetting::query()->create(['key' => 'payment.duitku.api_key', 'value' => 'duitku-secret']);
+        SystemSetting::query()->create(['key' => 'payment.duitku.payment_method', 'value' => 'VC']);
+        Http::fake(['sandbox.duitku.com/*' => Http::response([
+            'statusCode' => '00',
+            'paymentUrl' => 'https://sandbox.duitku.com/pay/test',
+            'reference' => 'D-REF-1',
+        ])]);
+        Sanctum::actingAs($owner);
+
+        $charge = $this->postJson('/api/subscription/charge', ['plan_id' => $plan->id])
+            ->assertOk()
+            ->assertJsonPath('data.provider', 'duitku')
+            ->assertJsonPath('data.redirect_url', 'https://sandbox.duitku.com/pay/test');
+        $orderId = $charge->json('data.order_id');
+        $payload = [
+            'merchantCode' => 'DTEST123',
+            'amount' => '25000',
+            'merchantOrderId' => $orderId,
+            'paymentCode' => 'VC',
+            'resultCode' => '00',
+            'reference' => 'D-REF-1',
+        ];
+        $payload['signature'] = hash_hmac('sha256', 'DTEST12325000'.$orderId, 'duitku-secret');
+
+        $this->postJson('/api/payments/duitku/callback', $payload)->assertOk();
+
+        $this->assertSame('paid', SubscriptionPayment::query()->where('order_id', $orderId)->value('status'));
+        $this->assertSame('duitku', Subscription::query()->where('order_id', $orderId)->value('provider'));
     }
 
     public function test_webhook_rejects_bad_signature(): void

@@ -52,6 +52,8 @@ final class KeuanganController extends Controller
             'rilis' => 'rilis',
             'lisensi' => 'lisensi',
             'log' => 'log',
+            'pembayaran' => 'pembayaran',
+            'ai' => 'ai',
             default => 'lisensi',
         };
 
