@@ -388,6 +388,12 @@
             const pageKey = (path) => 'wpScroll_' + path;
             const sidebarKey = 'wpSidebarScroll';
             const sidebarNav = document.querySelector('.wp-sidebar-nav');
+            const rememberSidebarPosition = () => {
+                if (!sidebarNav) return;
+                try {
+                    sessionStorage.setItem(sidebarKey, String(sidebarNav.scrollTop));
+                } catch (_) {}
+            };
             const save = () => {
                 try {
                     sessionStorage.setItem(pageKey(location.pathname), JSON.stringify({
@@ -407,12 +413,11 @@
                 } catch (_) {}
                 if (sidebarNav && side > 0) sidebarNav.scrollTop = side;
 
-                // Keep the clicked menu visible: scroll the active item into view.
+                // Keep the clicked menu visible without scrolling the page itself.
                 const active = sidebarNav && sidebarNav.querySelector('.wp-menu-item.current');
                 if (active) {
-                    try {
-                        active.scrollIntoView({ block: 'nearest', behavior: 'auto' });
-                    } catch (_) { active.scrollIntoView(true); }
+                    const target = active.offsetTop - (sidebarNav.clientHeight - active.offsetHeight) / 2;
+                    sidebarNav.scrollTop = Math.max(0, Math.min(target, sidebarNav.scrollHeight - sidebarNav.clientHeight));
                 }
 
                 // Page scroll stays per-pathname.
@@ -430,6 +435,10 @@
                     window.addEventListener('load', apply, { once: true });
                 }
             };
+            sidebarNav?.addEventListener('scroll', rememberSidebarPosition, { passive: true });
+            sidebarNav?.querySelectorAll('.wp-menu-link').forEach(link => {
+                link.addEventListener('click', rememberSidebarPosition, { capture: true });
+            });
             window.addEventListener('pagehide', save);
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') save();
