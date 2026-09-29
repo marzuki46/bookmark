@@ -33,10 +33,12 @@ final class CheckoutController extends Controller
         }
 
         $user = $request->user();
+        $family = $user->family();
         $orderId = MidtransService::newOrderId($user);
 
         SubscriptionPayment::query()->create([
             'user_id' => $user->id,
+            'family_id' => $family?->id,
             'plan_id' => $plan->id,
             'order_id' => $orderId,
             'gross_amount' => $plan->price,

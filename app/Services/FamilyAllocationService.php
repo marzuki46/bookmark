@@ -69,7 +69,10 @@ final class FamilyAllocationService
      */
     public function emergencyFundTarget(Family $family): float
     {
-        return round($this->averageMonthlyExpense($family, self::EMERGENCY_FUND_MONTHS), 2);
+        return round(
+            $this->averageMonthlyExpense($family, self::EMERGENCY_FUND_MONTHS) * self::EMERGENCY_FUND_MONTHS,
+            2,
+        );
     }
 
     /**

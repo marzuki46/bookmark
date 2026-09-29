@@ -18,14 +18,23 @@ final class SubscriptionService
 {
     public function activate(User $user, SubscriptionPlan $plan, ?string $orderId = null, string $provider = 'manual'): Subscription
     {
-        $current = $user->subscriptions()
+        $family = $user->family();
+        $current = ($family
+            ? Subscription::query()->where('family_id', $family->id)
+            : $user->subscriptions())
             ->where('status', 'active')
             ->orderByDesc('id')
             ->first();
 
         $base = $current?->expires_at?->isFuture() ? $current->expires_at : now();
 
-        $user->subscriptions()->where('status', 'active')->update(['status' => 'cancelled']);
+        if ($family) {
+            Subscription::query()->where('family_id', $family->id)
+                ->where('status', 'active')
+                ->update(['status' => 'cancelled']);
+        } else {
+            $user->subscriptions()->where('status', 'active')->update(['status' => 'cancelled']);
+        }
 
         $expiresAt = match ($plan->duration_type) {
             'lifetime' => null,
@@ -36,6 +45,7 @@ final class SubscriptionService
 
         $subscription = Subscription::query()->create([
             'user_id' => $user->id,
+            'family_id' => $family?->id,
             'plan_id' => $plan->id,
             'status' => 'active',
             'starts_at' => now(),
@@ -55,6 +65,13 @@ final class SubscriptionService
 
     public function revoke(User $user): void
     {
+        if ($family = $user->family()) {
+            Subscription::query()->where('family_id', $family->id)
+                ->where('status', 'active')
+                ->update(['status' => 'cancelled']);
+            return;
+        }
+
         $user->subscriptions()->where('status', 'active')->update(['status' => 'cancelled']);
     }
 }

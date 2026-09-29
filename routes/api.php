@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\App\ProfileController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Family\BudgetController as FamilyBudgetController;
 use App\Http\Controllers\Api\Family\DebtController as FamilyDebtController;
+use App\Http\Controllers\Api\Family\FamilyAdvisorController;
 use App\Http\Controllers\Api\Family\FamilyCategoryController;
 use App\Http\Controllers\Api\Family\FamilyController;
 use App\Http\Controllers\Api\Family\GoalController as FamilyGoalController;
@@ -118,6 +119,11 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         // Reminders for the app's background notifications + the 6-month trend.
         Route::get('reminders', [FamilyController::class, 'reminders']);
+
+        // Kang Cuan — the family financial advisor ("Pendamping Keuangan").
+        Route::get('advisor', [FamilyAdvisorController::class, 'status']);
+        Route::post('advisor', [FamilyAdvisorController::class, 'update'])->middleware('throttle:20,1,advisor');
+        Route::put('advisor/profile', [FamilyAdvisorController::class, 'saveProfile'])->middleware('throttle:20,1,advisor');
 
         // Categories are needed to build a transaction and were previously
         // web-only, so the app could record spending but not categorise it.

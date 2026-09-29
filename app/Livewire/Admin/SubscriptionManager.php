@@ -6,7 +6,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
-use App\Models\User;
+use App\Models\Family;
 use App\Services\SubscriptionService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -15,7 +15,7 @@ final class SubscriptionManager extends Component
 {
     use WithPagination;
 
-    public ?int $grantUserId = null;
+    public ?int $grantFamilyId = null;
 
     public ?int $grantPlanId = null;
 
@@ -23,11 +23,11 @@ final class SubscriptionManager extends Component
 
     public string $statusType = 'success';
 
-    public function getUsersProperty()
+    public function getFamiliesProperty()
     {
-        return User::query()
-            ->withCount('subscriptions')
-            ->with('subscriptions')
+        return Family::query()
+            ->with(['owner:id,name,email', 'members.user:id,name,email'])
+            ->withCount('members')
             ->orderBy('name')
             ->paginate(20);
     }
@@ -40,51 +40,51 @@ final class SubscriptionManager extends Component
     public function getRecentPaymentsProperty()
     {
         return SubscriptionPayment::query()
-            ->with(['user', 'plan'])
+            ->with(['user', 'family', 'plan'])
             ->latest()
             ->limit(15)
             ->get();
     }
 
-    public function openGrant(int $userId): void
+    public function openGrant(int $familyId): void
     {
-        $this->grantUserId = $userId;
+        $this->grantFamilyId = $familyId;
         $this->grantPlanId = null;
     }
 
     public function grant(): void
     {
         $data = $this->validate([
-            'grantUserId' => ['required', 'integer', 'exists:users,id'],
+            'grantFamilyId' => ['required', 'integer', 'exists:families,id'],
             'grantPlanId' => ['required', 'integer', 'exists:subscription_plans,id'],
         ]);
 
-        $user = User::query()->findOrFail($data['grantUserId']);
+        $family = Family::query()->with('owner')->findOrFail($data['grantFamilyId']);
         $plan = SubscriptionPlan::query()->findOrFail($data['grantPlanId']);
 
-        app(SubscriptionService::class)->activate($user, $plan);
+        app(SubscriptionService::class)->activate($family->owner, $plan);
 
         activity('admin-subscription')->causedBy(auth()->user())
-            ->log("Memberi akses {$plan->name} ke {$user->email}");
+            ->log("Memberi akses {$plan->name} ke keluarga {$family->name}");
 
-        $this->grantUserId = null;
+        $this->grantFamilyId = null;
         $this->grantPlanId = null;
         $this->flash('Akses berlangganan diberikan.');
     }
 
-    public function revoke(int $userId): void
+    public function revoke(int $familyId): void
     {
-        $user = User::query()->findOrFail($userId);
-        app(SubscriptionService::class)->revoke($user);
+        $family = Family::query()->with('owner')->findOrFail($familyId);
+        app(SubscriptionService::class)->revoke($family->owner);
 
-        activity('admin-subscription')->causedBy(auth()->user())->log("Mencabut akses {$user->email}");
+        activity('admin-subscription')->causedBy(auth()->user())->log("Mencabut akses keluarga {$family->name}");
         $this->flash('Akses dicabut.');
     }
 
     public function render()
     {
         return view('livewire.admin.subscription-manager', [
-            'users' => $this->users,
+            'families' => $this->families,
             'plans' => $this->plans,
             'recentPayments' => $this->recentPayments,
         ]);

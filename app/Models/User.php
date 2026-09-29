@@ -129,6 +129,21 @@ class User extends Authenticatable
      */
     public function activeSubscription(): ?Subscription
     {
+        $family = $this->family();
+        if ($family) {
+            $familySubscription = Subscription::query()
+                ->with('plan')
+                ->where('family_id', $family->id)
+                ->active()
+                ->orderByDesc('id')
+                ->get()
+                ->first(fn (Subscription $s) => $s->isUsable());
+
+            if ($familySubscription) {
+                return $familySubscription;
+            }
+        }
+
         $usable = $this->subscriptions()
             ->with('plan')
             ->active()

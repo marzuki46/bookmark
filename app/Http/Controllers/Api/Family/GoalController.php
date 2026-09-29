@@ -33,7 +33,7 @@ final class GoalController extends Controller
 
     public function store(Request $request, Family $family): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         if (! $request->filled('type')) {
             $request->merge(['type' => 'custom']);
@@ -59,7 +59,7 @@ final class GoalController extends Controller
 
     public function update(Request $request, Family $family, FamilyGoal $goal): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         abort_unless($goal->family_id === $family->id, 404);
 
@@ -92,7 +92,7 @@ final class GoalController extends Controller
      */
     public function contribute(Request $request, Family $family, FamilyGoal $goal): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         abort_unless($goal->family_id === $family->id, 404);
 
@@ -121,7 +121,7 @@ final class GoalController extends Controller
 
     public function destroy(Request $request, Family $family, FamilyGoal $goal): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         abort_unless($goal->family_id === $family->id, 404);
 

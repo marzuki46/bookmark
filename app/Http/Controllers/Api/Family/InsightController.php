@@ -8,12 +8,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Family;
 use App\Models\FamilyInsight;
 use App\Services\NudgeService;
+use App\Services\FamilyVisibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 final class InsightController extends Controller
 {
-    public function __construct(private readonly NudgeService $nudges) {}
+    public function __construct(
+        private readonly NudgeService $nudges,
+        private readonly FamilyVisibilityService $visibility,
+    ) {}
 
     /**
      * Everything the dashboard needs on open, in one round trip:
@@ -26,6 +30,8 @@ final class InsightController extends Controller
         $this->authorize('view', $family);
 
         $user = $request->user();
+        $canSeeIncome = $this->visibility->canView($user, $family, 'income');
+        $canSeeExpenses = $this->visibility->canView($user, $family, 'expense');
 
         $familyInsight = $family->insights()
             ->where('scope', 'family')
@@ -43,8 +49,8 @@ final class InsightController extends Controller
             'data' => [
                 'family' => $this->present($familyInsight),
                 'personal' => $this->present($personalInsight),
-                'nudge' => $this->nudges->evaluate($family),
-                'income_by_source' => $this->nudges->incomeBySource($family),
+                'nudge' => ($canSeeIncome || $canSeeExpenses) ? $this->nudges->evaluate($family) : null,
+                'income_by_source' => $canSeeIncome ? $this->nudges->incomeBySource($family) : [],
                 'week_key' => now()->format('o-\WW'),
                 'days_left_this_month' => $this->nudges->daysLeftThisMonth(),
             ],

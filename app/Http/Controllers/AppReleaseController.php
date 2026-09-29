@@ -32,6 +32,7 @@ final class AppReleaseController extends Controller
             'version_code' => ['required', 'integer', 'min:1', Rule::unique('app_releases', 'version_code')],
             'version_name' => ['required', 'string', 'max:32'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'is_mandatory' => ['nullable', 'boolean'],
         ]);
 
         $file = $request->file('apk');
@@ -51,6 +52,7 @@ final class AppReleaseController extends Controller
             'version_code' => (int) $validated['version_code'],
             'version_name' => $validated['version_name'],
             'notes' => $validated['notes'] ?? null,
+            'is_mandatory' => (bool) ($validated['is_mandatory'] ?? false),
             'file_path' => $path,
             'file_size' => Storage::disk('local')->size($path),
             'sha256' => hash_file('sha256', $realPath) ?: null,
@@ -106,6 +108,7 @@ final class AppReleaseController extends Controller
             'version_code' => ['required', 'integer', 'min:1', Rule::unique('app_releases', 'version_code')],
             'version_name' => ['required', 'string', 'max:32'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'is_mandatory' => ['nullable', 'boolean'],
         ]);
 
         $disk = Storage::disk('local');
@@ -159,6 +162,7 @@ final class AppReleaseController extends Controller
                 'version_code' => (int) $data['version_code'],
                 'version_name' => $data['version_name'],
                 'notes' => $data['notes'] ?? null,
+                'is_mandatory' => (bool) ($data['is_mandatory'] ?? false),
                 'file_path' => $finalRelative,
                 'file_size' => filesize($finalPath),
                 'sha256' => hash_file('sha256', $finalPath) ?: null,

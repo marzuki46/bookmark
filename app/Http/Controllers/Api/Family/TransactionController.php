@@ -11,13 +11,17 @@ use App\Models\FamilyCategory;
 use App\Models\FamilyTransaction;
 use App\Models\IncomeSource;
 use App\Services\NudgeService;
+use App\Services\FamilyVisibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 final class TransactionController extends Controller
 {
-    public function __construct(private readonly NudgeService $nudges) {}
+    public function __construct(
+        private readonly NudgeService $nudges,
+        private readonly FamilyVisibilityService $visibility,
+    ) {}
 
     public function index(Request $request, Family $family): AnonymousResourceCollection
     {
@@ -34,7 +38,7 @@ final class TransactionController extends Controller
             'per_page' => ['nullable', 'integer', 'between:1,100'],
         ]);
 
-        $transactions = $family->transactions()
+        $transactions = $this->visibility->scopeTransactions($family->transactions(), $request->user(), $family)
             ->with(['category:id,name,type', 'incomeSource:id,name,type', 'user:id,name'])
             ->when($data['type'] ?? null, fn ($q, $v) => $q->where('type', $v))
             ->when($data['payer'] ?? null, fn ($q, $v) => $q->where('payer', $v))
@@ -90,7 +94,7 @@ final class TransactionController extends Controller
 
     public function update(Request $request, Family $family, FamilyTransaction $transaction): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         $this->ensureBelongsToFamily($transaction, $family);
 
@@ -124,7 +128,7 @@ final class TransactionController extends Controller
 
     public function destroy(Request $request, Family $family, FamilyTransaction $transaction): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         $this->ensureBelongsToFamily($transaction, $family);
 

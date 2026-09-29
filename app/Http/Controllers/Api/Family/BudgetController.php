@@ -8,15 +8,19 @@ use App\Http\Controllers\Controller;
 use App\Models\Family;
 use App\Models\FamilyBudget;
 use App\Models\FamilyCategory;
+use App\Services\FamilyVisibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 
 final class BudgetController extends Controller
 {
+    public function __construct(private readonly FamilyVisibilityService $visibility) {}
+
     public function index(Request $request, Family $family): JsonResponse
     {
         $this->authorize('view', $family);
+        $this->ensureVisible($request, $family);
 
         $data = $request->validate([
             'month' => ['nullable', 'integer', 'between:1,12'],
@@ -61,7 +65,7 @@ final class BudgetController extends Controller
 
     public function store(Request $request, Family $family): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         $data = $request->validate([
             'category_id' => ['nullable', 'integer'],
@@ -104,7 +108,7 @@ final class BudgetController extends Controller
 
     public function update(Request $request, Family $family, FamilyBudget $budget): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         abort_unless($budget->family_id === $family->id, 404);
 
@@ -125,7 +129,7 @@ final class BudgetController extends Controller
 
     public function destroy(Request $request, Family $family, FamilyBudget $budget): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         abort_unless($budget->family_id === $family->id, 404);
 
@@ -145,5 +149,14 @@ final class BudgetController extends Controller
             ->exists();
 
         abort_unless($exists, 422, 'Kategori tidak milik keluarga ini.');
+    }
+
+    private function ensureVisible(Request $request, Family $family): void
+    {
+        abort_unless(
+            $this->visibility->canView($request->user(), $family, 'expense'),
+            403,
+            'Data anggaran dibatasi oleh kepala keluarga.'
+        );
     }
 }

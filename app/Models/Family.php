@@ -15,6 +15,13 @@ class Family extends Model
         'owner_user_id',
         'housing_complex_id',
         'invite_code',
+        'advisor_enabled',
+        'advisor_profile',
+    ];
+
+    protected $casts = [
+        'advisor_enabled' => 'boolean',
+        'advisor_profile' => 'array',
     ];
 
     public function owner(): BelongsTo

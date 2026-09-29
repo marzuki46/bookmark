@@ -16,9 +16,11 @@ final class AppRelease extends Model
         'version_code',
         'version_name',
         'notes',
+        'is_mandatory',
         'file_path',
         'file_size',
         'sha256',
+        'released_at',
     ];
 
     protected function casts(): array
@@ -26,6 +28,8 @@ final class AppRelease extends Model
         return [
             'version_code' => 'integer',
             'file_size' => 'integer',
+            'is_mandatory' => 'boolean',
+            'released_at' => 'datetime',
         ];
     }
 }

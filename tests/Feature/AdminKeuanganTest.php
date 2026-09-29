@@ -281,4 +281,42 @@ final class AdminKeuanganTest extends TestCase
         $component->assertSet('debts.installment', 25_000.0);
         $component->assertSet('debts.count', 1);
     }
+
+    public function test_admin_can_update_family_member_visibility_from_family_management(): void
+    {
+        $admin = $this->admin();
+        $owner = User::factory()->create();
+        $child = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Permission',
+            'owner_user_id' => $owner->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
+        FamilyMember::create([
+            'family_id' => $family->id,
+            'user_id' => $child->id,
+            'role' => 'member',
+            'relationship' => 'child',
+            'visibility' => ['income' => false, 'expense' => false, 'debts' => false],
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(UserFinances::class, ['familyId' => $family->id])
+            ->call('editMember', $child->id)
+            ->assertSet('editingMemberId', $child->id)
+            ->set('memberRelationship', 'adult')
+            ->set('memberCanViewIncome', true)
+            ->set('memberCanViewExpense', true)
+            ->set('memberCanViewDebts', true)
+            ->call('saveMemberSettings')
+            ->assertSet('editingMemberId', null);
+
+        $this->assertSame('adult', $child->familyMember()->fresh()->relationship);
+        $this->assertSame([
+            'income' => true,
+            'expense' => true,
+            'debts' => true,
+        ], $child->familyMember()->fresh()->visibility);
+    }
 }

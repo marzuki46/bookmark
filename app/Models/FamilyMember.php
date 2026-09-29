@@ -15,12 +15,15 @@ class FamilyMember extends Model
         'role',
         'is_family_only',
         'payer_role',
+        'relationship',
+        'visibility',
     ];
 
     protected function casts(): array
     {
         return [
             'is_family_only' => 'boolean',
+            'visibility' => 'array',
         ];
     }
 
@@ -69,6 +72,21 @@ class FamilyMember extends Model
             'wife' => 'Istri',
             default => null,
         };
+    }
+
+    public function canView(string $area): bool
+    {
+        if ($this->role === 'owner') {
+            return true;
+        }
+
+        return (bool) ($this->visibility[$area] ?? true);
+    }
+
+    public function canManage(): bool
+    {
+        return $this->role === 'owner'
+            || ($this->relationship !== 'child' && $this->payer_role !== null);
     }
 
     public function family(): BelongsTo

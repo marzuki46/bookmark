@@ -26,6 +26,15 @@ final class FamilyPolicy
 
     public function manage(User $user, Family $family): bool
     {
-        return $family->isOwner($user);
+        return $family->members()
+            ->where('user_id', $user->id)
+            ->where(function ($query): void {
+                $query->where('role', 'owner')
+                    ->orWhere(function ($adult): void {
+                        $adult->where('relationship', '!=', 'child')
+                            ->whereNotNull('payer_role');
+                    });
+            })
+            ->exists();
     }
 }

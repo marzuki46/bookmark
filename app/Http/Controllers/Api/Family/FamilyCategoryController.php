@@ -47,7 +47,7 @@ final class FamilyCategoryController extends Controller
 
     public function store(Request $request, Family $family): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         if (! $request->filled('type')) {
             $request->merge(['type' => 'expense']);
@@ -86,7 +86,7 @@ final class FamilyCategoryController extends Controller
 
     public function update(Request $request, Family $family, FamilyCategory $category): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         $this->assertSameFamily($family, $category->id);
 
@@ -111,7 +111,7 @@ final class FamilyCategoryController extends Controller
 
     public function destroy(Request $request, Family $family, FamilyCategory $category): \Illuminate\Http\Response|JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
         $this->assertSameFamily($family, $category->id);
 
         if ($category->is_system) {

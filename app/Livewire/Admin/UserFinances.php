@@ -7,6 +7,7 @@ namespace App\Livewire\Admin;
 use App\Models\Family;
 use App\Models\FamilyDebt;
 use App\Models\FamilyTransaction;
+use App\Models\Subscription;
 use App\Models\User;
 use App\Services\FamilyAIService;
 use Livewire\Component;
@@ -14,6 +15,20 @@ use Livewire\Component;
 final class UserFinances extends Component
 {
     public ?int $userId = null;
+
+    public ?int $familyId = null;
+
+    public ?int $editingMemberId = null;
+
+    public string $memberRelationship = 'adult';
+
+    public bool $memberCanViewIncome = true;
+
+    public bool $memberCanViewExpense = true;
+
+    public bool $memberCanViewDebts = true;
+
+    public string $statusMessage = '';
 
     public function getUsersProperty()
     {
@@ -29,11 +44,78 @@ final class UserFinances extends Component
             ]);
     }
 
+    public function getFamiliesProperty()
+    {
+        return Family::query()
+            ->with(['owner:id,name,email', 'members.user:id,name,email'])
+            ->withCount('members')
+            ->orderBy('name')
+            ->get();
+    }
+
     private function family(): ?Family
     {
+        if ($this->familyId) {
+            return Family::query()
+                ->with(['owner:id,name,email', 'members.user:id,name,email'])
+                ->find($this->familyId);
+        }
+
         $user = User::query()->find($this->userId);
 
         return $user?->family();
+    }
+
+    public function getLicenseProperty(): ?Subscription
+    {
+        $family = $this->family();
+
+        return $family
+            ? Subscription::query()->with('plan')->where('family_id', $family->id)->latest('id')->first()
+            : null;
+    }
+
+    public function editMember(int $memberUserId): void
+    {
+        $this->authorizeAdmin();
+
+        $member = $this->family()?->members()->where('user_id', $memberUserId)->firstOrFail();
+        abort_if($member->role === 'owner', 422, 'Pemilik keluarga tidak dapat diubah dari menu anggota.');
+
+        $visibility = $member->visibility ?? [];
+        $this->editingMemberId = $member->user_id;
+        $this->memberRelationship = $member->relationship ?? 'adult';
+        $this->memberCanViewIncome = (bool) ($visibility['income'] ?? true);
+        $this->memberCanViewExpense = (bool) ($visibility['expense'] ?? true);
+        $this->memberCanViewDebts = (bool) ($visibility['debts'] ?? true);
+    }
+
+    public function saveMemberSettings(): void
+    {
+        $this->authorizeAdmin();
+
+        $data = $this->validate([
+            'editingMemberId' => ['required', 'integer'],
+            'memberRelationship' => ['required', 'in:adult,child'],
+            'memberCanViewIncome' => ['boolean'],
+            'memberCanViewExpense' => ['boolean'],
+            'memberCanViewDebts' => ['boolean'],
+        ]);
+
+        $member = $this->family()?->members()->where('user_id', $data['editingMemberId'])->firstOrFail();
+        abort_if($member->role === 'owner', 422, 'Pemilik keluarga tidak dapat diubah dari menu anggota.');
+
+        $member->update([
+            'relationship' => $data['memberRelationship'],
+            'visibility' => [
+                'income' => (bool) $data['memberCanViewIncome'],
+                'expense' => (bool) $data['memberCanViewExpense'],
+                'debts' => (bool) $data['memberCanViewDebts'],
+            ],
+        ]);
+
+        $this->editingMemberId = null;
+        $this->statusMessage = 'Permission anggota diperbarui.';
     }
 
     /**
@@ -42,7 +124,7 @@ final class UserFinances extends Component
     public function getMonthlySeriesProperty(): array
     {
         $family = $this->family();
-        if (! $family || ! $this->userId) {
+        if (! $family) {
             return [];
         }
 
@@ -71,7 +153,7 @@ final class UserFinances extends Component
     public function getCategoryBreakdownProperty(): array
     {
         $family = $this->family();
-        if (! $family || ! $this->userId) {
+        if (! $family) {
             return [];
         }
 
@@ -94,7 +176,7 @@ final class UserFinances extends Component
     public function getDebtsProperty(): array
     {
         $family = $this->family();
-        if (! $family || ! $this->userId) {
+        if (! $family) {
             return ['total' => 0, 'installment' => 0, 'count' => 0];
         }
 
@@ -113,7 +195,7 @@ final class UserFinances extends Component
     public function getHealthProperty(): ?array
     {
         $family = $this->family();
-        if (! $family || ! $this->userId) {
+        if (! $family) {
             return null;
         }
 
@@ -123,7 +205,7 @@ final class UserFinances extends Component
     public function getAnomaliesProperty(): array
     {
         $family = $this->family();
-        if (! $family || ! $this->userId) {
+        if (! $family) {
             return [];
         }
 
@@ -149,7 +231,7 @@ final class UserFinances extends Component
     public function getRecentTransactionsProperty()
     {
         $family = $this->family();
-        if (! $family || ! $this->userId) {
+        if (! $family) {
             return collect();
         }
 
@@ -164,6 +246,9 @@ final class UserFinances extends Component
     {
         return view('livewire.admin.user-finances', [
             'users' => $this->users,
+            'families' => $this->families,
+            'selectedFamily' => $this->family(),
+            'license' => $this->license,
             'monthlySeries' => $this->monthlySeries,
             'categoryBreakdown' => $this->categoryBreakdown,
             'debts' => $this->debts,
@@ -171,5 +256,10 @@ final class UserFinances extends Component
             'anomalies' => $this->anomalies,
             'recentTransactions' => $this->recentTransactions,
         ]);
+    }
+
+    private function authorizeAdmin(): void
+    {
+        abort_unless(auth()->user()?->is_admin === true, 403);
     }
 }

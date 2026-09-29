@@ -521,6 +521,28 @@ final class FamilyHouseholdApiTest extends TestCase
 
     // â”€â”€ GOALS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+    public function test_emergency_fund_target_is_three_months_of_average_expense(): void
+    {
+        $category = $this->postJson("/api/families/{$this->family->id}/categories", [
+            'name' => 'Kebutuhan',
+            'type' => 'expense',
+        ])->json('data');
+
+        foreach ([1, 2, 3] as $i) {
+            $this->postJson("/api/families/{$this->family->id}/transactions", [
+                'type' => 'expense',
+                'amount' => 500_000,
+                'description' => 'Kebutuhan bulan ke-'.$i,
+                'date' => now()->subMonths(4 - $i)->startOfMonth()->toDateString(),
+                'category_id' => $category['id'],
+            ])->assertStatus(201);
+        }
+
+        $service = new \App\Services\FamilyAllocationService;
+
+        $this->assertSame(1_500_000.0, $service->emergencyFundTarget($this->family));
+    }
+
     public function test_goal_contribution_completes_at_target(): void
     {
         $goal = $this->postJson("/api/families/{$this->family->id}/goals", [

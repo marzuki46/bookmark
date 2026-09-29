@@ -7,15 +7,23 @@ namespace App\Http\Controllers\Api\Family;
 use App\Http\Controllers\Controller;
 use App\Models\Family;
 use App\Models\IncomeSource;
+use App\Services\FamilyVisibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 final class IncomeSourceController extends Controller
 {
+    public function __construct(private readonly FamilyVisibilityService $visibility) {}
+
     public function index(Request $request, Family $family): JsonResponse
     {
         $this->authorize('view', $family);
+        abort_unless(
+            $this->visibility->canView($request->user(), $family, 'income'),
+            403,
+            'Data pemasukan dibatasi oleh kepala keluarga.'
+        );
 
         $totals = $family->transactions()
             ->where('type', 'income')
@@ -44,7 +52,7 @@ final class IncomeSourceController extends Controller
 
     public function store(Request $request, Family $family): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         if (! $request->filled('type')) {
             $request->merge(['type' => 'other']);
@@ -75,7 +83,7 @@ final class IncomeSourceController extends Controller
 
     public function update(Request $request, Family $family, IncomeSource $incomeSource): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         abort_unless($incomeSource->family_id === $family->id, 404);
 
@@ -105,7 +113,7 @@ final class IncomeSourceController extends Controller
 
     public function destroy(Request $request, Family $family, IncomeSource $incomeSource): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         abort_unless($incomeSource->family_id === $family->id, 404);
 

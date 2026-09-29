@@ -13,6 +13,7 @@ use App\Models\FamilyMember;
 use App\Models\FamilyTransaction;
 use App\Models\User;
 use App\Services\FamilyAIService;
+use App\Services\FamilyVisibilityService;
 use App\Services\LoginCodeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -27,6 +28,7 @@ final class FamilyController extends Controller
     public function __construct(
         private readonly FamilyAIService $ai,
         private readonly LoginCodeService $codes,
+        private readonly FamilyVisibilityService $visibility,
     ) {}
 
     /**
@@ -94,6 +96,10 @@ final class FamilyController extends Controller
                     'name' => $member->user?->name,
                     'payer_role' => $member->payer_role,
                     'payer_label' => $member->payerLabel(),
+                    'relationship' => $member->relationship,
+                    'visibility' => $member->user_id === $request->user()->id || $request->user()->isFamilyOwner()
+                        ? $member->visibility
+                        : null,
                 ])->values(),
             ],
         ]);
@@ -187,6 +193,7 @@ final class FamilyController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'payer_role' => ['nullable', 'in:husband,wife'],
             'email' => ['nullable', 'email', 'max:255'],
+            'relationship' => ['nullable', 'in:adult,child'],
         ]);
 
         if (($data['payer_role'] ?? null) !== null) {
@@ -225,6 +232,10 @@ final class FamilyController extends Controller
             'role' => 'member',
             'is_family_only' => true,
             'payer_role' => $data['payer_role'] ?? null,
+            'relationship' => $data['relationship'] ?? 'adult',
+            'visibility' => ($data['relationship'] ?? 'adult') === 'child'
+                ? ['income' => false, 'expense' => false, 'debts' => false]
+                : null,
         ]);
 
         $code = $this->codes->issueFor($user);
@@ -254,6 +265,11 @@ final class FamilyController extends Controller
         $data = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'payer_role' => ['sometimes', 'nullable', 'in:husband,wife'],
+            'relationship' => ['sometimes', 'in:adult,child'],
+            'visibility' => ['sometimes', 'array'],
+            'visibility.income' => ['sometimes', 'boolean'],
+            'visibility.expense' => ['sometimes', 'boolean'],
+            'visibility.debts' => ['sometimes', 'boolean'],
         ]);
 
         if (array_key_exists('payer_role', $data) && $data['payer_role'] !== null) {
@@ -276,6 +292,17 @@ final class FamilyController extends Controller
         }
         if (array_key_exists('payer_role', $data)) {
             $member->update(['payer_role' => $data['payer_role']]);
+        }
+        if (array_key_exists('relationship', $data)) {
+            $member->update([
+                'relationship' => $data['relationship'],
+                ...($data['relationship'] === 'child' && ! array_key_exists('visibility', $data)
+                    ? ['visibility' => ['income' => false, 'expense' => false, 'debts' => false]]
+                    : []),
+            ]);
+        }
+        if (array_key_exists('visibility', $data)) {
+            $member->update(['visibility' => $data['visibility']]);
         }
 
         $member->load('user:id,name,email');
@@ -317,6 +344,8 @@ final class FamilyController extends Controller
             'email' => $member->user?->email,
             'payer_role' => $member->payer_role,
             'payer_label' => $member->payerLabel(),
+            'relationship' => $member->relationship,
+            'visibility' => $member->visibility ?? [],
         ];
     }
 
@@ -327,6 +356,13 @@ final class FamilyController extends Controller
     public function summary(Request $request, Family $family): JsonResponse
     {
         $this->authorize('view', $family);
+
+        abort_unless(
+            $this->visibility->canView($request->user(), $family, 'income')
+                || $this->visibility->canView($request->user(), $family, 'expense'),
+            403,
+            'Ringkasan keuangan dibatasi oleh kepala keluarga.'
+        );
 
         return response()->json([
             'data' => $this->ai->healthScore($family),
@@ -345,13 +381,15 @@ final class FamilyController extends Controller
 
         $today = now()->startOfDay();
         $reminders = collect();
+        $canSeeDebts = $this->visibility->canView($request->user(), $family, 'debts');
+        $canSeeExpenses = $this->visibility->canView($request->user(), $family, 'expense');
 
-        $debts = FamilyDebt::query()
+        $debts = $canSeeDebts ? FamilyDebt::query()
             ->where('family_id', $family->id)
             ->whereIn('status', ['open', 'partial'])
             ->where('type', 'payable')
             ->whereNotNull('due_date')
-            ->get();
+            ->get() : collect();
 
         foreach ($debts as $debt) {
             $dueAt = now()->parse($debt->due_date)->startOfDay();
@@ -397,12 +435,12 @@ final class FamilyController extends Controller
         }
 
         $now = now();
-        $budgets = FamilyBudget::query()
+        $budgets = $canSeeExpenses ? FamilyBudget::query()
             ->where('family_id', $family->id)
             ->where('month', $now->month)
             ->where('year', $now->year)
             ->with('category')
-            ->get();
+            ->get() : collect();
 
         foreach ($budgets as $budget) {
             if ($budget->category === null) {
@@ -440,7 +478,11 @@ final class FamilyController extends Controller
         $months = max(1, min(12, $request->integer('months', 6) ?: 6));
         $start = now()->startOfMonth()->subMonths($months - 1);
 
-        $rows = FamilyTransaction::query()
+        $rows = $this->visibility->scopeTransactions(
+            FamilyTransaction::query(),
+            $request->user(),
+            $family
+        )
             ->where('family_id', $family->id)
             ->where('date', '>=', $start->toDateString())
             ->get(['type', 'amount', 'date']);

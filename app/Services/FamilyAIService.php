@@ -41,6 +41,12 @@ final class FamilyAIService
 
     /**
      * Rule-based financial health score (0-100) + structured recommendations.
+     *
+     * The affordability checks are anchored on *essential* monthly needs (real
+     * spending history, otherwise the essentials share of income) rather than
+     * raw total expense, and debt installments are only scored on the share
+     * still unpaid this month — payments already recorded as expenses are not
+     * counted twice.
      */
     public function healthScore(Family $family): array
     {
@@ -50,7 +56,9 @@ final class FamilyAIService
             ->where('type', 'expense')->where('date', '>=', now()->startOfMonth())->sum('amount');
 
         $allocator = new FamilyAllocationService;
+        $advisor = new FamilyAdvisorService;
         $avgExpense = $allocator->averageMonthlyExpense($family);
+        $essentialMonthly = $advisor->essentialMonthlyExpense($family);
         $emergencyTarget = $allocator->emergencyFundTarget($family);
 
         $emergencyCurrent = (float) FamilyGoal::forFamily($family->id)
@@ -58,7 +66,32 @@ final class FamilyAIService
 
         $debt = FamilyDebt::forFamily($family->id)->where('type', 'payable')->where('status', '!=', 'settled')->get();
         $totalDebt = $debt->sum(fn ($d) => $d->remaining);
-        $debtInstallment = (float) $debt->sum('installment');
+        $plannedInstallment = (float) $debt->sum('installment');
+        $realizedThisMonth = $advisor->realizedDebtThisMonth($family);
+        $uncoveredObligation = max(0.0, $plannedInstallment - $realizedThisMonth);
+
+        $insufficient = $income <= 0 && $expense <= 0 && $avgExpense <= 0 && $emergencyCurrent <= 0;
+
+        if ($insufficient) {
+            return [
+                'score' => 0,
+                'grade' => 'Belum cukup data',
+                'insufficient_data' => true,
+                'income' => $income,
+                'expense' => $expense,
+                'savings' => 0.0,
+                'essential_monthly' => 0.0,
+                'emergency_current' => 0.0,
+                'emergency_target' => 0.0,
+                'total_debt' => 0.0,
+                'planned_debt' => 0.0,
+                'realized_debt_this_month' => 0.0,
+                'uncovered_debt' => 0.0,
+                'recommendations' => [
+                    'Catat pemasukan dan pengeluaran rutin selama minimal 1 bulan agar Kang Cuan bisa menilai kesehatan keuangan.',
+                ],
+            ];
+        }
 
         $score = 60.0;
 
@@ -73,6 +106,9 @@ final class FamilyAIService
             } else {
                 $score -= 15;
             }
+        } elseif ($expense > 0) {
+            // Spending without any recorded income this month.
+            $score -= 15;
         }
 
         if ($emergencyTarget > 0) {
@@ -88,41 +124,61 @@ final class FamilyAIService
             }
         }
 
-        if ($totalDebt > 0) {
-            if ($income > 0) {
-                $debtRatio = $totalDebt / ($income * 12) * 100;
-                if ($debtRatio <= 20) {
-                    $score += 5;
-                } elseif ($debtRatio > 50) {
-                    $score -= 10;
-                }
-            }
-
-            if ($debtInstallment > 0 && $income > 0 && ($debtInstallment / max($income, 1) > 0.5)) {
+        if ($income > 0 && $totalDebt > 0) {
+            $debtRatio = $totalDebt / ($income * 12) * 100;
+            if ($debtRatio <= 20) {
+                $score += 5;
+            } elseif ($debtRatio > 50) {
                 $score -= 10;
             }
         }
 
-        if ($income > 0 && $expense > 0) {
-            $needs = $expense / max($income, 1) * 100;
-            if ($needs > 70) {
+        // Affordability of the month's *unpaid* installments only; the paid part
+        // is already reflected inside $expense and must not be charged again.
+        if ($income > 0 && $uncoveredObligation > 0 && ($uncoveredObligation / $income > 0.5)) {
+            $score -= 10;
+        }
+
+        // Survival check: can the family cover its essential needs from income?
+        if ($income > 0 && $essentialMonthly > 0) {
+            $essentialRatio = $essentialMonthly / $income * 100;
+            if ($essentialRatio > 85) {
+                $score -= 10;
+            } elseif ($essentialRatio > 70) {
                 $score -= 5;
+            } elseif ($essentialRatio <= 50) {
+                $score += 5;
             }
         }
 
         $score = (int) round(max(0, min(100, $score)));
 
-        $recommendations = $this->ruleRecommendations($family, $income, $expense, $emergencyCurrent, $emergencyTarget, $totalDebt);
+        $recommendations = $this->ruleRecommendations(
+            $family,
+            $income,
+            $expense,
+            $essentialMonthly,
+            $emergencyCurrent,
+            $emergencyTarget,
+            $totalDebt,
+            $uncoveredObligation,
+            $realizedThisMonth,
+        );
 
         return [
             'score' => $score,
             'grade' => $score >= 80 ? 'Sangat Sehat' : ($score >= 60 ? 'Cukup Sehat' : ($score >= 40 ? 'Perlu Perhatian' : 'Kritis')),
+            'insufficient_data' => false,
             'income' => $income,
             'expense' => $expense,
-            'savings' => max(0, $income - $expense),
+            'savings' => $income - $expense,
+            'essential_monthly' => round($essentialMonthly, 2),
             'emergency_current' => $emergencyCurrent,
             'emergency_target' => $emergencyTarget,
             'total_debt' => $totalDebt,
+            'planned_debt' => $plannedInstallment,
+            'realized_debt_this_month' => $realizedThisMonth,
+            'uncovered_debt' => $uncoveredObligation,
             'recommendations' => $recommendations,
         ];
     }
@@ -236,8 +292,17 @@ Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris
         return implode("\n", $lines);
     }
 
-    private function ruleRecommendations(Family $family, float $income, float $expense, float $emergencyCurrent, float $emergencyTarget, float $totalDebt): array
-    {
+    private function ruleRecommendations(
+        Family $family,
+        float $income,
+        float $expense,
+        float $essentialMonthly,
+        float $emergencyCurrent,
+        float $emergencyTarget,
+        float $totalDebt,
+        float $uncoveredObligation,
+        float $realizedThisMonth,
+    ): array {
         $recs = [];
 
         if ($emergencyTarget > 0 && $emergencyCurrent < $emergencyTarget) {
@@ -249,8 +314,8 @@ Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris
             if ($savingsRate < 10) {
                 $recs[] = 'Tingkatkan tabungan ke minimal 10-20% dari pemasukan; evaluasi pengeluaran non-esensial.';
             }
-        } elseif ($income > 0 && $expense > $income) {
-            $recs[] = 'Pengeluaran melebihi pemasukan bulan ini — cek budget dan kurangi biaya yang bisa dipangkas.';
+        } elseif ($expense > 0) {
+            $recs[] = 'Bulan ini tercatat pengeluaran tanpa pemasukan — pastikan pencatatan pemasukan lengkap.';
         }
 
         if ($totalDebt > 0) {
@@ -260,12 +325,22 @@ Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris
                 $top = $order[0]['debt']->name;
                 $recs[] = 'Lunasi hutang prioritas: "'.$top.'" (strategi avalanche: bunga tertinggi lebih dulu).';
             }
+
+            if ($uncoveredObligation <= 0 && $realizedThisMonth > 0) {
+                $recs[] = 'Cicilan bulan ini sudah terbayar penuh — alihkan dana bekas cicilan ke dana darurat atau target tabungan.';
+            } elseif ($income > 0 && ($uncoveredObligation / $income > 0.5)) {
+                $recs[] = 'Sisa cicilan wajib bulan ini mencapai lebih dari separuh pemasukan — bicarakan restrukturisasi dengan kreditur.';
+            }
         }
 
-        if ($expense > 0 && $income > 0) {
-            $needs = $expense / max($income, 1) * 100;
-            if ($needs > 70) {
-                $recs[] = 'Beban pengeluaran >70% pemasukan. Pertimbangkan prinsip 50/30/20 agar ada ruang untuk goals.';
+        if ($income > 0 && $essentialMonthly > 0) {
+            $essentialRatio = $essentialMonthly / $income * 100;
+            if ($essentialRatio > 85) {
+                $recs[] = 'Kebutuhan pokok menghabiskan hampir semua pemasukan — cari tambahan pemasukan atau biaya tetap yang bisa ditekan.';
+            } elseif ($essentialRatio > 70) {
+                $recs[] = 'Kebutuhan pokok >70% pemasukan. Pertimbangkan prinsip 50/30/20 agar ada ruang untuk goals.';
+            } elseif ($essentialRatio <= 50) {
+                $recs[] = 'Kebutuhan pokok masih di bawah 50% pemasukan — ruang menabung untuk dana darurat dan tujuan masih terbuka lebar.';
             }
         }
 

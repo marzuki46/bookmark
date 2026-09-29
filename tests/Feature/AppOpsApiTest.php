@@ -46,6 +46,24 @@ final class AppOpsApiTest extends TestCase
 
     // ─── In-app update ───
 
+    public function test_summary_preserves_deficit_and_balanced_and_positive_cash_flow(): void
+    {
+        Sanctum::actingAs($this->owner);
+        $expense = $this->family->transactions()->create([
+            'user_id' => $this->owner->id, 'type' => 'expense',
+            'amount' => 150000, 'description' => 'Belanja', 'date' => now()->toDateString(),
+        ]);
+        $url = "/api/families/{$this->family->id}/summary";
+        $this->assertEquals(-150000, $this->getJson($url)->assertOk()->json('data.savings'));
+        $this->family->transactions()->create([
+            'user_id' => $this->owner->id, 'type' => 'income',
+            'amount' => 150000, 'description' => 'Gaji', 'date' => now()->toDateString(),
+        ]);
+        $this->assertEquals(0, $this->getJson($url)->assertOk()->json('data.savings'));
+        $expense->update(['amount' => 100000]);
+        $this->assertEquals(50000, $this->getJson($url)->assertOk()->json('data.savings'));
+    }
+
     public function test_update_check_reports_available_version(): void
     {
         config(['app.version_code' => 12, 'app.version_name' => '2.1.0']);
@@ -210,6 +228,54 @@ final class AppOpsApiTest extends TestCase
         ]);
     }
 
+    public function test_child_visibility_hides_parent_transactions_and_summary(): void
+    {
+        Sanctum::actingAs($this->owner);
+
+        $childId = $this->postJson("/api/families/{$this->family->id}/members", [
+            'name' => 'Anak',
+            'relationship' => 'child',
+        ])->assertCreated()->json('data.user_id');
+
+        $this->postJson("/api/families/{$this->family->id}/transactions", [
+            'type' => 'expense',
+            'amount' => 125_000,
+            'description' => 'Pengeluaran orang tua',
+            'date' => now()->toDateString(),
+            'payer' => 'husband',
+        ])->assertCreated();
+
+        $this->actingAs(User::findOrFail($childId), 'sanctum');
+
+        $this->getJson("/api/families/{$this->family->id}/transactions")
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+        $this->getJson("/api/families/{$this->family->id}/summary")
+            ->assertForbidden();
+        $this->getJson("/api/families/{$this->family->id}/debts")
+            ->assertForbidden();
+        $this->getJson("/api/families/{$this->family->id}/budgets")
+            ->assertForbidden();
+        $this->getJson("/api/families/{$this->family->id}/income-sources")
+            ->assertForbidden();
+
+        $this->postJson("/api/families/{$this->family->id}/debts", [
+            'name' => 'Hutang anak',
+            'amount' => 50_000,
+        ])->assertForbidden();
+
+        $this->postJson("/api/families/{$this->family->id}/budgets", [
+            'month' => now()->month,
+            'year' => now()->year,
+            'amount' => 50_000,
+        ])->assertForbidden();
+
+        $this->postJson("/api/families/{$this->family->id}/categories", [
+            'name' => 'Kategori anak',
+            'type' => 'expense',
+        ])->assertForbidden();
+    }
+
     public function test_plain_member_cannot_add_members(): void
     {
         $wife = User::factory()->create();
@@ -285,9 +351,15 @@ final class AppOpsApiTest extends TestCase
         $this->patchJson("/api/families/{$this->family->id}/members/{$member->id}", [
             'name' => 'Nama Baru',
             'payer_role' => 'wife',
+            'relationship' => 'child',
+            'visibility' => ['income' => false, 'expense' => true, 'debts' => false],
         ])->assertOk()
             ->assertJsonPath('data.name', 'Nama Baru')
-            ->assertJsonPath('data.payer_role', 'wife');
+            ->assertJsonPath('data.payer_role', 'wife')
+            ->assertJsonPath('data.relationship', 'child')
+            ->assertJsonPath('data.visibility.income', false)
+            ->assertJsonPath('data.visibility.expense', true)
+            ->assertJsonPath('data.visibility.debts', false);
 
         $this->deleteJson("/api/families/{$this->family->id}/members/{$member->id}")
             ->assertNoContent();

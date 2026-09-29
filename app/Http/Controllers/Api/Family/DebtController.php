@@ -7,15 +7,19 @@ namespace App\Http\Controllers\Api\Family;
 use App\Http\Controllers\Controller;
 use App\Models\Family;
 use App\Models\FamilyDebt;
+use App\Services\FamilyVisibilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 final class DebtController extends Controller
 {
+    public function __construct(private readonly FamilyVisibilityService $visibility) {}
+
     public function index(Request $request, Family $family): JsonResponse
     {
         $this->authorize('view', $family);
+        $this->ensureVisible($request, $family);
 
         $data = $request->validate([
             'status' => ['nullable', 'in:open,partial,settled'],
@@ -35,7 +39,7 @@ final class DebtController extends Controller
 
     public function store(Request $request, Family $family): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         if (! $request->filled('type')) {
             $request->merge(['type' => 'payable']);
@@ -60,6 +64,7 @@ final class DebtController extends Controller
     public function show(Request $request, Family $family, FamilyDebt $debt): JsonResponse
     {
         $this->authorize('view', $family);
+        $this->ensureVisible($request, $family);
 
         $this->ensureBelongsToFamily($debt, $family);
 
@@ -68,7 +73,7 @@ final class DebtController extends Controller
 
     public function update(Request $request, Family $family, FamilyDebt $debt): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         $this->ensureBelongsToFamily($debt, $family);
 
@@ -100,7 +105,7 @@ final class DebtController extends Controller
 
     public function destroy(Request $request, Family $family, FamilyDebt $debt): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         $this->ensureBelongsToFamily($debt, $family);
 
@@ -117,7 +122,7 @@ final class DebtController extends Controller
      */
     public function pay(Request $request, Family $family, FamilyDebt $debt): JsonResponse
     {
-        $this->authorize('view', $family);
+        $this->authorize('manage', $family);
 
         $this->ensureBelongsToFamily($debt, $family);
 
@@ -167,6 +172,15 @@ final class DebtController extends Controller
     {
         // Guards against a member of one family addressing another's debt by ID.
         abort_unless($debt->family_id === $family->id, 404);
+    }
+
+    private function ensureVisible(Request $request, Family $family): void
+    {
+        abort_unless(
+            $this->visibility->canView($request->user(), $family, 'debts'),
+            403,
+            'Data hutang dibatasi oleh kepala keluarga.'
+        );
     }
 
     private function present(FamilyDebt $debt): array
