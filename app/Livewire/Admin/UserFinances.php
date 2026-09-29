@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Models\AppRelease;
 use App\Models\Family;
 use App\Models\FamilyBudget;
 use App\Models\FamilyCategory;
 use App\Models\FamilyDebt;
 use App\Models\FamilyGoal;
+use App\Models\FamilyMember;
 use App\Models\FamilyTransaction;
 use App\Models\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\FamilyAIService;
+use App\Services\LoginCodeService;
 use App\Services\SubscriptionService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -48,6 +53,20 @@ final class UserFinances extends Component
 
     public string $directoryTab = 'keluarga';
 
+    public bool $showCreateFamily = false;
+
+    public string $newFamilyName = '';
+
+    public string $newOwnerName = '';
+
+    public string $newOwnerEmail = '';
+
+    public ?string $createdLoginCode = null;
+
+    public ?string $createdOwnerEmail = null;
+
+    public ?string $createdAppDownloadUrl = null;
+
     public ?int $licensePlanId = null;
 
     public ?string $licenseExpiry = null;
@@ -73,6 +92,74 @@ final class UserFinances extends Component
 
         $this->directoryTab = $tab;
         $this->resetPage();
+    }
+
+    public function openCreateFamily(): void
+    {
+        $this->authorizeAdmin();
+        $this->resetValidation();
+        $this->showCreateFamily = true;
+        $this->createdLoginCode = null;
+        $this->createdOwnerEmail = null;
+        $this->createdAppDownloadUrl = null;
+    }
+
+    public function cancelCreateFamily(): void
+    {
+        $this->showCreateFamily = false;
+        $this->newFamilyName = '';
+        $this->newOwnerName = '';
+        $this->newOwnerEmail = '';
+        $this->resetValidation();
+    }
+
+    public function createFamily(): void
+    {
+        $this->authorizeAdmin();
+
+        $data = $this->validate([
+            'newFamilyName' => ['required', 'string', 'max:255'],
+            'newOwnerName' => ['required', 'string', 'max:255'],
+            'newOwnerEmail' => ['required', 'email', 'max:255', 'unique:users,email'],
+        ]);
+
+        [$family, $owner] = DB::transaction(function () use ($data): array {
+            $owner = User::query()->create([
+                'name' => trim($data['newOwnerName']),
+                'email' => strtolower(trim($data['newOwnerEmail'])),
+                'password' => Str::random(32),
+                'setup_completed' => true,
+            ]);
+            $owner->forceFill(['email_verified_at' => now()])->save();
+
+            $family = Family::query()->create([
+                'name' => trim($data['newFamilyName']),
+                'owner_user_id' => $owner->id,
+                'invite_code' => Family::generateInviteCode(),
+            ]);
+
+            FamilyMember::query()->create([
+                'family_id' => $family->id,
+                'user_id' => $owner->id,
+                'role' => 'owner',
+                'is_family_only' => false,
+            ]);
+
+            return [$family, $owner];
+        });
+
+        $this->createdLoginCode = app(LoginCodeService::class)->issueFor($owner);
+        $this->createdOwnerEmail = $owner->email;
+        $this->createdAppDownloadUrl = $this->latestAppDownloadUrl();
+        $this->showCreateFamily = false;
+        $this->newFamilyName = '';
+        $this->newOwnerName = '';
+        $this->newOwnerEmail = '';
+        $this->familyId = null;
+        $this->userId = null;
+        $this->resetPage();
+        $this->statusMessage = 'Keluarga berhasil dibuat. Simpan kode login kepala keluarga.';
+        unset($family);
     }
 
     public function updatedFamilyId(): void
@@ -188,6 +275,17 @@ final class UserFinances extends Component
         $user = User::query()->find($this->userId);
 
         return $user?->family();
+    }
+
+    private function latestAppDownloadUrl(): ?string
+    {
+        $release = AppRelease::query()->orderByDesc('version_code')->first();
+
+        if ($release) {
+            return route('app-release.download', $release);
+        }
+
+        return filled(config('app.apk_download_url')) ? (string) config('app.apk_download_url') : null;
     }
 
     public function getLicenseProperty(): ?Subscription

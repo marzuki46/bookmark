@@ -217,6 +217,9 @@ final class AppOpsApiTest extends TestCase
         $this->assertSame('Siti', $response->json('data.name'));
         $this->assertSame('wife', $response->json('data.payer_role'));
         $this->assertMatchesRegularExpression('/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/', $response->json('data.login_code'));
+        $response->assertJsonStructure([
+            'data' => ['app' => ['latest_version_code', 'latest_version_name', 'download_url', 'notes', 'is_mandatory']],
+        ]);
 
         $this->assertDatabaseHas('family_members', [
             'family_id' => $this->family->id,

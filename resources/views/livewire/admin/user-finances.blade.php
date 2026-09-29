@@ -9,9 +9,60 @@
 
     <div class="flex items-center justify-between gap-3 flex-wrap">
         <h2 class="text-base font-semibold text-[var(--text-primary)]">Daftar Keluarga</h2>
+        @if(! $familyId && ! $userId)
+            <button type="button" wire:click="openCreateFamily" class="btn-primary">+ Tambah Keluarga</button>
+        @endif
     </div>
 
+    @if($createdLoginCode)
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="font-semibold">Keluarga berhasil dibuat</p>
+                    <p class="mt-1">Kode login kepala keluarga ({{ $createdOwnerEmail }}) hanya ditampilkan di sini. Salin dan berikan kepada pengguna.</p>
+                    <p class="mt-3 font-mono text-lg tracking-widest">{{ $createdLoginCode }}</p>
+                    @if($createdAppDownloadUrl)
+                        <a href="{{ $createdAppDownloadUrl }}" class="mt-3 inline-flex text-sm font-semibold underline" target="_blank" rel="noreferrer">Download aplikasi terbaru</a>
+                    @else
+                        <p class="mt-3 text-xs text-amber-700">APK terbaru belum dikonfigurasi.</p>
+                    @endif
+                </div>
+                <button type="button" wire:click="$set('createdLoginCode', null)" class="text-xs underline">Tutup</button>
+            </div>
+        </div>
+    @endif
+
     @if(! $familyId && ! $userId)
+        @if($showCreateFamily)
+            <div class="bg-[var(--color-surface)] border border-indigo-200 rounded-xl p-5 space-y-4">
+                <div>
+                    <h3 class="font-semibold text-[var(--text-primary)]">Tambah keluarga baru</h3>
+                    <p class="text-sm text-[var(--text-tertiary)] mt-1">Buat akun kepala keluarga sekaligus. Kode login akan diterbitkan setelah disimpan.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="wp-form-label">Nama keluarga</label>
+                        <input type="text" wire:model="newFamilyName" class="wp-form-input" placeholder="Contoh: Keluarga Santoso">
+                        @error('newFamilyName') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="wp-form-label">Nama kepala keluarga</label>
+                        <input type="text" wire:model="newOwnerName" class="wp-form-input" placeholder="Nama lengkap">
+                        @error('newOwnerName') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="wp-form-label">Email kepala keluarga</label>
+                        <input type="email" wire:model="newOwnerEmail" class="wp-form-input" placeholder="nama@email.com">
+                        @error('newOwnerEmail') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" wire:click="cancelCreateFamily" class="btn-secondary">Batal</button>
+                    <button type="button" wire:click="createFamily" wire:loading.attr="disabled" class="btn-primary">Simpan keluarga</button>
+                </div>
+            </div>
+        @endif
+
         <nav class="flex gap-2 flex-wrap border-b border-[var(--color-border)] pb-2" aria-label="Direktori manajemen keluarga">
             <button type="button" wire:click="setDirectoryTab('keluarga')"
                     class="px-4 py-2 rounded-full text-sm font-medium transition {{ $directoryTab === 'keluarga' ? 'bg-indigo-600 text-white' : 'text-[var(--text-secondary)] hover:bg-[var(--color-bg)]' }}">

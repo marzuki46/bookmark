@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\Family;
 
 use App\Http\Controllers\Controller;
+use App\Models\AppRelease;
 use App\Models\Family;
 use App\Models\FamilyBudget;
 use App\Models\FamilyDebt;
@@ -247,6 +248,7 @@ final class FamilyController extends Controller
                 'payer_role' => $user->familyMember()?->payer_role,
                 'payer_label' => $user->familyMember()?->payerLabel(),
                 'login_code' => $code,
+                'app' => $this->latestAppPayload(),
             ],
         ], 201);
     }
@@ -346,6 +348,29 @@ final class FamilyController extends Controller
             'payer_label' => $member->payerLabel(),
             'relationship' => $member->relationship,
             'visibility' => $member->visibility ?? [],
+        ];
+    }
+
+    private function latestAppPayload(): array
+    {
+        $release = AppRelease::query()->orderByDesc('version_code')->first();
+
+        if ($release) {
+            return [
+                'latest_version_code' => $release->version_code,
+                'latest_version_name' => $release->version_name,
+                'download_url' => route('app-release.download', $release),
+                'notes' => (string) $release->notes,
+                'is_mandatory' => (bool) $release->is_mandatory,
+            ];
+        }
+
+        return [
+            'latest_version_code' => (int) config('app.version_code', 1),
+            'latest_version_name' => (string) config('app.version_name', '1.0.0'),
+            'download_url' => (string) config('app.apk_download_url', ''),
+            'notes' => (string) config('app.apk_notes', ''),
+            'is_mandatory' => false,
         ];
     }
 

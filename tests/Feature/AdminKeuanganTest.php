@@ -113,6 +113,30 @@ final class AdminKeuanganTest extends TestCase
         $this->assertNotSame('', $code);
     }
 
+    public function test_admin_can_create_family_with_owner_and_issue_app_login_code(): void
+    {
+        $admin = $this->admin();
+
+        Livewire::actingAs($admin)
+            ->test(UserFinances::class)
+            ->call('openCreateFamily')
+            ->set('newFamilyName', 'Keluarga Baru')
+            ->set('newOwnerName', 'Kepala Baru')
+            ->set('newOwnerEmail', 'kepala.baru@example.com')
+            ->call('createFamily')
+            ->assertSet('createdOwnerEmail', 'kepala.baru@example.com');
+
+        $owner = User::query()->where('email', 'kepala.baru@example.com')->firstOrFail();
+        $family = Family::query()->where('name', 'Keluarga Baru')->firstOrFail();
+
+        $this->assertDatabaseHas('family_members', [
+            'family_id' => $family->id,
+            'user_id' => $owner->id,
+            'role' => 'owner',
+        ]);
+        $this->assertNotNull($owner->fresh()->app_login_code);
+    }
+
     public function test_profile_about_is_updated_via_api(): void
     {
         $user = User::factory()->create();
