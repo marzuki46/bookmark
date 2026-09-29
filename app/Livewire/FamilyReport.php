@@ -7,6 +7,7 @@ namespace App\Livewire;
 use App\Models\Family;
 use App\Models\FamilyTransaction;
 use App\Services\FamilyAIService;
+use App\Services\FamilyEntitlementService;
 use Livewire\Component;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -148,6 +149,12 @@ final class FamilyReport extends Component
     {
         $family = $this->family;
         if (! $family || strlen($this->aiQuery) < 3) {
+            return;
+        }
+
+        if (! app(FamilyEntitlementService::class)->consumeAiAnalysis($family)) {
+            $this->aiAnswer = 'Jatah analisis AI bulan ini sudah habis atau lisensi keluarga belum aktif.';
+
             return;
         }
 

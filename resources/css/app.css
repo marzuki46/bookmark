@@ -539,9 +539,7 @@ body {
 .wp-main-content {
     flex: 1;
     padding: var(--wp-space-xl) var(--wp-space-2xl);
-    max-width: 1440px;
     width: 100%;
-    margin: 0 auto;
 }
 
 /* ===== MOBILE OVERLAY ===== */

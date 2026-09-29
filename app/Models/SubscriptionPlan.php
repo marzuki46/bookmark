@@ -8,13 +8,15 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['slug', 'name', 'description', 'duration_type', 'price', 'is_active'])]
+#[Fillable(['slug', 'name', 'description', 'duration_type', 'duration_days', 'ai_analysis_limit', 'price', 'is_active'])]
 class SubscriptionPlan extends Model
 {
     protected function casts(): array
     {
         return [
             'price' => 'integer',
+            'duration_days' => 'integer',
+            'ai_analysis_limit' => 'integer',
             'is_active' => 'boolean',
         ];
     }
@@ -26,6 +28,10 @@ class SubscriptionPlan extends Model
 
     public function durationLabel(): string
     {
+        if ($this->duration_days) {
+            return $this->duration_days.' hari';
+        }
+
         return match ($this->duration_type) {
             'lifetime' => 'Seumur hidup',
             'monthly' => 'Bulanan',

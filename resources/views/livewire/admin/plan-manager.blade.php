@@ -2,7 +2,7 @@
     <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
             <h1 class="text-2xl font-bold text-[var(--text-primary)]">Paket Berbayar</h1>
-            <p class="text-sm text-[var(--text-tertiary)] mt-1">Buat dan ubah paket lifetime / bulanan / tahunan</p>
+            <p class="text-sm text-[var(--text-tertiary)] mt-1">Atur masa aktif dan jatah analisis AI. Data transaksi tidak dibatasi.</p>
         </div>
         <button wire:click="create" class="btn-primary">+ Tambah Paket</button>
     </div>
@@ -17,30 +17,40 @@
                 <h3 class="text-sm font-semibold text-[var(--text-primary)]">{{ $editingId ? 'Edit Paket' : 'Tambah Paket' }}</h3>
                 <button type="button" wire:click="cancel" class="btn-secondary !py-1.5 text-xs">Batal</button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                     <label class="wp-form-label">Nama</label>
                     <input type="text" wire:model="name" class="wp-form-input" required>
                     @error('name') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                 </div>
                 <div>
-                    <label class="wp-form-label">Slug (a-z0-9-, unik)</label>
-                    <input type="text" wire:model="slug" class="wp-form-input" required>
-                    @error('slug') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
-                </div>
-                <div>
                     <label class="wp-form-label">Durasi</label>
                     <select wire:model="durationType" class="wp-form-input">
+                        <option value="custom">Masa aktif sendiri</option>
                         <option value="monthly">Bulanan</option>
                         <option value="yearly">Tahunan</option>
                         <option value="lifetime">Seumur Hidup</option>
                     </select>
                     @error('durationType') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                 </div>
+                @if($durationType === 'custom')
+                    <div>
+                        <label class="wp-form-label">Masa aktif (hari)</label>
+                        <input type="number" wire:model="durationDays" class="wp-form-input" min="1" max="3650" placeholder="Contoh: 7" required>
+                        <p class="text-xs text-[var(--text-tertiary)] mt-1">Trial gratis gunakan 7 hari.</p>
+                        @error('durationDays') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+                @endif
                 <div>
                     <label class="wp-form-label">Harga (Rp)</label>
                     <input type="number" wire:model="price" class="wp-form-input" min="0" required>
                     @error('price') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                </div>
+                <div>
+                    <label class="wp-form-label">Analisis AI per bulan</label>
+                    <input type="number" wire:model="aiAnalysisLimit" class="wp-form-input" min="0" placeholder="Kosong = tanpa batas">
+                    <p class="text-xs text-[var(--text-tertiary)] mt-1">Hanya fitur ini yang dibatasi paket.</p>
+                    @error('aiAnalysisLimit') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                 </div>
                 <div class="md:col-span-2">
                     <label class="wp-form-label">Deskripsi</label>
@@ -65,8 +75,8 @@
                 <thead>
                     <tr class="text-left text-xs uppercase tracking-wide text-[var(--text-tertiary)] border-b border-[var(--color-border)]">
                         <th class="px-5 py-3">Nama</th>
-                        <th class="px-5 py-3">Slug</th>
                         <th class="px-5 py-3">Durasi</th>
+                        <th class="px-5 py-3">Analisis AI</th>
                         <th class="px-5 py-3">Harga</th>
                         <th class="px-5 py-3">Status</th>
                         <th class="px-5 py-3">Langganan</th>
@@ -77,8 +87,8 @@
                     @forelse($plans as $plan)
                         <tr class="border-b border-[var(--color-border)] last:border-0">
                             <td class="px-5 py-3 font-medium text-[var(--text-primary)]">{{ $plan->name }}</td>
-                            <td class="px-5 py-3 text-[var(--text-tertiary)]">{{ $plan->slug }}</td>
                             <td class="px-5 py-3">{{ $plan->durationLabel() }}</td>
+                            <td class="px-5 py-3">{{ $plan->ai_analysis_limit === null ? 'Tanpa batas' : $plan->ai_analysis_limit.'/bulan' }}</td>
                             <td class="px-5 py-3 font-semibold text-[var(--text-primary)]">Rp{{ number_format($plan->price, 0, ',', '.') }}</td>
                             <td class="px-5 py-3">
                                 <button wire:click="toggleActive({{ $plan->id }})"

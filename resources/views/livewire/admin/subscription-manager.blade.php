@@ -9,7 +9,7 @@
     @endif
 
     @if($grantFamilyId)
-        <form wire:submit="grant" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 max-w-lg">
+        <form wire:submit="grant" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-[var(--text-primary)]">Beri lisensi ke keluarga {{ \App\Models\Family::find($grantFamilyId)?->name }}</h3>
                 <button type="button" wire:click="$set('grantFamilyId', null)" class="btn-secondary !py-1.5 text-xs">Batal</button>

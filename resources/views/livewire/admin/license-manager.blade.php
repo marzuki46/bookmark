@@ -12,7 +12,7 @@
     @endif
 
     @if($editFamilyId && $mode === 'grant')
-        <form wire:submit="grant" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 max-w-lg">
+        <form wire:submit="grant" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-[var(--text-primary)]">Beri lisensi ke {{ \App\Models\Family::find($editFamilyId)?->name }}</h3>
                 <button type="button" wire:click="cancelEdit" class="btn-secondary !py-1.5 text-xs">Batal</button>
@@ -34,7 +34,7 @@
     @endif
 
     @if($editFamilyId && $mode === 'extend')
-        <form wire:submit="extend" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 max-w-lg">
+        <form wire:submit="extend" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
             <div class="flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-[var(--text-primary)]">Perpanjang / ubah lisensi {{ \App\Models\Family::find($editFamilyId)?->name }}</h3>
                 <button type="button" wire:click="cancelEdit" class="btn-secondary !py-1.5 text-xs">Batal</button>
@@ -114,7 +114,7 @@
         <div class="px-5 py-3">{{ $families->links() }}</div>
     </div>
 
-    <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 max-w-lg">
+    <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
         <h3 class="text-sm font-semibold text-[var(--text-primary)]">Ubah Tanggal Berakhir (Expiry)</h3>
         <form wire:submit="saveExpiry" class="mt-3 space-y-4">
             <div>

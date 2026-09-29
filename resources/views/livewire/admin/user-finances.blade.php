@@ -12,7 +12,7 @@
     </div>
 
     @if(! $familyId && ! $userId)
-        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 max-w-lg space-y-4">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
             <div>
                 <label class="wp-form-label">Cari keluarga</label>
                 <input type="search" wire:model.live.debounce.300ms="familySearch" class="wp-form-input" placeholder="Cari nama keluarga atau pilih dari daftar">
@@ -242,7 +242,7 @@
         @endif
 
         @if($section === 'transaksi')
-            <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 max-w-xs">
+            <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
                 <label class="wp-form-label">Bulan</label>
                 <input type="month" wire:model.live="month" class="wp-form-input">
             </div>
@@ -282,7 +282,7 @@
         @endif
 
         @if($section === 'anggaran')
-            <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 max-w-xs">
+            <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
                 <label class="wp-form-label">Bulan</label>
                 <input type="month" wire:model.live="month" class="wp-form-input">
             </div>
@@ -489,7 +489,7 @@
             </div>
 
             @if($editingMemberId)
-                <form wire:submit="saveMemberSettings" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 max-w-xl">
+                <form wire:submit="saveMemberSettings" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-sm font-semibold text-[var(--text-primary)]">Permission Anggota</h3>
                         <button type="button" wire:click="$set('editingMemberId', null)" class="btn-secondary !py-1.5 text-xs">Batal</button>

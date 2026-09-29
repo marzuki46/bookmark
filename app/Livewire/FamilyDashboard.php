@@ -9,7 +9,10 @@ use App\Models\FamilyCategory;
 use App\Models\FamilyGoal;
 use App\Models\FamilyMember;
 use App\Models\FamilyTransaction;
+use App\Models\SubscriptionPlan;
 use App\Services\FamilyAIService;
+use App\Services\FamilyEntitlementService;
+use App\Services\SubscriptionService;
 use Livewire\Component;
 
 final class FamilyDashboard extends Component
@@ -114,6 +117,17 @@ final class FamilyDashboard extends Component
             'is_family_only' => false,
         ]);
 
+        if (! $user->hasActiveSubscription()) {
+            $trial = SubscriptionPlan::query()
+                ->where('slug', 'free-trial')
+                ->where('is_active', true)
+                ->first();
+
+            if ($trial) {
+                app(SubscriptionService::class)->activate($user, $trial, provider: 'trial');
+            }
+        }
+
         $this->seedDefaultCategories($family);
 
         $this->familyName = '';
@@ -125,6 +139,12 @@ final class FamilyDashboard extends Component
     {
         $family = $this->family;
         if (! $family || strlen($this->aiQuery) < 3) {
+            return;
+        }
+
+        if (! app(FamilyEntitlementService::class)->consumeAiAnalysis($family)) {
+            $this->aiAnswer = 'Jatah analisis AI bulan ini sudah habis atau lisensi keluarga belum aktif.';
+
             return;
         }
 

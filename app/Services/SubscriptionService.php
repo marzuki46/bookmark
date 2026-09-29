@@ -43,6 +43,10 @@ final class SubscriptionService
             default => $base->copy()->addMonth(),
         };
 
+        if ($plan->duration_days) {
+            $expiresAt = $base->copy()->addDays($plan->duration_days);
+        }
+
         $subscription = Subscription::query()->create([
             'user_id' => $user->id,
             'family_id' => $family?->id,

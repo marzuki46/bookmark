@@ -17,9 +17,10 @@ final class SubscriptionPlanSeeder extends Seeder
     public function run(): void
     {
         $plans = [
-            ['slug' => 'lifetime', 'name' => 'Akses Seumur Hidup', 'duration_type' => 'lifetime', 'price' => 499_000],
-            ['slug' => 'yearly', 'name' => 'Tahunan', 'duration_type' => 'yearly', 'price' => 99_000],
-            ['slug' => 'monthly', 'name' => 'Bulanan', 'duration_type' => 'monthly', 'price' => 9_900],
+            ['slug' => 'free-trial', 'name' => 'Cuan Trial 7 Hari', 'duration_type' => 'monthly', 'duration_days' => 7, 'ai_analysis_limit' => 3, 'price' => 0],
+            ['slug' => 'lifetime', 'name' => 'Cuan Seumur Hidup', 'duration_type' => 'lifetime', 'duration_days' => null, 'ai_analysis_limit' => null, 'price' => 299_000],
+            ['slug' => 'yearly', 'name' => 'Cuan Keluarga Tahunan', 'duration_type' => 'yearly', 'duration_days' => null, 'ai_analysis_limit' => 50, 'price' => 99_000],
+            ['slug' => 'monthly', 'name' => 'Cuan Hemat Bulanan', 'duration_type' => 'monthly', 'duration_days' => null, 'ai_analysis_limit' => 10, 'price' => 9_900],
         ];
 
         foreach ($plans as $plan) {

@@ -10,6 +10,7 @@ use App\Models\FamilyGoal;
 use App\Models\FamilyTransaction;
 use App\Services\FamilyAIService;
 use App\Services\FamilyAllocationService;
+use App\Services\FamilyEntitlementService;
 use Livewire\Component;
 
 final class FamilyAppDashboard extends Component
@@ -124,6 +125,12 @@ final class FamilyAppDashboard extends Component
     {
         $family = $this->family;
         if (! $family || strlen($this->aiQuery) < 3) {
+            return;
+        }
+
+        if (! app(FamilyEntitlementService::class)->consumeAiAnalysis($family)) {
+            $this->aiAnswer = 'Jatah analisis AI bulan ini sudah habis atau lisensi keluarga belum aktif.';
+
             return;
         }
 

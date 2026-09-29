@@ -9,12 +9,14 @@ use App\Livewire\Admin\PlanManager;
 use App\Livewire\Admin\UserFinances;
 use App\Livewire\Admin\UserManager;
 use App\Models\Family;
+use App\Models\FamilyAiUsage;
 use App\Models\FamilyDebt;
 use App\Models\FamilyMember;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\FamilyEntitlementService;
 use App\Services\SubscriptionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -405,18 +407,21 @@ final class AdminKeuanganTest extends TestCase
             ->assertSet('showForm', true);
 
         $component->set('name', 'Paket Premium')
-            ->set('slug', 'premium-pro')
             ->set('description', 'Akses semua fitur')
-            ->set('durationType', 'yearly')
+            ->set('durationType', 'custom')
+            ->set('durationDays', 7)
+            ->set('aiAnalysisLimit', 3)
             ->set('price', 250_000)
             ->call('save')
             ->assertSet('showForm', false)
             ->assertHasNoErrors();
 
-        $plan = SubscriptionPlan::query()->where('slug', 'premium-pro')->first();
+        $plan = SubscriptionPlan::query()->where('slug', 'paket-premium')->first();
         $this->assertNotNull($plan);
         $this->assertSame('Paket Premium', $plan->name);
-        $this->assertSame('yearly', $plan->duration_type);
+        $this->assertSame('monthly', $plan->duration_type);
+        $this->assertSame(7, $plan->duration_days);
+        $this->assertSame(3, $plan->ai_analysis_limit);
         $this->assertSame(250_000, $plan->price);
         $this->assertTrue($plan->is_active);
     }
@@ -431,5 +436,26 @@ final class AdminKeuanganTest extends TestCase
             ->assertSet('showForm', true)
             ->call('cancel')
             ->assertSet('showForm', false);
+    }
+
+    public function test_custom_plan_duration_and_ai_limit_are_enforced(): void
+    {
+        $user = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Trial',
+            'owner_user_id' => $user->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $user->id, 'role' => 'owner']);
+        $plan = $this->plan('monthly');
+        $plan->update(['duration_days' => 7, 'ai_analysis_limit' => 1]);
+
+        $subscription = app(SubscriptionService::class)->activate($user, $plan, provider: 'trial');
+        $this->assertEqualsWithDelta(7, now()->diffInDays($subscription->expires_at), 0.001);
+
+        $entitlements = app(FamilyEntitlementService::class);
+        $this->assertTrue($entitlements->consumeAiAnalysis($family));
+        $this->assertFalse($entitlements->consumeAiAnalysis($family));
+        $this->assertSame(1, FamilyAiUsage::query()->where('family_id', $family->id)->value('analysis_count'));
     }
 }
