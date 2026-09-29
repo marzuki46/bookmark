@@ -1,4 +1,4 @@
-﻿<div class="space-y-6">
+<div class="space-y-6">
     <div>
         <h1 class="text-2xl font-bold text-[var(--text-primary)]">Manajemen Keluarga</h1>
         <p class="text-sm text-[var(--text-tertiary)] mt-1">Pilih keluarga lalu kelola tiap sub-menu: transaksi, anggaran, tabungan, hutang, laporan, anggota &amp; lisensi</p>
@@ -103,6 +103,17 @@
             @endforeach
         </nav>
 
+        @if($section === 'transaksi')
+            <livewire:family-transactions :family-id="$familyId" :key="'admin-family-transactions-'.$familyId" />
+        @elseif($section === 'anggaran')
+            <livewire:family-budget :family-id="$familyId" :key="'admin-family-budget-'.$familyId" />
+        @elseif($section === 'tabungan')
+            <livewire:family-goals :family-id="$familyId" :key="'admin-family-goals-'.$familyId" />
+        @elseif($section === 'hutang')
+            <livewire:family-debts :family-id="$familyId" :key="'admin-family-debts-'.$familyId" />
+        @elseif($section === 'laporan')
+            <livewire:family-report :family-id="$familyId" :key="'admin-family-report-'.$familyId" />
+        @else
         @if($section === 'ringkasan')
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
@@ -544,11 +555,46 @@
                                 </div>
                             @endif
                         </div>
+                        <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4 border-t border-[var(--color-border)] pt-5">
+                            <div>
+                                <label class="wp-form-label">Perpanjang dengan paket</label>
+                                <select wire:model="licensePlanId" class="wp-form-input">
+                                    <option value="">Pilih paket...</option>
+                                    @foreach($plans as $plan)
+                                        <option value="{{ $plan->id }}">{{ $plan->name }} &mdash; {{ $plan->durationLabel() }}</option>
+                                    @endforeach
+                                </select>
+                                @error('licensePlanId') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                            </div>
+                            <div>
+                                <label class="wp-form-label">Tanggal berakhir</label>
+                                <input type="date" wire:model="licenseExpiry" class="wp-form-input">
+                                @error('licenseExpiry') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                            </div>
+                            <div class="flex items-end gap-2 flex-wrap">
+                                <button type="button" wire:click="extendLicense" class="btn-primary">Perpanjang</button>
+                                <button type="button" wire:click="saveLicenseExpiry" class="btn-secondary">Simpan Tanggal</button>
+                                <button type="button" wire:click="revokeLicense" wire:confirm="Cabut lisensi keluarga ini?" class="btn-secondary">Cabut</button>
+                            </div>
+                        </div>
                     @else
                         <p class="text-sm text-[var(--text-tertiary)]">Keluarga ini belum memiliki lisensi aktif.</p>
+                        <div class="mt-4 flex items-end gap-3 flex-wrap">
+                            <div class="min-w-[260px] flex-1">
+                                <label class="wp-form-label">Beri lisensi</label>
+                                <select wire:model="licensePlanId" class="wp-form-input">
+                                    <option value="">Pilih paket...</option>
+                                    @foreach($plans as $plan)
+                                        <option value="{{ $plan->id }}">{{ $plan->name }} &mdash; {{ $plan->durationLabel() }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <button type="button" wire:click="grantLicense" class="btn-primary">Aktifkan Lisensi</button>
+                        </div>
                     @endif
                 </div>
             </div>
+        @endif
         @endif
     @endif
 </div>

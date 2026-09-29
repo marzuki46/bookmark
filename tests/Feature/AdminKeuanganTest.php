@@ -8,8 +8,13 @@ use App\Livewire\Admin\LicenseManager;
 use App\Livewire\Admin\PlanManager;
 use App\Livewire\Admin\UserFinances;
 use App\Livewire\Admin\UserManager;
+use App\Livewire\FamilyBudget;
+use App\Livewire\FamilyDebts;
+use App\Livewire\FamilyGoals;
+use App\Livewire\FamilyTransactions;
 use App\Models\Family;
 use App\Models\FamilyAiUsage;
+use App\Models\FamilyCategory;
 use App\Models\FamilyDebt;
 use App\Models\FamilyMember;
 use App\Models\Subscription;
@@ -470,5 +475,66 @@ final class AdminKeuanganTest extends TestCase
         $this->assertTrue($entitlements->consumeAiAnalysis($family));
         $this->assertFalse($entitlements->consumeAiAnalysis($family));
         $this->assertSame(1, FamilyAiUsage::query()->where('family_id', $family->id)->value('analysis_count'));
+    }
+
+    public function test_admin_family_tabs_write_to_the_selected_family(): void
+    {
+        $admin = $this->admin();
+        $owner = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Tab CRUD',
+            'owner_user_id' => $owner->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
+        $category = FamilyCategory::create([
+            'family_id' => $family->id,
+            'name' => 'Belanja',
+            'type' => 'expense',
+            'icon' => '🛒',
+            'color' => '#6366f1',
+        ]);
+
+        Livewire::actingAs($admin)
+            ->test(FamilyTransactions::class, ['familyId' => $family->id])
+            ->call('openCreate')
+            ->set('formCategoryId', $category->id)
+            ->set('formAmount', '125000')
+            ->set('formDescription', 'Belanja admin')
+            ->set('formDate', now()->format('Y-m-d'))
+            ->call('save')
+            ->assertHasNoErrors();
+
+        Livewire::actingAs($admin)
+            ->test(FamilyBudget::class, ['familyId' => $family->id])
+            ->call('openCreate')
+            ->set('formCategoryId', $category->id)
+            ->set('formAmount', '500000')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        Livewire::actingAs($admin)
+            ->test(FamilyGoals::class, ['familyId' => $family->id])
+            ->call('openCreate')
+            ->set('formName', 'Dana Liburan')
+            ->set('formTargetAmount', '2000000')
+            ->set('formMonthlyAllocation', '250000')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        Livewire::actingAs($admin)
+            ->test(FamilyDebts::class, ['familyId' => $family->id])
+            ->call('openCreate')
+            ->set('formName', 'Pinjaman')
+            ->set('formAmount', '1000000')
+            ->set('formPaidAmount', '0')
+            ->set('formInstallment', '100000')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('family_transactions', ['family_id' => $family->id, 'description' => 'Belanja admin']);
+        $this->assertDatabaseHas('family_budgets', ['family_id' => $family->id, 'category_id' => $category->id, 'amount' => 500000]);
+        $this->assertDatabaseHas('family_goals', ['family_id' => $family->id, 'name' => 'Dana Liburan']);
+        $this->assertDatabaseHas('family_debts', ['family_id' => $family->id, 'name' => 'Pinjaman']);
     }
 }

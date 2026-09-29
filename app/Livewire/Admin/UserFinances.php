@@ -11,8 +11,10 @@ use App\Models\FamilyDebt;
 use App\Models\FamilyGoal;
 use App\Models\FamilyTransaction;
 use App\Models\Subscription;
+use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Services\FamilyAIService;
+use App\Services\SubscriptionService;
 use Livewire\Component;
 use Livewire\WithPagination;
 
@@ -43,6 +45,10 @@ final class UserFinances extends Component
     public string $month = '';
 
     public string $familySearch = '';
+
+    public ?int $licensePlanId = null;
+
+    public ?string $licenseExpiry = null;
 
     public function mount(?int $familyId = null, ?int $userId = null): void
     {
@@ -171,6 +177,70 @@ final class UserFinances extends Component
 
         $this->editingMemberId = null;
         $this->statusMessage = 'Permission anggota diperbarui.';
+    }
+
+    public function grantLicense(): void
+    {
+        $this->authorizeAdmin();
+        $data = $this->validate(['licensePlanId' => ['required', 'integer', 'exists:subscription_plans,id']]);
+        $family = $this->family();
+        $plan = SubscriptionPlan::query()->where('is_active', true)->findOrFail($data['licensePlanId']);
+
+        if (! $family?->owner) {
+            return;
+        }
+
+        app(SubscriptionService::class)->activate($family->owner, $plan, provider: 'manual');
+        $this->statusMessage = 'Lisensi '.$plan->name.' diberikan ke keluarga.';
+        $this->licensePlanId = null;
+    }
+
+    public function extendLicense(): void
+    {
+        $this->authorizeAdmin();
+        $data = $this->validate(['licensePlanId' => ['required', 'integer', 'exists:subscription_plans,id']]);
+        $family = $this->family();
+        $plan = SubscriptionPlan::query()->where('is_active', true)->findOrFail($data['licensePlanId']);
+
+        if (! $family?->owner) {
+            return;
+        }
+
+        app(SubscriptionService::class)->activate($family->owner, $plan, provider: 'manual');
+        $this->statusMessage = 'Lisensi diperpanjang dengan paket '.$plan->name.'.';
+        $this->licensePlanId = null;
+    }
+
+    public function saveLicenseExpiry(): void
+    {
+        $this->authorizeAdmin();
+        $this->validate(['licenseExpiry' => ['nullable', 'date']]);
+        $license = $this->license;
+
+        if (! $license) {
+            $this->statusMessage = 'Keluarga belum memiliki lisensi.';
+
+            return;
+        }
+
+        $license->update(['expires_at' => $this->licenseExpiry ?: null]);
+        $this->statusMessage = 'Masa aktif lisensi diperbarui.';
+    }
+
+    public function revokeLicense(): void
+    {
+        $this->authorizeAdmin();
+        $family = $this->family();
+
+        if ($family?->owner) {
+            app(SubscriptionService::class)->revoke($family->owner);
+            $this->statusMessage = 'Lisensi keluarga dicabut.';
+        }
+    }
+
+    public function getPlansProperty()
+    {
+        return SubscriptionPlan::query()->where('is_active', true)->orderBy('price')->get();
     }
 
     /**
@@ -400,6 +470,7 @@ final class UserFinances extends Component
             'families' => $this->families,
             'selectedFamily' => $this->family(),
             'license' => $this->license,
+            'plans' => $this->plans,
             'monthlySeries' => $this->monthlySeries,
             'categoryBreakdown' => $this->categoryBreakdown,
             'debts' => $this->debts,

@@ -14,6 +14,8 @@ final class FamilyTransactions extends Component
 {
     use WithPagination;
 
+    public ?int $familyId = null;
+
     public string $search = '';
 
     public string $filterType = 'all';
@@ -62,14 +64,21 @@ final class FamilyTransactions extends Component
 
     protected string $paginationTheme = 'tailwind';
 
-    public function mount(): void
+    public function mount(?int $familyId = null): void
     {
+        $this->familyId = $familyId;
         $this->month = now()->format('Y-m');
         $this->formDate = now()->format('Y-m-d');
     }
 
     public function getFamilyProperty(): ?Family
     {
+        if ($this->familyId) {
+            abort_unless(auth()->user()?->is_admin === true, 403);
+
+            return Family::query()->find($this->familyId);
+        }
+
         return auth()->user()->family();
     }
 

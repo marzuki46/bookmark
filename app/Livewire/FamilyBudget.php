@@ -12,6 +12,8 @@ use Livewire\Component;
 
 final class FamilyBudget extends Component
 {
+    public ?int $familyId = null;
+
     public string $month = '';
 
     public bool $showModal = false;
@@ -26,13 +28,20 @@ final class FamilyBudget extends Component
 
     public string $statusType = 'success';
 
-    public function mount(): void
+    public function mount(?int $familyId = null): void
     {
+        $this->familyId = $familyId;
         $this->month = now()->format('Y-m');
     }
 
     public function getFamilyProperty(): ?Family
     {
+        if ($this->familyId) {
+            abort_unless(auth()->user()?->is_admin === true, 403);
+
+            return Family::query()->find($this->familyId);
+        }
+
         return auth()->user()->family();
     }
 

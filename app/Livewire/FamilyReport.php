@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class FamilyReport extends Component
 {
+    public ?int $familyId = null;
+
     public string $period = 'this_year';
 
     public string $dateFrom = '';
@@ -25,20 +27,27 @@ final class FamilyReport extends Component
 
     public string $aiAnswer = '';
 
+    public function mount(?int $familyId = null): void
+    {
+        $this->familyId = $familyId;
+        $this->dateFrom = now()->startOfYear()->format('Y-m-d');
+        $this->dateTo = now()->format('Y-m-d');
+    }
+
     public bool $aiLoading = false;
 
     public string $statusMessage = '';
 
     public string $statusType = 'success';
 
-    public function mount(): void
-    {
-        $this->dateFrom = now()->startOfYear()->format('Y-m-d');
-        $this->dateTo = now()->format('Y-m-d');
-    }
-
     public function getFamilyProperty(): ?Family
     {
+        if ($this->familyId) {
+            abort_unless(auth()->user()?->is_admin === true, 403);
+
+            return Family::query()->find($this->familyId);
+        }
+
         return auth()->user()->family();
     }
 
