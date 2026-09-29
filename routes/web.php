@@ -84,6 +84,7 @@ Route::middleware(['auth', 'family.scope'])->group(function (): void {
         Route::get('/finansial', [KeuanganController::class, 'userFinances'])->name('finansial');
         Route::get('/keluarga', [KeuanganController::class, 'userFinances'])->name('keluarga');
         Route::get('/log', [KeuanganController::class, 'logs'])->name('log');
+        Route::get('/aplikasi-manajemen', [KeuanganController::class, 'appManager'])->name('aplikasi-manajemen');
         Route::get('/aplikasi', [AppReleaseController::class, 'index'])->name('aplikasi');
         Route::post('/aplikasi', [AppReleaseController::class, 'store'])->name('aplikasi.store');
         Route::post('/aplikasi/chunk', [AppReleaseController::class, 'uploadChunk'])->name('aplikasi.chunk');

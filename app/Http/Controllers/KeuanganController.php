@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\AppRelease;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 final class KeuanganController extends Controller
@@ -36,5 +38,20 @@ final class KeuanganController extends Controller
     public function logs(): View
     {
         return view('pages.keuangan-logs');
+    }
+
+    public function appManager(Request $request): View
+    {
+        $activeTab = match ($request->query('tab')) {
+            'rilis' => 'rilis',
+            'lisensi' => 'lisensi',
+            'log' => 'log',
+            default => 'lisensi',
+        };
+
+        return view('pages.keuangan-aplikasi-manajemen', [
+            'activeTab' => $activeTab,
+            'releases' => AppRelease::query()->orderByDesc('version_code')->limit(20)->get(),
+        ]);
     }
 }

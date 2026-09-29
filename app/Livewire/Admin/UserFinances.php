@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Livewire\Admin;
 
 use App\Models\Family;
+use App\Models\FamilyBudget;
+use App\Models\FamilyCategory;
 use App\Models\FamilyDebt;
+use App\Models\FamilyGoal;
 use App\Models\FamilyTransaction;
 use App\Models\Subscription;
 use App\Models\User;
@@ -29,6 +32,22 @@ final class UserFinances extends Component
     public bool $memberCanViewDebts = true;
 
     public string $statusMessage = '';
+
+    public string $section = 'ringkasan';
+
+    public string $month = '';
+
+    public function mount(): void
+    {
+        $this->month = now()->format('Y-m');
+    }
+
+    public function updatedFamilyId(): void
+    {
+        $this->editingMemberId = null;
+        $this->statusMessage = '';
+        $this->section = 'ringkasan';
+    }
 
     public function getUsersProperty()
     {
@@ -242,6 +261,102 @@ final class UserFinances extends Component
             ->get();
     }
 
+    public function getTransactionsProperty()
+    {
+        $family = $this->family();
+        if (! $family) {
+            return collect();
+        }
+
+        $query = FamilyTransaction::forFamily($family->id)
+            ->with(['category', 'user'])
+            ->latest('date');
+
+        if (preg_match('/^\d{4}-\d{2}$/', $this->month)) {
+            $query->whereYear('date', substr($this->month, 0, 4))
+                ->whereMonth('date', (int) substr($this->month, 5, 2));
+        } else {
+            $query->whereYear('date', now()->year)->whereMonth('date', now()->month);
+        }
+
+        return $query->limit(100)->get();
+    }
+
+    public function getBudgetRowsProperty(): array
+    {
+        $family = $this->family();
+        if (! $family) {
+            return [];
+        }
+
+        $year = (int) substr($this->month, 0, 4);
+        $mon = (int) substr($this->month, 5, 2);
+
+        $budgets = FamilyBudget::with('category')->forFamily($family->id)
+            ->where('month', $mon)->where('year', $year)
+            ->get()->keyBy('category_id');
+
+        $expenseCategories = FamilyCategory::forFamily($family->id)->where('type', 'expense')->get();
+
+        $start = sprintf('%04d-%02d-01', $year, $mon);
+        $end = date('Y-m-t', strtotime($start));
+
+        $spentByCategory = FamilyTransaction::forFamily($family->id)
+            ->where('type', 'expense')
+            ->whereBetween('date', [$start, $end])
+            ->selectRaw('category_id, SUM(amount) as total')
+            ->groupBy('category_id')
+            ->pluck('total', 'category_id');
+
+        $result = [];
+
+        foreach ($expenseCategories as $cat) {
+            $budget = $budgets->get($cat->id);
+            $spent = (float) ($spentByCategory[$cat->id] ?? 0);
+            $amount = $budget ? (float) $budget->amount : 0;
+
+            $result[] = [
+                'category' => $cat->name,
+                'amount' => $amount,
+                'spent' => $spent,
+                'remaining' => $amount - $spent,
+                'percent' => $amount > 0 ? min(100, round($spent / $amount * 100)) : 0,
+                'overspent' => $amount > 0 && $spent > $amount,
+            ];
+        }
+
+        return $result;
+    }
+
+    public function getGoalRowsProperty()
+    {
+        $family = $this->family();
+        if (! $family) {
+            return collect();
+        }
+
+        return FamilyGoal::forFamily($family->id)
+            ->whereIn('status', ['active', 'completed'])
+            ->orderByRaw("case when status = 'active' then 0 else 1 end")
+            ->orderBy('priority')
+            ->limit(50)
+            ->get(['id', 'name', 'type', 'target_amount', 'current_amount', 'monthly_allocation', 'deadline', 'icon', 'color', 'status']);
+    }
+
+    public function getDebtRowsProperty()
+    {
+        $family = $this->family();
+        if (! $family) {
+            return collect();
+        }
+
+        return FamilyDebt::forFamily($family->id)
+            ->orderByRaw("case when status = 'settled' then 1 else 0 end")
+            ->orderBy('due_date')
+            ->limit(100)
+            ->get();
+    }
+
     public function render()
     {
         return view('livewire.admin.user-finances', [
@@ -255,6 +370,10 @@ final class UserFinances extends Component
             'health' => $this->health,
             'anomalies' => $this->anomalies,
             'recentTransactions' => $this->recentTransactions,
+            'transactions' => $this->transactions,
+            'budgetRows' => $this->budgetRows,
+            'goalRows' => $this->goalRows,
+            'debtRows' => $this->debtRows,
         ]);
     }
 

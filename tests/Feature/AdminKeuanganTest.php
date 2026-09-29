@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Livewire\Admin\LicenseManager;
 use App\Livewire\Admin\UserFinances;
 use App\Livewire\Admin\UserManager;
 use App\Models\Family;
@@ -230,7 +231,7 @@ final class AdminKeuanganTest extends TestCase
         User::factory()->create();
         $this->plan('monthly');
 
-        foreach (['', '/pengguna', '/paket', '/langganan', '/finansial', '/log'] as $path) {
+        foreach (['', '/pengguna', '/paket', '/langganan', '/finansial', '/keluarga', '/log', '/aplikasi-manajemen', '/aplikasi'] as $path) {
             $this->actingAs($admin)->get('/keuangan'.$path)->assertOk();
         }
     }
@@ -318,5 +319,78 @@ final class AdminKeuanganTest extends TestCase
             'expense' => true,
             'debts' => true,
         ], $child->familyMember()->fresh()->visibility);
+    }
+
+    public function test_license_manager_can_grant_family_license(): void
+    {
+        $admin = $this->admin();
+        $user = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Lisensi',
+            'owner_user_id' => $user->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $user->id, 'role' => 'owner']);
+        $plan = $this->plan('yearly');
+
+        Livewire::actingAs($admin)
+            ->test(LicenseManager::class)
+            ->call('openGrant', $family->id)
+            ->set('grantPlanId', $plan->id)
+            ->call('grant')
+            ->assertSet('editFamilyId', null)
+            ->assertStatus(200);
+
+        $sub = Subscription::query()->where('family_id', $family->id)->latest('id')->first();
+        $this->assertNotNull($sub);
+        $this->assertSame('active', $sub->status);
+        $this->assertNotNull($sub->expires_at);
+    }
+
+    public function test_license_manager_can_set_custom_expiry(): void
+    {
+        $admin = $this->admin();
+        $user = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Expiry',
+            'owner_user_id' => $user->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $user->id, 'role' => 'owner']);
+        $plan = $this->plan('yearly');
+        app(SubscriptionService::class)->activate($user, $plan);
+
+        $future = now()->addMonths(3)->format('Y-m-d');
+
+        Livewire::actingAs($admin)
+            ->test(LicenseManager::class)
+            ->call('openExtend', $family->id)
+            ->set('editExpiresAt', $future)
+            ->call('saveExpiry')
+            ->assertSet('editFamilyId', null);
+
+        $sub = Subscription::query()->where('family_id', $family->id)->latest('id')->first();
+        $this->assertSame($future, $sub->expires_at->format('Y-m-d'));
+    }
+
+    public function test_license_manager_can_revoke_family_license(): void
+    {
+        $admin = $this->admin();
+        $user = User::factory()->create();
+        $family = Family::create([
+            'name' => 'Keluarga Cabut',
+            'owner_user_id' => $user->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $user->id, 'role' => 'owner']);
+        $plan = $this->plan('yearly');
+        app(SubscriptionService::class)->activate($user, $plan);
+
+        Livewire::actingAs($admin)
+            ->test(LicenseManager::class)
+            ->call('revoke', $family->id)
+            ->assertStatus(200);
+
+        $this->assertSame('cancelled', Subscription::query()->where('family_id', $family->id)->latest('id')->first()->status);
     }
 }
