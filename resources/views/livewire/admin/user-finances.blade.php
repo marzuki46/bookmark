@@ -12,28 +12,76 @@
     </div>
 
     @if(! $familyId && ! $userId)
-        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
-            <div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+            <div class="p-5 border-b border-[var(--color-border)]">
                 <label class="wp-form-label">Cari keluarga</label>
-                <input type="search" wire:model.live.debounce.300ms="familySearch" class="wp-form-input" placeholder="Cari nama keluarga atau pilih dari daftar">
+                <input type="search" wire:model.live.debounce.300ms="familySearch" class="wp-form-input" placeholder="Cari nama keluarga">
             </div>
 
-            <div class="divide-y divide-[var(--color-border)] max-h-96 overflow-y-auto rounded-lg border border-[var(--color-border)]">
-                @forelse($families as $family)
-                    <div class="w-full px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--color-bg)] transition">
-                        <span>
-                            <a href="{{ route('keuangan.keluarga.detail', $family) }}" class="block font-medium text-[var(--text-primary)] hover:text-indigo-600">
-                                {{ $family->name }}
-                            </a>
-                            <span class="block text-xs text-[var(--text-tertiary)]">
-                                {{ $family->members_count }} anggota &middot; {{ $family->owner?->name ?? '-' }}
-                            </span>
-                        </span>
-                        <a href="{{ route('keuangan.keluarga.detail', $family) }}" class="text-xs px-3 py-1 rounded-full bg-indigo-50 text-indigo-700">Kelola</a>
-                    </div>
-                @empty
-                    <p class="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">Tidak ada keluarga ditemukan.</p>
-                @endforelse
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-[var(--text-tertiary)] border-b border-[var(--color-border)]">
+                            <th class="px-5 py-3">Keluarga</th>
+                            <th class="px-5 py-3">Email terdaftar</th>
+                            <th class="px-5 py-3">Anggota</th>
+                            <th class="px-5 py-3">Masa aktif</th>
+                            <th class="px-5 py-3">Status</th>
+                            <th class="px-5 py-3">Terakhir online</th>
+                            <th class="px-5 py-3">AI</th>
+                            <th class="px-5 py-3 text-right">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($families as $family)
+                            @php
+                                $subscription = $family->latest_subscription;
+                                $isLicensed = $subscription?->isUsable() === true;
+                            @endphp
+                            <tr class="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-bg)]">
+                                <td class="px-5 py-4">
+                                    <a href="{{ route('keuangan.keluarga.detail', $family) }}" class="font-semibold text-[var(--text-primary)] hover:text-indigo-600">
+                                        {{ $family->name }}
+                                    </a>
+                                    <p class="text-xs text-[var(--text-tertiary)] mt-1">{{ $family->owner?->name ?? '-' }}</p>
+                                </td>
+                                <td class="px-5 py-4 text-[var(--text-secondary)]">{{ $family->owner?->email ?? '-' }}</td>
+                                <td class="px-5 py-4">{{ $family->members_count }}</td>
+                                <td class="px-5 py-4">
+                                    @if($subscription?->expires_at)
+                                        <span class="text-[var(--text-primary)]">{{ $subscription->expires_at->format('d M Y') }}</span>
+                                    @elseif($subscription)
+                                        <span class="text-[var(--text-primary)]">Seumur hidup</span>
+                                    @else
+                                        <span class="text-[var(--text-tertiary)]">-</span>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-4">
+                                    <span class="text-xs px-2 py-1 rounded-full {{ $isLicensed ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700' }}">
+                                        {{ $isLicensed ? 'Aktif' : 'Tidak aktif' }}
+                                    </span>
+                                </td>
+                                <td class="px-5 py-4 text-[var(--text-secondary)] whitespace-nowrap">
+                                    {{ $family->last_online_at?->format('d M Y H:i') ?? 'Belum ada data' }}
+                                </td>
+                                <td class="px-5 py-4">
+                                    @if(! $aiConfigured)
+                                        <span class="text-xs text-amber-600">Konfigurasi belum ada</span>
+                                    @elseif(! $isLicensed || $subscription->plan?->ai_analysis_limit === 0)
+                                        <span class="text-xs text-red-600">Tidak aktif</span>
+                                    @else
+                                        <span class="text-xs text-emerald-600">Berjalan</span>
+                                    @endif
+                                </td>
+                                <td class="px-5 py-4 text-right">
+                                    <a href="{{ route('keuangan.keluarga.detail', $family) }}" class="btn-secondary !py-1 text-xs">Kelola</a>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="8" class="px-5 py-8 text-center text-[var(--text-tertiary)]">Tidak ada keluarga ditemukan.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
 
             <div class="flex items-center justify-between gap-3 flex-wrap">

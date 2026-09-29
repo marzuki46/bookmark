@@ -39,6 +39,11 @@ class Family extends Model
         return $this->hasMany(FamilyMember::class);
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     public function categories(): HasMany
     {
         return $this->hasMany(FamilyCategory::class);

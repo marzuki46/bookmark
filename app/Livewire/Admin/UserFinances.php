@@ -106,12 +106,36 @@ final class UserFinances extends Component
 
     public function getFamiliesProperty()
     {
-        return Family::query()
-            ->with(['owner:id,name,email', 'members.user:id,name,email'])
+        $families = Family::query()
+            ->with([
+                'owner:id,name,email',
+                'owner.devices:id,user_id,last_seen_at',
+                'members.user:id,name,email',
+                'members.user.devices:id,user_id,last_seen_at',
+                'subscriptions.plan',
+            ])
             ->withCount('members')
             ->when($this->familySearch !== '', fn ($q) => $q->where('name', 'like', "%{$this->familySearch}%"))
             ->orderBy('name')
             ->paginate(20);
+
+        $families->getCollection()->transform(function (Family $family): Family {
+            $users = collect([$family->owner])->merge($family->members->pluck('user'))->filter();
+            $lastOnline = $users
+                ->flatMap(fn (User $user) => $user->devices)
+                ->sortByDesc(fn ($device) => $device->last_seen_at?->timestamp ?? 0)
+                ->first()?->last_seen_at;
+
+            $family->setAttribute(
+                'latest_subscription',
+                $family->subscriptions->sortByDesc('id')->first(),
+            );
+            $family->setAttribute('last_online_at', $lastOnline);
+
+            return $family;
+        });
+
+        return $families;
     }
 
     private function family(): ?Family
@@ -468,6 +492,7 @@ final class UserFinances extends Component
         return view('livewire.admin.user-finances', [
             'users' => $this->users,
             'families' => $this->families,
+            'aiConfigured' => app(FamilyAIService::class)->isConfigured(),
             'selectedFamily' => $this->family(),
             'license' => $this->license,
             'plans' => $this->plans,

@@ -248,7 +248,13 @@ final class AdminKeuanganTest extends TestCase
         FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
 
         foreach (['', '/pengguna', '/paket', '/langganan', '/finansial', '/keluarga', '/log', '/aplikasi-manajemen', '/aplikasi'] as $path) {
-            $this->actingAs($admin)->get('/keuangan'.$path)->assertOk();
+            $response = $this->actingAs($admin)->get('/keuangan'.$path)->assertOk();
+
+            if ($path === '/keluarga') {
+                $response->assertSee('Email terdaftar')
+                    ->assertSee($owner->email)
+                    ->assertSee('Terakhir online');
+            }
         }
 
         $this->actingAs($admin)
