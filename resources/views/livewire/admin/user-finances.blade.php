@@ -12,12 +12,24 @@
     </div>
 
     @if(! $familyId && ! $userId)
+        <nav class="flex gap-2 flex-wrap border-b border-[var(--color-border)] pb-2" aria-label="Direktori manajemen keluarga">
+            <button type="button" wire:click="setDirectoryTab('keluarga')"
+                    class="px-4 py-2 rounded-full text-sm font-medium transition {{ $directoryTab === 'keluarga' ? 'bg-indigo-600 text-white' : 'text-[var(--text-secondary)] hover:bg-[var(--color-bg)]' }}">
+                Keluarga
+            </button>
+            <button type="button" wire:click="setDirectoryTab('pengguna')"
+                    class="px-4 py-2 rounded-full text-sm font-medium transition {{ $directoryTab === 'pengguna' ? 'bg-indigo-600 text-white' : 'text-[var(--text-secondary)] hover:bg-[var(--color-bg)]' }}">
+                Semua Pengguna
+            </button>
+        </nav>
+
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl overflow-hidden">
             <div class="p-5 border-b border-[var(--color-border)]">
-                <label class="wp-form-label">Cari keluarga</label>
-                <input type="search" wire:model.live.debounce.300ms="familySearch" class="wp-form-input" placeholder="Cari nama keluarga">
+                <label class="wp-form-label">{{ $directoryTab === 'pengguna' ? 'Cari pengguna atau keluarga' : 'Cari keluarga' }}</label>
+                <input type="search" wire:model.live.debounce.300ms="familySearch" class="wp-form-input" placeholder="{{ $directoryTab === 'pengguna' ? 'Cari nama atau email' : 'Cari nama keluarga' }}">
             </div>
 
+            @if($directoryTab === 'keluarga')
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead>
@@ -104,6 +116,58 @@
                     </nav>
                 @endif
             </div>
+            @else
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-[var(--text-tertiary)] border-b border-[var(--color-border)]">
+                                <th class="px-5 py-3">Pengguna</th>
+                                <th class="px-5 py-3">Email</th>
+                                <th class="px-5 py-3">Keluarga</th>
+                                <th class="px-5 py-3">Peran</th>
+                                <th class="px-5 py-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($directoryFamilies as $directoryFamily)
+                                @php
+                                    $owner = $directoryFamily->owner;
+                                    $members = $directoryFamily->members->filter(fn ($member) => $member->user && $member->user_id !== $owner?->id);
+                                @endphp
+                                @if($owner)
+                                    <tr class="border-b border-[var(--color-border)] bg-[var(--color-bg)]">
+                                        <td class="px-5 py-3 font-semibold text-[var(--text-primary)]">{{ $owner->name }}</td>
+                                        <td class="px-5 py-3 text-[var(--text-secondary)]">{{ $owner->email }}</td>
+                                        <td class="px-5 py-3">{{ $directoryFamily->name }}</td>
+                                        <td class="px-5 py-3"><span class="text-xs px-2 py-1 rounded-full bg-indigo-50 text-indigo-700">Kepala keluarga</span></td>
+                                        <td class="px-5 py-3 text-right"><a href="{{ route('keuangan.keluarga.detail', $directoryFamily) }}" class="btn-secondary !py-1 text-xs">Kelola</a></td>
+                                    </tr>
+                                @endif
+                                @foreach($members as $member)
+                                    <tr class="border-b border-[var(--color-border)] last:border-0">
+                                        <td class="px-5 py-3 pl-12 text-[var(--text-primary)]"><span class="mr-2 text-[var(--text-tertiary)]">&rarr;</span>{{ $member->user->name }}</td>
+                                        <td class="px-5 py-3 text-[var(--text-secondary)]">{{ $member->user->email }}</td>
+                                        <td class="px-5 py-3 text-[var(--text-secondary)]">{{ $directoryFamily->name }}</td>
+                                        <td class="px-5 py-3"><span class="text-xs text-[var(--text-tertiary)]">{{ $member->relationship === 'child' ? 'Anak' : 'Anggota' }}</span></td>
+                                        <td class="px-5 py-3 text-right"><a href="{{ route('keuangan.keluarga.detail', $directoryFamily) }}" class="text-xs text-indigo-600 hover:underline">Lihat keluarga</a></td>
+                                    </tr>
+                                @endforeach
+                            @empty
+                                <tr><td colspan="5" class="px-5 py-8 text-center text-[var(--text-tertiary)]">Tidak ada keluarga atau pengguna ditemukan.</td></tr>
+                            @endforelse
+                            @foreach($unassignedUsers as $user)
+                                <tr class="border-b border-[var(--color-border)] last:border-0">
+                                    <td class="px-5 py-3 font-medium text-[var(--text-primary)]">{{ $user->name }}</td>
+                                    <td class="px-5 py-3 text-[var(--text-secondary)]">{{ $user->email }}</td>
+                                    <td class="px-5 py-3 text-[var(--text-tertiary)]">Belum ada keluarga</td>
+                                    <td class="px-5 py-3"><span class="text-xs px-2 py-1 rounded-full bg-amber-50 text-amber-700">Belum ditautkan</span></td>
+                                    <td class="px-5 py-3 text-right">-</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
         </div>
     @else
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 flex items-center justify-between gap-3 flex-wrap">

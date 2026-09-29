@@ -349,6 +349,31 @@ final class AdminKeuanganTest extends TestCase
         ], $child->familyMember()->fresh()->visibility);
     }
 
+    public function test_family_management_users_tab_groups_members_under_family_owner(): void
+    {
+        $admin = $this->admin();
+        $owner = User::factory()->create(['name' => 'Kepala Direktori']);
+        $member = User::factory()->create(['name' => 'Anggota Direktori']);
+        $unassigned = User::factory()->create(['name' => 'Pengguna Tanpa Keluarga']);
+        $family = Family::create([
+            'name' => 'Keluarga Direktori',
+            'owner_user_id' => $owner->id,
+            'invite_code' => Family::generateInviteCode(),
+        ]);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $owner->id, 'role' => 'owner']);
+        FamilyMember::create(['family_id' => $family->id, 'user_id' => $member->id, 'role' => 'member', 'relationship' => 'child']);
+
+        Livewire::actingAs($admin)
+            ->test(UserFinances::class)
+            ->call('setDirectoryTab', 'pengguna')
+            ->assertSee('Semua Pengguna')
+            ->assertSee('Kepala Direktori')
+            ->assertSee('Anggota Direktori')
+            ->assertSee('Pengguna Tanpa Keluarga')
+            ->assertSee('Kepala keluarga')
+            ->assertSee('Belum ditautkan');
+    }
+
     public function test_license_manager_can_grant_family_license(): void
     {
         $admin = $this->admin();

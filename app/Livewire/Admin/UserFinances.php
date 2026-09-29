@@ -46,6 +46,8 @@ final class UserFinances extends Component
 
     public string $familySearch = '';
 
+    public string $directoryTab = 'keluarga';
+
     public ?int $licensePlanId = null;
 
     public ?string $licenseExpiry = null;
@@ -63,6 +65,14 @@ final class UserFinances extends Component
         $this->familyId = null;
         $this->userId = null;
         $this->editingMemberId = null;
+    }
+
+    public function setDirectoryTab(string $tab): void
+    {
+        abort_unless(in_array($tab, ['keluarga', 'pengguna'], true), 422);
+
+        $this->directoryTab = $tab;
+        $this->resetPage();
     }
 
     public function updatedFamilyId(): void
@@ -136,6 +146,35 @@ final class UserFinances extends Component
         });
 
         return $families;
+    }
+
+    public function getDirectoryFamiliesProperty()
+    {
+        return Family::query()
+            ->with(['owner:id,name,email', 'members.user:id,name,email'])
+            ->when($this->familySearch !== '', function ($query): void {
+                $search = "%{$this->familySearch}%";
+                $query->where(function ($familyQuery) use ($search): void {
+                    $familyQuery
+                        ->where('name', 'like', $search)
+                        ->orWhereHas('owner', fn ($ownerQuery) => $ownerQuery->where('name', 'like', $search)->orWhere('email', 'like', $search))
+                        ->orWhereHas('members.user', fn ($userQuery) => $userQuery->where('name', 'like', $search)->orWhere('email', 'like', $search));
+                });
+            })
+            ->orderBy('name')
+            ->get();
+    }
+
+    public function getUnassignedUsersProperty()
+    {
+        return User::query()
+            ->whereDoesntHave('familyMemberships')
+            ->when($this->familySearch !== '', function ($query): void {
+                $search = "%{$this->familySearch}%";
+                $query->where(fn ($userQuery) => $userQuery->where('name', 'like', $search)->orWhere('email', 'like', $search));
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
     }
 
     private function family(): ?Family
@@ -492,6 +531,8 @@ final class UserFinances extends Component
         return view('livewire.admin.user-finances', [
             'users' => $this->users,
             'families' => $this->families,
+            'directoryFamilies' => $this->directoryFamilies,
+            'unassignedUsers' => $this->unassignedUsers,
             'aiConfigured' => app(FamilyAIService::class)->isConfigured(),
             'selectedFamily' => $this->family(),
             'license' => $this->license,
