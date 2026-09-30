@@ -1,5 +1,6 @@
 package com.keuangan.app.ui.family
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
@@ -22,6 +23,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -60,10 +62,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,7 +130,23 @@ fun FamilyDashboardScreen(
 
     val initialLoading = state.loading && state.health == null && state.insights.isEmpty()
 
+    val listState = rememberLazyListState()
+    // The header is tall and always in the way once the numbers below it start
+    // scrolling. Collapse it to nothing as soon as the user scrolls down and
+    // bring it back the moment they scroll up, so a short name never costs the
+    // list a permanently pinned strip.
+    var headerHeight by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+    val headerCollapsed = listState.firstVisibleItemIndex > 0 ||
+        listState.firstVisibleItemScrollOffset > COLLAPSE_TRIGGER_PX
+    val shownHeaderHeight by animateDpAsState(
+        targetValue = if (headerCollapsed) 0.dp else headerHeight,
+        animationSpec = tween(durationMillis = 200),
+        label = "headerCollapse",
+    )
+
     LazyColumn(
+        state = listState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -142,13 +166,24 @@ fun FamilyDashboardScreen(
 
             state.health?.let { health ->
                 item {
-                    HeroHeader(
-                        familyName = family?.name ?: "Keluarga",
-                        memberName = memberName,
-                        health = health,
-                        refreshing = state.refreshing,
-                        onRefresh = { viewModel.refresh(familyId) },
-                    )
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(shownHeaderHeight)
+                            .clipToBounds(),
+                    ) {
+                        HeroHeader(
+                            modifier = Modifier
+                                .onSizeChanged { size ->
+                                    headerHeight = with(density) { size.height.toDp() }
+                                },
+                            familyName = family?.name ?: "Keluarga",
+                            memberName = memberName,
+                            health = health,
+                            refreshing = state.refreshing,
+                            onRefresh = { viewModel.refresh(familyId) },
+                        )
+                    }
                 }
                 item {
                     FamilySummaryCard(
@@ -220,10 +255,17 @@ fun FamilyDashboardScreen(
     }
 }
 
-/** "Selamat pagi kak Budi" — first name only, time-of-day aware. */
+/**
+ * How far the first item must scroll before the header collapses. Small enough
+ * that the header leaves quickly, large enough that a slight bounce does not
+ * hide it the moment the screen opens.
+ */
+private val COLLAPSE_TRIGGER_PX = 72f
+
+/** "Selamat pagi kak Budi," — first name only, time-of-day aware. */
 private fun greetingFor(memberName: String?): String {
     val firstName = memberName?.trim()?.substringBefore(' ')?.takeIf { it.isNotBlank() }
-    return if (firstName != null) "Selamat ${greetingPeriod()} kak $firstName" else "Selamat ${greetingPeriod()}"
+    return if (firstName != null) "Selamat ${greetingPeriod()} kak $firstName," else "Selamat ${greetingPeriod()},"
 }
 
 /** Time-of-day bucket shared by the greeting text and its icon. */
@@ -268,6 +310,7 @@ private fun SectionTitle(text: String) {
  */
 @Composable
 private fun HeroHeader(
+    modifier: Modifier = Modifier,
     familyName: String,
     memberName: String?,
     health: FamilyHealthDto,
@@ -288,7 +331,7 @@ private fun HeroHeader(
     val savingsColor = if (savings < 0) Color(0xFFFFF3CD) else Color.White
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
@@ -318,7 +361,7 @@ private fun HeroHeader(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier
-                            .size(40.dp)
+                            .size(36.dp)
                             .background(Color.White.copy(alpha = 0.18f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -326,18 +369,22 @@ private fun HeroHeader(
                             greetingIcon(),
                             contentDescription = null,
                             tint = contentOn,
-                            modifier = Modifier.size(22.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
+                        // Two lines: a long name plus the period word does not fit on
+                        // one line on a narrow phone, and truncating it to
+                        // "Selamat siang kak Mar..." greets nobody.
                         Text(
                             greetingFor(memberName),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = contentOn,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
+                            softWrap = true,
                         )
                         Text(
                             "Soal cuan, urusan Kang Cuan",

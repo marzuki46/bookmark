@@ -80,8 +80,11 @@ data class FamilyMemberDto(
     val name: String? = null,
     @SerialName("payer_role") val payerRole: String? = null,
     @SerialName("payer_label") val payerLabel: String? = null,
-    val relationship: String = "adult",
-    val visibility: Map<String, Boolean> = emptyMap(),
+val relationship: String = "adult",
+    // Nullable: the server sends null for a member who has not been given
+    // per-stream visibility yet, and kotlinx rejects an explicit null for a
+    // non-null field outright ("expected start of the object").
+    val visibility: Map<String, Boolean>? = null,
 )
 
 @Serializable
@@ -538,6 +541,16 @@ data class IncomeBySourceDto(
     @SerialName("income_source_id") val incomeSourceId: Int? = null,
     val name: String = "",
     val total: Double = 0.0,
+)
+
+/**
+ * Wire wrapper for /insights. The server nests the payload under "data"; without
+ * this envelope the whole object was silently dropped (ignoreUnknownKeys) and
+ * the dashboard's insight list was always empty.
+ */
+@Serializable
+data class FamilyInsightsEnvelope(
+    val data: FamilyInsightsResponse = FamilyInsightsResponse(),
 )
 
 /** Everything the family dashboard needs, in one request. */

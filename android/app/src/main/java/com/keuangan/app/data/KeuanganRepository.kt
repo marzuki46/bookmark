@@ -300,7 +300,7 @@ class KeuanganRepository(
     // --- insights ---
 
     suspend fun insights(familyId: Int): ApiResult<FamilyInsightsResponse> = runCatching {
-        apiCall { api.insights(familyId) }
+        apiCall { api.insights(familyId) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
     suspend fun nudge(familyId: Int): ApiResult<NudgeDto?> = runCatching {

@@ -559,9 +559,12 @@ private fun EditMemberDialog(
     var name by rememberSaveable(member.userId) { mutableStateOf(member.name.orEmpty()) }
     var role by rememberSaveable(member.userId) { mutableStateOf(member.payerRole) }
     var relationship by rememberSaveable(member.userId) { mutableStateOf(member.relationship) }
-    var canViewIncome by rememberSaveable(member.userId) { mutableStateOf(member.visibility["income"] ?: true) }
-    var canViewExpense by rememberSaveable(member.userId) { mutableStateOf(member.visibility["expense"] ?: true) }
-    var canViewDebts by rememberSaveable(member.userId) { mutableStateOf(member.visibility["debts"] ?: true) }
+
+    // Absent and explicitly-null visibility both mean "not restricted yet".
+    val visibility = member.visibility
+    var canViewIncome by rememberSaveable(member.userId) { mutableStateOf(visibility?.get("income") ?: true) }
+    var canViewExpense by rememberSaveable(member.userId) { mutableStateOf(visibility?.get("expense") ?: true) }
+    var canViewDebts by rememberSaveable(member.userId) { mutableStateOf(visibility?.get("debts") ?: true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,

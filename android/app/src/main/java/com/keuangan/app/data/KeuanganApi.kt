@@ -358,7 +358,7 @@ interface KeuanganApi {
     // --- Insights ---
 
     @GET("api/families/{family}/insights")
-    suspend fun insights(@Path("family") familyId: Int): FamilyInsightsResponse
+    suspend fun insights(@Path("family") familyId: Int): FamilyInsightsEnvelope
 
     @GET("api/families/{family}/nudge")
     suspend fun nudge(@Path("family") familyId: Int): NudgeResponse
