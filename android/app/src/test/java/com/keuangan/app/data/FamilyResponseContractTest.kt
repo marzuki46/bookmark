@@ -128,6 +128,21 @@ class FamilyResponseContractTest {
     }
 
     @Test
+    fun `advisor profile accepts php empty array and object`() {
+        val empty = json.decodeFromString<AdvisorStatusResponse>(
+            """{"data":{"enabled":true,"profile":[]}}""",
+        )
+        val populated = json.decodeFromString<AdvisorStatusResponse>(
+            """{"data":{"enabled":true,"profile":{"monthly_income":5000000,"income_type":"fixed"}}}""",
+        )
+
+        assertTrue(empty.data.enabled)
+        assertNull(empty.data.profile.monthlyIncome)
+        assertEquals(5000000.0, populated.data.profile.monthlyIncome!!, 0.01)
+        assertEquals("fixed", populated.data.profile.incomeType)
+    }
+
+    @Test
     fun `summary decodes a populated health block`() {
         val payload = """
             {"data":{"score":85,"grade":"Sangat Sehat","insufficient_data":false,

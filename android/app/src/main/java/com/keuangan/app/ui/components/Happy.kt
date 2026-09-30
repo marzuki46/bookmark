@@ -70,10 +70,11 @@ fun GradientHeader(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
             .statusBarsPadding()
-            .clip(RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(appTheme.gradient)
-            .padding(horizontal = 16.dp, vertical = if (collapsed) 4.dp else 8.dp),
+            .padding(horizontal = 16.dp, vertical = if (collapsed) 6.dp else 12.dp),
     ) {
         Box(
             Modifier

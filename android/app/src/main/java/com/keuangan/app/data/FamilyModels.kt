@@ -2,6 +2,15 @@ package com.keuangan.app.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonDecoder
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
 
 /**
  * Contracts for the household ("family") API.
@@ -265,6 +274,7 @@ data class AdvisorStatusDto(
     val message: String? = null,
     val context: AdvisorContextDto? = null,
     val plan: AdvisorPlanDto? = null,
+    @Serializable(with = AdvisorProfileDtoSerializer::class)
     val profile: AdvisorProfileDto = AdvisorProfileDto(),
 )
 
@@ -375,6 +385,25 @@ data class FamilyTransactionRequest(
     @SerialName("payment_method") val paymentMethod: String? = null,
     val notes: String? = null,
 )
+
+/** The API returns [] for an unconfigured profile and an object once configured. */
+object AdvisorProfileDtoSerializer : KSerializer<AdvisorProfileDto> {
+    override val descriptor: SerialDescriptor = AdvisorProfileDto.serializer().descriptor
+
+    override fun deserialize(decoder: Decoder): AdvisorProfileDto {
+        val jsonDecoder = decoder as? JsonDecoder
+            ?: error("AdvisorProfileDtoSerializer requires JSON")
+        return when (val element: JsonElement = jsonDecoder.decodeJsonElement()) {
+            is JsonObject -> jsonDecoder.json.decodeFromJsonElement(AdvisorProfileDto.serializer(), element)
+            is JsonArray, JsonNull -> AdvisorProfileDto()
+            else -> error("Expected advisor profile object or empty array")
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: AdvisorProfileDto) {
+        encoder.encodeSerializableValue(AdvisorProfileDto.serializer(), value)
+    }
+}
 
 /**
  * Transaction payload plus the instant nudge.

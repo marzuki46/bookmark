@@ -88,9 +88,7 @@ import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.AppThemes
 import com.keuangan.app.ui.theme.Red600
-import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
-import com.keuangan.app.ui.theme.Teal900
 import com.keuangan.app.ui.theme.ThemeController
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -834,7 +832,7 @@ private fun ForecastCard(
 
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = Teal100),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
@@ -848,7 +846,7 @@ private fun ForecastCard(
                     Icon(
                         page.icon,
                         contentDescription = null,
-                        tint = Teal700,
+                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -858,14 +856,14 @@ private fun ForecastCard(
                         page.label,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Teal900,
+                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         page.netCaption,
                         style = MaterialTheme.typography.labelSmall,
-                        color = Teal900.copy(alpha = 0.75f),
+                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -880,20 +878,20 @@ private fun ForecastCard(
                 if (netKnown) formatRupiah(net) else "Tidak terlihat",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (net >= 0) Teal700 else Red600,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 if (netKnown) "Sisa setelah dikurangi pengeluaran" else "Sembunyikan salah satu catatan untuk melihat sisa",
                 style = MaterialTheme.typography.labelSmall,
-                color = Teal900.copy(alpha = 0.75f),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
 
             Spacer(Modifier.height(12.dp))
-            HorizontalDivider(color = Teal900.copy(alpha = 0.12f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.16f))
             Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -938,14 +936,14 @@ private fun ForecastStat(
             Icon(
                 icon,
                 contentDescription = null,
-                tint = Teal900.copy(alpha = 0.7f),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
                 modifier = Modifier.size(14.dp),
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 caption,
                 style = MaterialTheme.typography.labelMedium,
-                color = Teal900.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.82f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -955,7 +953,7 @@ private fun ForecastStat(
             if (visible) formatRupiah(amount) else "—",
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
-            color = Teal900,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -963,7 +961,7 @@ private fun ForecastStat(
             Text(
                 "Disembunyikan",
                 style = MaterialTheme.typography.labelSmall,
-                color = Teal900.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.72f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -971,9 +969,7 @@ private fun ForecastStat(
         }
         val better = if (goodWhenUp) delta >= 0 else delta <= 0
         val tint = when {
-            delta == 0.0 -> Teal900.copy(alpha = 0.7f)
-            better -> Teal700
-            else -> Red600
+            else -> MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = if (better) 1f else 0.78f)
         }
         Text(
             buildString {
