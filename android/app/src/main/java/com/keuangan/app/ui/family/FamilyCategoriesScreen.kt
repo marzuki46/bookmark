@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Category
@@ -45,6 +46,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyCategoryDto
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.theme.Teal700
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +58,8 @@ fun FamilyCategoriesScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var pendingDelete by androidx.compose.runtime.remember { mutableStateOf<FamilyCategoryDto?>(null) }
+    val listState = rememberLazyListState()
+    val headerFraction by rememberHeaderCollapse(listState)
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
@@ -63,6 +68,7 @@ fun FamilyCategoriesScreen(
     Scaffold(
         topBar = {
             GradientHeader(
+                modifier = Modifier.collapsingHeader { headerFraction },
                 title = "Kategori",
                 subtitle = "Kelompokkan pengeluaran & pemasukan",
             )
@@ -81,6 +87,7 @@ fun FamilyCategoriesScreen(
                 Text(state.error!!, color = MaterialTheme.colorScheme.error)
             }
             else -> LazyColumn(
+                state = listState,
                 modifier = Modifier.padding(padding).fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),

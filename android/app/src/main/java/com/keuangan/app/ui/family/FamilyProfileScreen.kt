@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -63,6 +64,8 @@ import android.widget.Toast
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.keuangan.app.data.FamilyMemberDto
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.components.TextChoiceDropdown
 import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.theme.Amber100
@@ -90,6 +93,8 @@ fun FamilyProfileScreen(
     onLogout: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    val listState = rememberLazyListState()
+    val headerFraction by rememberHeaderCollapse(listState)
     var confirmLogout by remember { mutableStateOf(false) }
     var showAddMember by remember { mutableStateOf(false) }
     var showQr by remember { mutableStateOf(false) }
@@ -124,12 +129,14 @@ fun FamilyProfileScreen(
     Scaffold(
         topBar = {
             GradientHeader(
+                modifier = Modifier.collapsingHeader { headerFraction },
                 title = "Keluarga & Akun",
                 subtitle = "Kelola profil, peran, kode login & langganan",
             )
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -78,6 +79,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
 import com.keuangan.app.BuildConfig
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
@@ -117,6 +120,8 @@ fun FamilyMoreScreen(
     onOpenHppCalculator: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
+    val listState = rememberLazyListState()
+    val headerFraction by rememberHeaderCollapse(listState)
     val context = LocalContext.current
     var showThemePicker by remember { mutableStateOf(false) }
     var showMotionPicker by remember { mutableStateOf(false) }
@@ -131,6 +136,7 @@ fun FamilyMoreScreen(
     Scaffold(
         topBar = {
             GradientHeader(
+                modifier = Modifier.collapsingHeader { headerFraction },
                 title = "Lainnya",
                 subtitle = "Kelola anggaran, kategori, tema & akun keluarga",
             )
@@ -173,6 +179,7 @@ MenuGroup("Tools Penunjang Cuan", listOf(
         )
 
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),

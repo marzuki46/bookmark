@@ -189,6 +189,7 @@ val state by viewModel.state.collectAsState()
                 }
                 else -> items(state.items, key = { it.id }) { tx ->
                     TxCard(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp),
                         tx = tx,
                         pending = tx.id < 0,
                         onEdit = { viewModel.openEdit(tx) },
@@ -490,6 +491,7 @@ fun payerName(payer: String): String = when (payer) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TxCard(
+    modifier: Modifier = Modifier,
     tx: FamilyTransactionDto,
     pending: Boolean,
     onEdit: () -> Unit,
@@ -498,7 +500,7 @@ private fun TxCard(
 Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = onEdit,

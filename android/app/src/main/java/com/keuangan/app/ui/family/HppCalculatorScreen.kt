@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -58,6 +59,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.PricingResponse
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -143,6 +146,8 @@ fun HppCalculatorScreen(onBack: () -> Unit, viewModel: HppViewModel) {
     // a total they never had to build up.
     val lines = rememberSaveable(saver = hppLinesSaver) { mutableStateListOf<HppLine>() }
     var nextId by rememberSaveable { mutableLongStateOf(1L) }
+    val listState = rememberLazyListState()
+    val headerFraction by rememberHeaderCollapse(listState)
 
     var quantity by rememberSaveable { mutableStateOf("") }
     var productName by rememberSaveable { mutableStateOf("") }
@@ -182,6 +187,7 @@ fun HppCalculatorScreen(onBack: () -> Unit, viewModel: HppViewModel) {
     Scaffold(
         topBar = {
             GradientHeader(
+                modifier = Modifier.collapsingHeader { headerFraction },
                 title = "Kalkulator HPP",
                 subtitle = "Harga pokok per unit & saran harga jual",
                 trailing = {
@@ -197,6 +203,7 @@ fun HppCalculatorScreen(onBack: () -> Unit, viewModel: HppViewModel) {
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),

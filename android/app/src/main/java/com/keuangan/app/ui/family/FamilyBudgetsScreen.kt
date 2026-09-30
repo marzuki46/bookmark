@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
@@ -51,6 +52,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.FamilyBudgetDto
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -73,6 +76,8 @@ fun FamilyBudgetsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var pendingDelete by remember { mutableStateOf<FamilyBudgetDto?>(null) }
+    val listState = rememberLazyListState()
+    val headerFraction by rememberHeaderCollapse(listState)
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
@@ -81,6 +86,7 @@ fun FamilyBudgetsScreen(
     Scaffold(
         topBar = {
             GradientHeader(
+                modifier = Modifier.collapsingHeader { headerFraction },
                 title = "Anggaran",
                 subtitle = "Tetapkan batas dan kendalikan pengeluaran",
             )
@@ -150,6 +156,7 @@ fun FamilyBudgetsScreen(
                     )
                 }
                 else -> LazyColumn(
+                    state = listState,
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {

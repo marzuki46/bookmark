@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
@@ -46,6 +47,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.IncomeSourceDto
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
 
@@ -64,6 +67,8 @@ fun FamilyIncomeSourcesScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var pendingDelete by remember { mutableStateOf<IncomeSourceDto?>(null) }
+    val listState = rememberLazyListState()
+    val headerFraction by rememberHeaderCollapse(listState)
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
@@ -72,6 +77,7 @@ fun FamilyIncomeSourcesScreen(
     Scaffold(
         topBar = {
             GradientHeader(
+                modifier = Modifier.collapsingHeader { headerFraction },
                 title = "Sumber Pemasukan",
                 subtitle = "Gaji, usaha, sampingan & lainnya",
             )
@@ -96,6 +102,7 @@ fun FamilyIncomeSourcesScreen(
                 )
             }
             else -> LazyColumn(
+                state = listState,
                 modifier = Modifier.padding(padding).fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
