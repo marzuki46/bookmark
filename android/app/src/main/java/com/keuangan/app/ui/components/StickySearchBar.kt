@@ -27,6 +27,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 
@@ -61,6 +62,7 @@ fun StickySearchBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .zIndex(1f)
             .background(MaterialTheme.colorScheme.surface)
             .then(if (headerGone) Modifier.statusBarsPadding() else Modifier)
             .padding(top = 4.dp),

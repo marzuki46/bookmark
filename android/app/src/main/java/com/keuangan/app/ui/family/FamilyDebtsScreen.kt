@@ -51,7 +51,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +66,8 @@ import com.keuangan.app.ui.components.DateField
 import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.components.KangCuanTipCard
 import com.keuangan.app.ui.components.StickySearchBar
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.formatShortDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -84,7 +85,8 @@ fun FamilyDebtsScreen(
     var pendingDelete by remember { mutableStateOf<FamilyDebtDto?>(null) }
     var showFilters by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val headerGone by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
+    val headerFraction by rememberHeaderCollapse(listState)
+    val headerGone = headerFraction == 0f
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
@@ -108,6 +110,7 @@ fun FamilyDebtsScreen(
         ) {
             item {
                 GradientHeader(
+                    modifier = Modifier.collapsingHeader { headerFraction },
                     title = "Hutang & Piutang",
                     subtitle = "Pantau tagihan, tetap tenang dan teratur",
                 )

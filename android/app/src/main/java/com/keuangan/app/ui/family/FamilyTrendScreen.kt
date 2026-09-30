@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.TrendPointDto
 import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.components.KangCuanTipCard
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
@@ -45,6 +47,8 @@ fun FamilyTrendScreen(
     viewModel: FamilyTrendViewModel,
 ) {
     val state by viewModel.state.collectAsState()
+    val scrollState = rememberScrollState()
+    val headerFraction by rememberHeaderCollapse(scrollState)
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
@@ -53,9 +57,10 @@ fun FamilyTrendScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(scrollState),
     ) {
         GradientHeader(
+            modifier = Modifier.collapsingHeader { headerFraction },
             title = "Tren Keluarga",
             subtitle = "Pemasukan, pengeluaran, dan selisih",
         )

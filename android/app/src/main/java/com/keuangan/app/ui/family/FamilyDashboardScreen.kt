@@ -1,6 +1,5 @@
 package com.keuangan.app.ui.family
 
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
@@ -62,16 +61,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -88,6 +82,8 @@ import com.keuangan.app.data.IncomeBySourceDto
 import com.keuangan.app.data.NudgeDto
 import com.keuangan.app.ui.formatCompact
 import com.keuangan.app.ui.formatRupiah
+import com.keuangan.app.ui.components.collapsingHeader
+import com.keuangan.app.ui.components.rememberHeaderCollapse
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.AppThemes
@@ -131,19 +127,8 @@ fun FamilyDashboardScreen(
     val initialLoading = state.loading && state.health == null && state.insights.isEmpty()
 
     val listState = rememberLazyListState()
-    // The header is tall and always in the way once the numbers below it start
-    // scrolling. Collapse it to nothing as soon as the user scrolls down and
-    // bring it back the moment they scroll up, so a short name never costs the
-    // list a permanently pinned strip.
-    var headerHeight by remember { mutableStateOf(0.dp) }
-    val density = LocalDensity.current
-    val headerCollapsed = listState.firstVisibleItemIndex > 0 ||
-        listState.firstVisibleItemScrollOffset > COLLAPSE_TRIGGER_PX
-    val shownHeaderHeight by animateDpAsState(
-        targetValue = if (headerCollapsed) 0.dp else headerHeight,
-        animationSpec = tween(durationMillis = 200),
-        label = "headerCollapse",
-    )
+    val headerIndex = if (state.error != null) 1 else 0
+    val headerFraction by rememberHeaderCollapse(listState, headerIndex)
 
     LazyColumn(
         state = listState,
@@ -166,24 +151,14 @@ fun FamilyDashboardScreen(
 
             state.health?.let { health ->
                 item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(shownHeaderHeight)
-                            .clipToBounds(),
-                    ) {
-                        HeroHeader(
-                            modifier = Modifier
-                                .onSizeChanged { size ->
-                                    headerHeight = with(density) { size.height.toDp() }
-                                },
+                    HeroHeader(
+                        modifier = Modifier.collapsingHeader { headerFraction },
                             familyName = family?.name ?: "Keluarga",
                             memberName = memberName,
                             health = health,
                             refreshing = state.refreshing,
                             onRefresh = { viewModel.refresh(familyId) },
-                        )
-                    }
+                    )
                 }
                 item {
                     FamilySummaryCard(
@@ -254,13 +229,6 @@ fun FamilyDashboardScreen(
         }
     }
 }
-
-/**
- * How far the first item must scroll before the header collapses. Small enough
- * that the header leaves quickly, large enough that a slight bounce does not
- * hide it the moment the screen opens.
- */
-private val COLLAPSE_TRIGGER_PX = 72f
 
 /** "Selamat pagi kak Budi," — first name only, time-of-day aware. */
 private fun greetingFor(memberName: String?): String {
