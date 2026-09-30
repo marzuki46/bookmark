@@ -235,7 +235,7 @@
                 @if($license)
                     <p class="font-semibold text-[var(--text-primary)]">{{ $license->plan?->name ?? 'Paket' }}</p>
                     <p class="text-sm {{ $license->isUsable() ? 'text-emerald-600' : 'text-red-500' }}">
-                        {{ $license->expires_at?->format('d M Y') ?? 'Seumur hidup' }} Â· {{ $license->isUsable() ? 'aktif' : 'habis' }}
+                        {{ $license->expires_at?->format('d M Y') ?? 'Seumur hidup' }} · {{ $license->isUsable() ? 'aktif' : 'habis' }}
                     </p>
                 @else
                     <p class="text-sm text-[var(--text-tertiary)]">Belum berlisensi</p>
@@ -663,9 +663,9 @@
                                 <p class="text-xs text-[var(--text-secondary)]">{{ $member->user?->email ?? '-' }}</p>
                                 <p class="text-xs text-[var(--text-tertiary)]">
                                     {{ $member->role === 'owner' ? 'Kepala keluarga' : ($member->relationship === 'child' ? 'Anak' : 'Dewasa') }}
-                                    Â· Pemasukan {{ ($member->visibility['income'] ?? true) ? 'terlihat' : 'disembunyikan' }}
-                                    Â· Pengeluaran {{ ($member->visibility['expense'] ?? true) ? 'terlihat' : 'disembunyikan' }}
-                                    Â· Hutang {{ ($member->visibility['debts'] ?? true) ? 'terlihat' : 'disembunyikan' }}
+                                    · Pemasukan {{ ($member->visibility['income'] ?? true) ? 'terlihat' : 'disembunyikan' }}
+                                    · Pengeluaran {{ ($member->visibility['expense'] ?? true) ? 'terlihat' : 'disembunyikan' }}
+                                    · Hutang {{ ($member->visibility['debts'] ?? true) ? 'terlihat' : 'disembunyikan' }}
                                 </p>
                             </div>
                             <div class="flex items-center gap-2">
@@ -722,7 +722,7 @@
                                 <p class="text-xl font-bold text-[var(--text-primary)]">{{ $license->plan?->name ?? 'Paket' }}</p>
                                 <p class="text-sm {{ $license->isUsable() ? 'text-emerald-600' : 'text-red-500' }}">
                                     {{ $license->expires_at?->format('d M Y') ?? 'Seumur hidup' }}
-                                    Â· {{ $license->isUsable() ? 'aktif' : 'habis' }}
+                                    · {{ $license->isUsable() ? 'aktif' : 'habis' }}
                                 </p>
                             </div>
                             @if($license->expires_at)

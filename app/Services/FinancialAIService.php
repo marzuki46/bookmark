@@ -207,6 +207,123 @@ Teks: "'.$text.'"';
     }
 
     /**
+     * Recommend a selling price for a unit that cost $hpp to make.
+     *
+     * The client sends its own calculator figures, so nothing about the user's
+     * transactions is disclosed to the model and no personal data is needed.
+     * When the AI provider is unavailable the deterministic band below is
+     * returned instead, so the screen always has a usable number.
+     *
+     * @param  array<string, mixed>  $inputs
+     * @return array{recommended: float, min: float, max: float, rationale: string, ai_enabled: bool}
+     */
+    public function recommendPrice(array $inputs): array
+    {
+        $hpp = max(0.0, (float) ($inputs['hpp'] ?? 0));
+        $quantity = max(0.0, (float) ($inputs['quantity'] ?? 0));
+        $wastePct = max(0.0, (float) ($inputs['waste_percent'] ?? 0));
+        $product = trim((string) ($inputs['product'] ?? ''));
+        $market = trim((string) ($inputs['market'] ?? ''));
+        $competition = max(0.0, (float) ($inputs['competition_price'] ?? 0));
+
+        $fallback = $this->ruleBasedPrice($hpp, $wastePct, $competition);
+
+        if ($hpp <= 0 || ! $this->ai->isConfigured()) {
+            return $fallback;
+        }
+
+        $facts = "Harga pokok per unit: Rp ".number_format($hpp, 0, ',', '.')."\n";
+        $facts .= 'Jumlah produk jadi per batch: '.number_format($quantity, 0, ',', '.')."\n";
+        $facts .= 'Sisipan cacat / tak laku: '.number_format($wastePct, 1)."% dari biaya\n";
+        if ($product !== '') {
+            $facts .= "Produk: {$product}\n";
+        }
+        if ($market !== '') {
+            $facts .= "Pasar / channel: {$market}\n";
+        }
+        if ($competition > 0) {
+            $facts .= 'Harga pesaing yang diketahui: Rp '.number_format($competition, 0, ',', '.')."\n";
+        }
+
+        $systemPrompt = "Kamu adalah konsultan harga jual untuk usaha rumahan di Indonesia. "
+            ."Selalu menjawab dalam Bahasa Indonesia.\n\n";
+        $systemPrompt .= "Data perhitungan modal dari kalkulator HPP:\n".$facts."\n";
+        $systemPrompt .= "Tugasmu: rekomendasikan satu harga jual yang wajar per unit.\n";
+        $systemPrompt .= "Rules:\n";
+        $systemPrompt .= "- Masukkan penyusutan alat, kemasan, ongkir, dan cacat dalam angka harga jual.\n";
+        $systemPrompt .= "- Target margin kotor 25-40% dari harga jual adalah rentang wajar.\n";
+        $systemPrompt .= "- Bulatkan ke angka yang enak dilihat pembeli (misal 12.500 atau 13.000).\n";
+        $systemPrompt .= "- Balas HANYA JSON valid tanpa teks lain, bentuk persis:\n";
+        $systemPrompt .= '{"recommended":<angka>,"min":<angka>,"max":<angka>,"rationale":"<1-2 kalimat singkat Bahasa Indonesia>"}'."\n";
+
+        try {
+            $raw = $this->ai->askRaw($systemPrompt, 'Rekomendasi harga jual per unit?', 400);
+            $parsed = $raw === null ? null : json_decode(trim($raw), true);
+
+            $recommended = isset($parsed['recommended']) ? (float) $parsed['recommended'] : 0.0;
+            if ($recommended <= 0) {
+                return $fallback;
+            }
+
+            return [
+                // Never let the model undercut cost: a seller pricing below HPP
+                // loses money on every unit, so clamp to at least a 20% markup.
+                'recommended' => max($recommended, round($hpp * 1.2)),
+                'min' => max((float) ($parsed['min'] ?? $recommended), $hpp),
+                'max' => max((float) ($parsed['max'] ?? $recommended), $recommended),
+                'rationale' => trim((string) ($parsed['rationale'] ?? '')) ?: $fallback['rationale'],
+                'ai_enabled' => true,
+            ];
+        } catch (\Exception) {
+            return $fallback;
+        }
+    }
+
+    /**
+     * Deterministic price band used when AI is off or returned junk.
+     *
+     * Anchors on a 30% margin, which leaves room for operating costs that are
+     * not part of HPP, and never recommends a price at or below cost.
+     */
+    private function ruleBasedPrice(float $hpp, float $wastePct, float $competition): array
+    {
+        if ($hpp <= 0) {
+            return [
+                'recommended' => 0.0,
+                'min' => 0.0,
+                'max' => 0.0,
+                'rationale' => 'Isi modal dan jumlah produk dulu untuk mendapat saran harga.',
+                'ai_enabled' => false,
+            ];
+        }
+
+        $recommended = $hpp * 1.30;
+        $min = $hpp * 1.20;
+        $max = $hpp * 1.50;
+
+        if ($competition > 0) {
+            // Sit just under a known competitor while still clearing cost.
+            $recommended = min(max($competition * 0.95, $hpp * 1.20), $hpp * 1.50);
+        }
+
+        if ($wastePct >= 10) {
+            $recommended *= 1.05;
+            $max *= 1.05;
+        }
+
+        $round = static fn (float $v): float => (float) (ceil($v / 100) * 100);
+
+        return [
+            'recommended' => $round($recommended),
+            'min' => $round(min($min, $recommended)),
+            'max' => $round(max($max, $recommended)),
+            'rationale' => 'Perkalian standar 30% di atas modal, dibulatkan ke atas. '
+                .'Belum memperhitungkan pajak dan biaya hidup, jadi sisakan mark-up tambahan kalau target kamu凌厉.',
+            'ai_enabled' => false,
+        ];
+    }
+
+    /**
      * Proactive, no-question-needed advice for the dashboard.
      *
      * $metrics comes from FinanceReportService::insights() so the advice is

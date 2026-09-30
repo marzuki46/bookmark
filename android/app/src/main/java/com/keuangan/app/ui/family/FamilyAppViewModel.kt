@@ -32,6 +32,9 @@ class FamilyAppViewModel(private val repository: KeuanganRepository) : ViewModel
     private val _family = MutableStateFlow<FamilyDto?>(null)
     val family: StateFlow<FamilyDto?> = _family.asStateFlow()
 
+    private val _memberName = MutableStateFlow<String?>(null)
+    val memberName: StateFlow<String?> = _memberName.asStateFlow()
+
     private val _loading = MutableStateFlow(true)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
 
@@ -42,14 +45,36 @@ class FamilyAppViewModel(private val repository: KeuanganRepository) : ViewModel
             _familyId.value = cachedId
             _loading.value = false
         }
+        _memberName.value = repository.currentUserName
         resolve()
     }
 
     fun resolve() {
         viewModelScope.launch {
+            // Keep the greeting's name warm. The dashboard shows it before any
+            // child screen has had a chance to call /me, and a cold start with an
+            // empty token store would otherwise greet nobody.
+            repository.currentUser().let { result ->
+                if (result is com.keuangan.app.data.ApiResult.Ok) {
+                    result.value.name
+                        ?.substringBefore(' ')
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let { _memberName.value = it }
+                }
+            }
+
             repository.loadFamily(force = true)
             _family.value = repository.family.value
             _familyId.value = repository.familyId
+
+            // A member row matched by id is the better source: it is the name the
+            // rest of the family sees, not just the account display name.
+            _memberName.value = repository.currentUserName
+                ?: _family.value?.members
+                    ?.firstOrNull { it.userId == repository.currentUserId }
+                    ?.name
+                    ?.substringBefore(' ')
+                    ?.takeIf { it.isNotBlank() }
             _loading.value = false
         }
     }

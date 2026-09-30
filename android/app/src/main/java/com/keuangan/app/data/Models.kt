@@ -178,6 +178,29 @@ data class AskRequest(val question: String)
 @Serializable
 data class AskResponse(val answer: String? = null, val model: String? = null)
 
+/**
+ * HPP calculator inputs sent to the pricing advisor. Only the user's own
+ * calculator figures travel; no transaction data is disclosed.
+ */
+@Serializable
+data class PricingRequest(
+    val hpp: Double,
+    val quantity: Double? = null,
+    @SerialName("waste_percent") val wastePercent: Double? = null,
+    val product: String? = null,
+    val market: String? = null,
+    @SerialName("competition_price") val competitionPrice: Double? = null,
+)
+
+@Serializable
+data class PricingResponse(
+    val recommended: Double = 0.0,
+    val min: Double = 0.0,
+    val max: Double = 0.0,
+    val rationale: String? = null,
+    @SerialName("ai_enabled") val aiEnabled: Boolean = false,
+)
+
 // --- Personal profile (the "about" menu) ---
 
 @Serializable

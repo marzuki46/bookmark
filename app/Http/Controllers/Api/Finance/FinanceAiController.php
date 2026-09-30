@@ -104,7 +104,32 @@ final class FinanceAiController extends Controller
     }
 
     /**
-     * Turn free text ("makan 30rb") into a transaction.
+     * Recommended selling price for a unit built with the in-app HPP calculator.
+ *
+ * The client sends its own calculator figures only — no transaction data is
+ * disclosed, so this endpoint is safe to call without any license gating.
+ */
+public function pricing(Request $request): JsonResponse
+{
+    $validated = $request->validate([
+        'hpp' => 'required|numeric|min:0',
+        'quantity' => 'nullable|numeric|min:0',
+        'waste_percent' => 'nullable|numeric|min:0|max:100',
+        'product' => 'nullable|string|max:120',
+        'market' => 'nullable|string|max:120',
+        'competition_price' => 'nullable|numeric|min:0',
+    ]);
+
+    $service = new FinancialAIService($this->ai);
+    $recommendation = $service->recommendPrice($validated);
+
+    return response()->json(array_merge($recommendation, [
+        'generated_at' => now()->toIso8601String(),
+    ]));
+}
+
+/**
+ * Turn free text ("makan 30rb") into a transaction.
      *
      * By default this is a dry run so the app can show a confirmation screen
      * before anything is written; pass save=true to persist in one call.

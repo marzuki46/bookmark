@@ -93,6 +93,7 @@ import com.keuangan.app.ui.family.FamilyCategoriesViewModel
 import com.keuangan.app.ui.family.FamilyAdvisorProfileScreen
 import com.keuangan.app.ui.family.FamilyDashboardScreen
 import com.keuangan.app.ui.family.HppCalculatorScreen
+import com.keuangan.app.ui.family.HppViewModel
 import com.keuangan.app.ui.family.FamilyDashboardViewModel
 import com.keuangan.app.ui.family.KangCuanFloatButton
 import com.keuangan.app.ui.family.FamilyDebtsScreen
@@ -160,6 +161,7 @@ private fun appFactory(): ViewModelProvider.Factory {
             initializer { FamilyMoreViewModel(app.repository) }
             initializer { FamilyTrendViewModel(app.repository) }
             initializer { FamilyMessagesViewModel(app, app.repository) }
+            initializer { HppViewModel(app.repository) }
         }
     }
 }
@@ -213,6 +215,7 @@ private fun FamilyShell(
 ) {
     val familyId by viewModel.familyId.collectAsState()
     val family by viewModel.family.collectAsState()
+    val memberName by viewModel.memberName.collectAsState()
     val loading by viewModel.loading.collectAsState()
 
     if (familyId == null) {
@@ -343,7 +346,7 @@ private fun FamilyShell(
                 FamilyDashboardScreen(
                     familyId = familyId!!,
                     family = family,
-                    memberName = me?.name ?: viewModel.currentUserName,
+                    memberName = memberName ?: me?.name,
                     viewModel = vm,
                     onOpenTransactions = { navController.navigate(Routes.TRANSACTIONS) },
                     onOpenBudgets = { navController.navigate(Routes.BUDGETS) },
@@ -390,8 +393,12 @@ private fun FamilyShell(
                     onOpenHppCalculator = { navController.navigate(Routes.HPP_CALCULATOR) },
                 )
             }
-            composable(Routes.HPP_CALCULATOR) {
-                HppCalculatorScreen(onBack = { navController.popBackStack() })
+composable(Routes.HPP_CALCULATOR) {
+        val hppVm: HppViewModel = viewModel(factory = appFactory())
+        HppCalculatorScreen(
+            onBack = { navController.popBackStack() },
+            viewModel = hppVm,
+        )
             }
             composable(Routes.BUDGETS) {
                 val vm: FamilyBudgetsViewModel = viewModel(factory = appFactory())

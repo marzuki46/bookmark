@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -27,17 +29,27 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.NightsStay
+import androidx.compose.material.icons.filled.NorthEast
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SouthWest
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material.icons.filled.WbSunny
+import androidx.compose.material.icons.filled.WbTwilight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -54,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.keuangan.app.data.FamilyDto
@@ -73,6 +86,7 @@ import com.keuangan.app.ui.theme.AppThemes
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
+import com.keuangan.app.ui.theme.Teal900
 import com.keuangan.app.ui.theme.ThemeController
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -208,15 +222,27 @@ fun FamilyDashboardScreen(
 
 /** "Selamat pagi kak Budi" — first name only, time-of-day aware. */
 private fun greetingFor(memberName: String?): String {
+    val firstName = memberName?.trim()?.substringBefore(' ')?.takeIf { it.isNotBlank() }
+    return if (firstName != null) "Selamat ${greetingPeriod()} kak $firstName" else "Selamat ${greetingPeriod()}"
+}
+
+/** Time-of-day bucket shared by the greeting text and its icon. */
+private fun greetingPeriod(): String {
     val hour = java.time.LocalTime.now().hour
-    val period = when (hour) {
+    return when (hour) {
         in 0..10 -> "pagi"
         in 11..14 -> "siang"
         in 15..17 -> "sore"
         else -> "malam"
     }
-    val firstName = memberName?.trim()?.substringBefore(' ')?.takeIf { it.isNotBlank() }
-    return if (firstName != null) "Selamat $period kak $firstName" else "Selamat $period"
+}
+
+/** Icon that matches the greeting period, so the header reads at a glance. */
+private fun greetingIcon(): ImageVector = when (greetingPeriod()) {
+    "pagi" -> Icons.Filled.WbSunny
+    "siang" -> Icons.Filled.LightMode
+    "sore" -> Icons.Filled.WbTwilight
+    else -> Icons.Filled.NightsStay
 }
 
 @Composable
@@ -290,6 +316,20 @@ private fun HeroHeader(
 
             Column(Modifier.padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(40.dp)
+                            .background(Color.White.copy(alpha = 0.18f), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            greetingIcon(),
+                            contentDescription = null,
+                            tint = contentOn,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             greetingFor(memberName),
@@ -297,12 +337,14 @@ private fun HeroHeader(
                             fontWeight = FontWeight.Bold,
                             color = contentOn,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            "Soal cuan, urusan Kang Cuan · $familyName",
+                            "Soal cuan, urusan Kang Cuan",
                             style = MaterialTheme.typography.labelMedium,
                             color = mutedOn,
                             maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     IconButton(onClick = onRefresh, enabled = !refreshing) {
@@ -321,11 +363,13 @@ private fun HeroHeader(
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
-                    "Selisih bulan ini · ${SimpleDateFormat("MMMM yyyy", Locale("id", "ID")).format(Date())}",
+                    "Sisa bulan ini · ${familyName} · ${SimpleDateFormat("MMMM yyyy", Locale("id", "ID")).format(Date())}",
                     style = MaterialTheme.typography.labelLarge,
                     color = mutedOn,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(2.dp))
                 val animated by animateIntAsState(
@@ -417,10 +461,13 @@ private fun Tile(tile: FeatureTile, modifier: Modifier = Modifier) {
         shape = RoundedCornerShape(16.dp),
     ) {
         // A fixed height keeps both rows even, and the label is allowed two
-        // lines on narrow phones so "Anggaran" is never cut in half. Content is
-        // centred on both axes so the badge never reads as pinned to a corner.
+        // lines on narrow phones so "Anggaran" is never cut in half. The column
+        // must fill the cell width, otherwise it shrink-wraps to the icon and
+        // centring has no space to work with, leaving icon and label hugging the
+        // left edge.
         Column(
             modifier = Modifier
+                .fillMaxWidth()
                 .height(96.dp)
                 .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -699,33 +746,61 @@ private fun formatSignedFull(value: Double): String = if (value >= 0) {
  * the app for; week and month share one row underneath. Three equal columns
  * used to squeeze rupiah figures into ~110dp each and wrap mid-amount.
  */
+/** One swipeable page of the forecast pager. */
+private data class ForecastPage(
+    val label: String,
+    val netCaption: String,
+    val window: ForecastWindowDto,
+    val icon: ImageVector,
+)
+
 @Composable
 private fun ForecastStrip(forecast: FamilyForecastDto, license: ForecastLicenseDto) {
+    // One full-width card per window, swiped horizontally. Splitting three windows
+    // across a grid gave each one half the screen, so the label and the rupiah
+    // figure ended up stacked and wrapped instead of read side by side.
+    val pages = listOf(
+        ForecastPage("Hari ini", "Sisa kas hari ini", forecast.today, Icons.Filled.Today),
+        ForecastPage("Minggu ini", "Sisa minggu ini", forecast.week, Icons.Filled.DateRange),
+        ForecastPage("Bulan ini", "Sisa bulan ini", forecast.month, Icons.Filled.CalendarMonth),
+    )
+    val pagerState = rememberPagerState(pageCount = { pages.size })
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        ForecastCard(
-            modifier = Modifier.fillMaxWidth(),
-            label = "Hari ini",
-            netCaption = "Sisa kas hari ini",
-            window = forecast.today,
-            license = license,
-            emphasised = true,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
             ForecastCard(
-                modifier = Modifier.weight(1f),
-                label = "Minggu ini",
-                netCaption = "Sisa minggu ini",
-                window = forecast.week,
+                modifier = Modifier.fillMaxWidth(),
+                page = pages[page],
                 license = license,
-                emphasised = false,
             )
-            ForecastCard(
-                modifier = Modifier.weight(1f),
-                label = "Bulan ini",
-                netCaption = "Sisa bulan ini",
-                window = forecast.month,
-                license = license,
-                emphasised = false,
+        }
+        PageDots(current = pagerState.currentPage, count = pages.size)
+    }
+}
+
+/** Swipe position readout: one dot per window, the active one stretched. */
+@Composable
+private fun PageDots(current: Int, count: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(count) { index ->
+            val active = index == current
+            Box(
+                Modifier
+                    .padding(horizontal = 3.dp)
+                    .height(6.dp)
+                    .width(if (active) 20.dp else 6.dp)
+                    .background(
+                        color = if (active) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                        shape = CircleShape,
+                    ),
             )
         }
     }
@@ -734,135 +809,168 @@ private fun ForecastStrip(forecast: FamilyForecastDto, license: ForecastLicenseD
 @Composable
 private fun ForecastCard(
     modifier: Modifier,
-    label: String,
-    netCaption: String,
-    window: ForecastWindowDto,
+    page: ForecastPage,
     license: ForecastLicenseDto,
-    emphasised: Boolean,
 ) {
     // Net is only meaningful when both streams are visible: the server zeroes a
     // hidden stream, so subtracting it would print a confident wrong number.
     val netKnown = license.incomeVisible && license.expenseVisible
-    val net = window.current.income - window.current.expense
+    val net = page.window.current.income - page.window.current.expense
 
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = if (emphasised) Teal100 else MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (emphasised) 0.dp else 1.dp),
+        colors = CardDefaults.cardColors(containerColor = Teal100),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
-        Column(Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        netCaption,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(38.dp)
+                        .background(Color.White.copy(alpha = 0.55f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        page.icon,
+                        contentDescription = null,
+                        tint = Teal700,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
-                if (netKnown) {
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
                     Text(
-                        formatRupiah(net),
-                        style = if (emphasised) {
-                            MaterialTheme.typography.headlineSmall
-                        } else {
-                            MaterialTheme.typography.titleMedium
-                        },
+                        page.label,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (net >= 0) Teal700 else Red600,
-                        textAlign = TextAlign.End,
+                        color = Teal900,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                } else {
                     Text(
-                        "Tidak terlihat",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.End,
+                        page.netCaption,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Teal900.copy(alpha = 0.75f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-            androidx.compose.material3.HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-            )
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
-            ForecastLine(
-                caption = "Masuk",
-                amount = window.current.income,
-                delta = window.delta.incomeDelta,
-                pct = window.delta.incomePct,
-                visible = license.incomeVisible,
-                goodWhenUp = true,
+            // The hero figure gets its own full-width line. Sharing a row with the
+            // title was what forced the text to break mid-number.
+            Text(
+                if (netKnown) formatRupiah(net) else "Tidak terlihat",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (net >= 0) Teal700 else Red600,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            ForecastLine(
-                caption = "Keluar",
-                amount = window.current.expense,
-                delta = window.delta.expenseDelta,
-                pct = window.delta.expensePct,
-                visible = license.expenseVisible,
-                goodWhenUp = false,
+            Text(
+                if (netKnown) "Sisa setelah dikurangi pengeluaran" else "Sembunyikan salah satu catatan untuk melihat sisa",
+                style = MaterialTheme.typography.labelSmall,
+                color = Teal900.copy(alpha = 0.75f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
             )
+
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = Teal900.copy(alpha = 0.12f))
+            Spacer(Modifier.height(12.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ForecastStat(
+                    modifier = Modifier.weight(1f),
+                    caption = "Masuk",
+                    icon = Icons.Filled.SouthWest,
+                    amount = page.window.current.income,
+                    delta = page.window.delta.incomeDelta,
+                    pct = page.window.delta.incomePct,
+                    visible = license.incomeVisible,
+                    goodWhenUp = true,
+                )
+                ForecastStat(
+                    modifier = Modifier.weight(1f),
+                    caption = "Keluar",
+                    icon = Icons.Filled.NorthEast,
+                    amount = page.window.current.expense,
+                    delta = page.window.delta.expenseDelta,
+                    pct = page.window.delta.expensePct,
+                    visible = license.expenseVisible,
+                    goodWhenUp = false,
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ForecastLine(
+private fun ForecastStat(
+    modifier: Modifier,
     caption: String,
+    icon: ImageVector,
     amount: Double,
     delta: Double,
     pct: Double?,
     visible: Boolean,
     goodWhenUp: Boolean,
 ) {
-    Column(Modifier.padding(bottom = 8.dp)) {
-        Text(
-            caption,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    Column(modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = Teal900.copy(alpha = 0.7f),
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                caption,
+                style = MaterialTheme.typography.labelMedium,
+                color = Teal900.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(2.dp))
         Text(
             if (visible) formatRupiah(amount) else "—",
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
+            color = Teal900,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         if (!visible) {
             Text(
                 "Disembunyikan",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = Teal900.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
             return
         }
         val better = if (goodWhenUp) delta >= 0 else delta <= 0
         val tint = when {
-            delta == 0.0 -> MaterialTheme.colorScheme.onSurfaceVariant
+            delta == 0.0 -> Teal900.copy(alpha = 0.7f)
             better -> Teal700
             else -> Red600
         }
         Text(
             buildString {
-                append(if (delta >= 0) "+" else "-")
+                append(if (delta >= 0) "+" else "−")
                 append(formatRupiah(kotlin.math.abs(delta)))
                 if (pct != null) append(" (${if (pct >= 0) "+" else "−"}${formatPct(pct)})")
             },
             style = MaterialTheme.typography.labelSmall,
             color = tint,
             fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }

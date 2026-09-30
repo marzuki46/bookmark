@@ -44,6 +44,68 @@ final class FinanceApiTest extends TestCase
         $this->getJson('/api/finance/transactions')->assertUnauthorized();
         $this->getJson('/api/finance/categories')->assertUnauthorized();
         $this->postJson('/api/finance/ai/advice', [])->assertUnauthorized();
+        $this->postJson('/api/finance/ai/pricing', [])->assertUnauthorized();
+    }
+
+    // --- HPP pricing advice ---
+
+    public function test_pricing_requires_a_positive_cost(): void
+    {
+        $user = User::factory()->create();
+
+        $this->asUser($user)
+            ->postJson('/api/finance/ai/pricing', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('hpp');
+
+        $this->asUser($user)
+            ->postJson('/api/finance/ai/pricing', ['hpp' => -1])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('hpp');
+    }
+
+    public function test_pricing_never_recommends_a_price_at_or_below_cost(): void
+    {
+        $user = User::factory()->create();
+        $hpp = 10_000;
+
+        $response = $this->asUser($user)->postJson('/api/finance/ai/pricing', [
+            'hpp' => $hpp,
+            'quantity' => 50,
+        ])->assertOk();
+
+        // AI is not configured under test, so this exercises the deterministic
+        // fallback: the floor is the invariant that matters most to a seller.
+        $this->assertGreaterThan($hpp, $response->json('recommended'));
+        $this->assertGreaterThanOrEqual($hpp, $response->json('min'));
+        $this->assertGreaterThanOrEqual($response->json('recommended'), $response->json('max'));
+        $this->assertFalse($response->json('ai_enabled'));
+        $this->assertNotEmpty($response->json('rationale'));
+    }
+
+    public function test_pricing_band_widens_when_waste_is_high(): void
+    {
+        $user = User::factory()->create();
+
+        $clean = $this->asUser($user)->postJson('/api/finance/ai/pricing', [
+            'hpp' => 10_000, 'waste_percent' => 2,
+        ])->assertOk()->json();
+
+        $wasteful = $this->asUser($user)->postJson('/api/finance/ai/pricing', [
+            'hpp' => 10_000, 'waste_percent' => 15,
+        ])->assertOk()->json();
+
+        $this->assertGreaterThan($clean['recommended'], $wasteful['recommended']);
+    }
+
+    public function test_pricing_returns_zero_when_cost_is_zero(): void
+    {
+        $user = User::factory()->create();
+
+        $this->asUser($user)
+            ->postJson('/api/finance/ai/pricing', ['hpp' => 0])
+            ->assertOk()
+            ->assertJson(['recommended' => 0, 'ai_enabled' => false]);
     }
 
     // --- Dashboard ---

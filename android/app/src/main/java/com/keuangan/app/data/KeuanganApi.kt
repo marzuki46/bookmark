@@ -66,6 +66,9 @@ interface KeuanganApi {
     @POST("api/finance/ai/ask")
     suspend fun ask(@Body body: AskRequest): AskResponse
 
+    @POST("api/finance/ai/pricing")
+    suspend fun pricing(@Body body: PricingRequest): PricingResponse
+
     // --- App login by permanent code ---
 
     @POST("api/app/login")

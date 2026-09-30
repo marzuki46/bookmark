@@ -94,7 +94,7 @@ final class FamilyHouseholdApiTest extends TestCase
         $this->assertSame('custom', $goal['type']);
     }
 
-    // â”€â”€ DEBTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— DEBTS —————————————————————————————————————————————————————————
 
     public function test_can_create_a_debt(): void
     {
@@ -226,7 +226,7 @@ final class FamilyHouseholdApiTest extends TestCase
         $this->assertSame(['Sendiri'], $names->all());
     }
 
-    // â”€â”€ INCOME SOURCES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— INCOME SOURCES ————————————————————————————————————————————————
 
     public function test_can_create_income_sources_for_salary_and_business(): void
     {
@@ -315,7 +315,7 @@ final class FamilyHouseholdApiTest extends TestCase
         ])->assertStatus(422);
     }
 
-    // â”€â”€ TRANSACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— TRANSACTIONS ——————————————————————————————————————————————————
 
     public function test_can_create_a_transaction_attributed_to_the_wife(): void
     {
@@ -448,7 +448,7 @@ final class FamilyHouseholdApiTest extends TestCase
         }
     }
 
-    // â”€â”€ BUDGETS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— BUDGETS ———————————————————————————————————————————————————————
 
     public function test_budget_creation_and_spent_calculation(): void
     {
@@ -520,7 +520,7 @@ final class FamilyHouseholdApiTest extends TestCase
         $this->assertSame(0.0, (float) $data['budgets'][0]['spent']);
     }
 
-    // â”€â”€ GOALS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // —— GOALS —————————————————————————————————————————————————————————
 
     public function test_emergency_fund_target_is_three_months_of_average_expense(): void
     {

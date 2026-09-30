@@ -71,7 +71,13 @@ class KeuanganRepository(
         apiCall { api.me() }.data
     }.fold(
         onSuccess = { me ->
-            kangCuan.saveUserName(me.name?.substringBefore(' ')?.takeIf { it.isNotBlank() })
+            val shortName = me.name?.substringBefore(' ')?.takeIf { it.isNotBlank() }
+            kangCuan.saveUserName(shortName)
+            // Durable copy: the dashboard greets the member from this, and it has
+            // to survive a cold start that never opens the profile screen.
+            if (shortName != null && tokenStore.userName != shortName) {
+                tokenStore.saveSession(tokenStore.token.orEmpty(), currentUserId, shortName)
+            }
             ApiResult.Ok(me)
         },
         onFailure = { e -> e.toApiError() },
@@ -184,6 +190,10 @@ class KeuanganRepository(
 
     suspend fun ask(question: String): ApiResult<AskResponse> = runCatching {
         apiCall { api.ask(AskRequest(question)) }
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
+    suspend fun pricingAdvice(request: PricingRequest): ApiResult<PricingResponse> = runCatching {
+        apiCall { api.pricing(request) }
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
     // ======================================================================

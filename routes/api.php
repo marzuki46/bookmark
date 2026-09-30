@@ -186,6 +186,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
 
         Route::post('ai/advice', [FinanceAiController::class, 'advice']);
         Route::post('ai/ask', [FinanceAiController::class, 'ask']);
+        Route::post('ai/pricing', [FinanceAiController::class, 'pricing']);
         Route::post('ai/parse', [FinanceAiController::class, 'parse']);
     });
 });

@@ -40,6 +40,7 @@ val Slate100 = Color(0xFFF1F5F9)
 // Kept as aliases — screen code has always referenced these names.
 val Teal700 = Color(0xFF0F766E)
 val Teal600 = Color(0xFF0D9488)
+val Teal900 = Color(0xFF134E4A)
 val Teal100 = Color(0xFFCCFBF1)
 val Emerald500 = Color(0xFF10B981)
 val Emerald600 = Color(0xFF059669)
