@@ -126,6 +126,92 @@ final class FamilyApiTest extends TestCase
         $this->getJson("/api/families/{$family->id}/summary")->assertStatus(403);
     }
 
+    // ── forecast ──────────────────────────────────────────────────────
+
+    public function test_forecast_compares_current_and_previous_windows(): void
+    {
+        $husband = User::factory()->create();
+        $family = $this->familyWith($husband);
+        Sanctum::actingAs($husband);
+
+        $today = now()->toDateString();
+        $yesterday = now()->subDay()->toDateString();
+        $lastWeek = now()->startOfWeek()->subWeek()->addDay()->toDateString();
+        $lastMonth = now()->startOfMonth()->subMonthNoOverflow()->addDay()->toDateString();
+
+        $family->transactions()->createMany([
+            ['user_id' => $husband->id, 'type' => 'income', 'amount' => 100000, 'description' => 'Hari ini', 'date' => $today],
+            ['user_id' => $husband->id, 'type' => 'expense', 'amount' => 15000, 'description' => 'Belanja hari ini', 'date' => $today],
+            ['user_id' => $husband->id, 'type' => 'income', 'amount' => 200000, 'description' => 'Kemarin', 'date' => $yesterday],
+            ['user_id' => $husband->id, 'type' => 'income', 'amount' => 300000, 'description' => 'Minggu lalu', 'date' => $lastWeek],
+            ['user_id' => $husband->id, 'type' => 'income', 'amount' => 500000, 'description' => 'Bulan lalu', 'date' => $lastMonth],
+            ['user_id' => $husband->id, 'type' => 'expense', 'amount' => 30000, 'description' => 'Buln lalu', 'date' => $lastMonth],
+        ]);
+
+        $url = "/api/families/{$family->id}/forecast";
+        $data = $this->getJson($url)->assertOk()->json('data');
+
+        // Day window: today vs yesterday.
+        $this->assertEquals(100000.0, $data['today']['current']['income']);
+        $this->assertEquals(200000.0, $data['today']['previous']['income']);
+        $this->assertEquals(-50.0, $data['today']['delta']['income_pct']);
+        $this->assertEquals(-100000.0, $data['today']['delta']['income_delta']);
+
+        // Month window: today to month-start vs last month.
+        $this->assertEquals(600000.0, $data['month']['current']['income']);
+        $this->assertEquals(500000.0, $data['month']['previous']['income']);
+        $this->assertEquals(20.0, $data['month']['delta']['income_pct']);
+        $this->assertEquals(100000.0, $data['month']['delta']['income_delta']);
+        $this->assertEquals(15000.0, $data['month']['current']['expense']);
+        $this->assertEquals(30000.0, $data['month']['previous']['expense']);
+
+        // License flags are true for the owner. They are a SIBLING of `data`,
+        // not nested inside it — the Android DTO mirrors this shape, and moving
+        // the key silently defaulted its flags to true and leaked masked rows.
+        $response = $this->getJson($url)->assertOk();
+        $this->assertTrue($response->json('license.income_visible'));
+        $this->assertTrue($response->json('license.expense_visible'));
+        $this->assertNull($response->json('data.license'));
+        $this->assertNull($response->json('data.income_visible'));
+    }
+
+    public function test_forecast_masks_hidden_streams_and_reports_them_in_license(): void
+    {
+        $husband = User::factory()->create();
+        $wife = User::factory()->create();
+        // familyWith already registers the wife as a plain member.
+        $family = $this->familyWith($husband, $wife);
+        FamilyMember::where('family_id', $family->id)
+            ->where('user_id', $wife->id)
+            ->update(['visibility' => json_encode(['income' => true, 'expense' => false])]);
+        Sanctum::actingAs($wife);
+
+        $today = now()->toDateString();
+        $family->transactions()->createMany([
+            ['user_id' => $husband->id, 'type' => 'income', 'amount' => 100000, 'description' => 'Gaji', 'date' => $today],
+            ['user_id' => $husband->id, 'type' => 'expense', 'amount' => 25000, 'description' => 'Belanja', 'date' => $today],
+        ]);
+
+        $json = $this->getJson("/api/families/{$family->id}/forecast")->assertOk()->json();
+
+        $this->assertTrue($json['license']['income_visible']);
+        $this->assertFalse($json['license']['expense_visible']);
+
+        // Visible stream keeps its value; the hidden one is zeroed, never leaked.
+        $this->assertEquals(100000.0, $json['data']['today']['current']['income']);
+        $this->assertEquals(0.0, $json['data']['today']['current']['expense']);
+    }
+
+    public function test_forecast_is_forbidden_to_non_members(): void
+    {
+        $family = $this->familyWith();
+        $stranger = User::factory()->create();
+
+        Sanctum::actingAs($stranger);
+
+        $this->getJson("/api/families/{$family->id}/forecast")->assertStatus(403);
+    }
+
     // ── devices ───────────────────────────────────────────────────────
 
     public function test_device_registration_stores_token(): void

@@ -25,12 +25,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -60,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -87,14 +90,19 @@ import com.keuangan.app.ui.family.FamilyBudgetsScreen
 import com.keuangan.app.ui.family.FamilyBudgetsViewModel
 import com.keuangan.app.ui.family.FamilyCategoriesScreen
 import com.keuangan.app.ui.family.FamilyCategoriesViewModel
+import com.keuangan.app.ui.family.FamilyAdvisorProfileScreen
 import com.keuangan.app.ui.family.FamilyDashboardScreen
+import com.keuangan.app.ui.family.HppCalculatorScreen
 import com.keuangan.app.ui.family.FamilyDashboardViewModel
+import com.keuangan.app.ui.family.KangCuanFloatButton
 import com.keuangan.app.ui.family.FamilyDebtsScreen
 import com.keuangan.app.ui.family.FamilyDebtsViewModel
 import com.keuangan.app.ui.family.FamilyGoalsScreen
 import com.keuangan.app.ui.family.FamilyGoalsViewModel
 import com.keuangan.app.ui.family.FamilyIncomeSourcesScreen
 import com.keuangan.app.ui.family.FamilyIncomeSourcesViewModel
+import com.keuangan.app.ui.family.FamilyMessagesScreen
+import com.keuangan.app.ui.family.FamilyMessagesViewModel
 import com.keuangan.app.ui.family.FamilyMoreScreen
 import com.keuangan.app.ui.family.FamilyMoreViewModel
 import com.keuangan.app.ui.family.FamilyProfileScreen
@@ -120,6 +128,9 @@ object Routes {
     const val TREND = "trend"
     const val PROFILE = "profile"
     const val SUBSCRIPTION = "subscription"
+    const val KANG_CUAN = "kang-cuan"
+    const val ADVISOR_PROFILE = "advisor-profile"
+    const val HPP_CALCULATOR = "hpp-calculator"
 }
 
 /**
@@ -148,6 +159,7 @@ private fun appFactory(): ViewModelProvider.Factory {
             initializer { FamilySubscriptionViewModel(app.repository) }
             initializer { FamilyMoreViewModel(app.repository) }
             initializer { FamilyTrendViewModel(app.repository) }
+            initializer { FamilyMessagesViewModel(app, app.repository) }
         }
     }
 }
@@ -226,6 +238,21 @@ private fun FamilyShell(
 
     NotificationPermissionRequest()
 
+    // Tapping a Kang Cuan notification lands straight on the message page.
+    val context = LocalContext.current
+    val activity = LocalContext.current as? android.app.Activity
+    LaunchedEffect(activity, familyId) {
+        val openKangCuan = activity
+            ?.intent
+            ?.getBooleanExtra(com.keuangan.app.reminder.KangCuanAlarmReceiver.EXTRA_OPEN_KANG_CUAN, false) == true
+        if (openKangCuan && familyId != null && currentDestination?.route != Routes.KANG_CUAN) {
+            navController.navigate(Routes.KANG_CUAN) {
+                popUpTo(Routes.HOME) { saveState = false }
+                launchSingleTop = true
+            }
+        }
+    }
+
     val selectedTab = TABS.firstOrNull { tab ->
         currentDestination?.hierarchy?.any { it.route == tab.route } == true
     }
@@ -249,6 +276,14 @@ private fun FamilyShell(
                     }
                 },
             )
+        },
+        floatingActionButton = {
+            if (selectedTab?.route == Routes.HOME) {
+                KangCuanFloatButton(
+                    onOpenRencana = { navController.navigate(Routes.KANG_CUAN) },
+                    onOpenAnggaran = { navController.navigate(Routes.BUDGETS) },
+                )
+            }
         },
     ) { padding ->
         NavHost(
@@ -304,9 +339,11 @@ private fun FamilyShell(
         ) {
             composable(Routes.HOME) {
                 val vm: FamilyDashboardViewModel = viewModel(factory = appFactory())
+                val me = family?.members?.firstOrNull { it.userId == viewModel.currentUserId }
                 FamilyDashboardScreen(
                     familyId = familyId!!,
                     family = family,
+                    memberName = me?.name ?: viewModel.currentUserName,
                     viewModel = vm,
                     onOpenTransactions = { navController.navigate(Routes.TRANSACTIONS) },
                     onOpenBudgets = { navController.navigate(Routes.BUDGETS) },
@@ -319,7 +356,13 @@ private fun FamilyShell(
             }
             composable(Routes.TRANSACTIONS) {
                 val vm: FamilyTransactionsViewModel = viewModel(factory = appFactory())
-                FamilyTransactionsScreen(familyId = familyId!!, viewModel = vm)
+                val me = family?.members?.firstOrNull { it.userId == viewModel.currentUserId }
+                FamilyTransactionsScreen(
+                    familyId = familyId!!,
+                    viewModel = vm,
+                    payerRole = me?.payerRole ?: family?.payerRole,
+                    isChild = me?.relationship == "child",
+                )
             }
             composable(Routes.DEBTS) {
                 val vm: FamilyDebtsViewModel = viewModel(factory = appFactory())
@@ -331,16 +374,24 @@ private fun FamilyShell(
             }
             composable(Routes.MORE) {
                 val vm: FamilyMoreViewModel = viewModel(factory = appFactory())
+                val me = family?.members?.firstOrNull { it.userId == viewModel.currentUserId }
                 FamilyMoreScreen(
                     familyId = familyId!!,
                     viewModel = vm,
+                    currentUserIsOwner = me?.role == "owner",
                     onOpenBudgets = { navController.navigate(Routes.BUDGETS) },
                     onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
                     onOpenIncomeSources = { navController.navigate(Routes.INCOME_SOURCES) },
                     onOpenTrend = { navController.navigate(Routes.TREND) },
                     onOpenProfile = { navController.navigate(Routes.PROFILE) },
                     onOpenSubscription = { navController.navigate(Routes.SUBSCRIPTION) },
+                    onOpenKangCuan = { navController.navigate(Routes.KANG_CUAN) },
+                    onOpenAdvisorProfile = { navController.navigate(Routes.ADVISOR_PROFILE) },
+                    onOpenHppCalculator = { navController.navigate(Routes.HPP_CALCULATOR) },
                 )
+            }
+            composable(Routes.HPP_CALCULATOR) {
+                HppCalculatorScreen(onBack = { navController.popBackStack() })
             }
             composable(Routes.BUDGETS) {
                 val vm: FamilyBudgetsViewModel = viewModel(factory = appFactory())
@@ -370,6 +421,18 @@ private fun FamilyShell(
             composable(Routes.SUBSCRIPTION) {
                 val vm: FamilySubscriptionViewModel = viewModel(factory = appFactory())
                 FamilySubscriptionScreen(viewModel = vm, onBack = { navController.popBackStack() })
+            }
+            composable(Routes.KANG_CUAN) {
+                val vm: FamilyMessagesViewModel = viewModel(factory = appFactory())
+                FamilyMessagesScreen(viewModel = vm, onBack = { navController.popBackStack() })
+            }
+            composable(Routes.ADVISOR_PROFILE) {
+                val vm: FamilyMoreViewModel = viewModel(factory = appFactory())
+                FamilyAdvisorProfileScreen(
+                    familyId = familyId!!,
+                    viewModel = vm,
+                    onBack = { navController.popBackStack() },
+                )
             }
         }
     }
@@ -416,27 +479,59 @@ private fun AppleNavBar(
     val scheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(28.dp)
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 10.dp),
+            .padding(horizontal = 18.dp, vertical = 10.dp)
+            .drawBehind {
+                drawRoundRect(
+                    color = scheme.surface.copy(alpha = 0.82f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx()),
+                )
+                drawRoundRect(
+                    color = Color.White.copy(alpha = 0.06f),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx()),
+                )
+            }
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)), shape)
+            .clip(shape),
     ) {
+        val itemWidth = (maxWidth - 12.dp - ((tabs.size - 1) * 2).dp) / tabs.size
+        val selectedIndex = tabs.indexOfFirst { it.route == selectedRoute }.coerceAtLeast(0)
+        val targetOffset = 6.dp + (itemWidth + 2.dp) * selectedIndex
+        val indicatorOffset by animateDpAsState(
+            targetValue = targetOffset,
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow,
+            ),
+            label = "navigation wave position",
+        )
+
+        Box(
+            modifier = Modifier
+                .offset(x = indicatorOffset, y = 6.dp)
+                .size(width = itemWidth, height = 70.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(scheme.primary.copy(alpha = 0.14f))
+                .drawBehind {
+                    val wave = Path().apply {
+                        val base = size.height - 8.dp.toPx()
+                        moveTo(0f, base)
+                        quadraticTo(size.width * 0.25f, base - 9.dp.toPx(), size.width * 0.5f, base)
+                        quadraticTo(size.width * 0.75f, base + 9.dp.toPx(), size.width, base)
+                        lineTo(size.width, size.height)
+                        lineTo(0f, size.height)
+                        close()
+                    }
+                    drawPath(wave, scheme.primary.copy(alpha = 0.18f))
+                },
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(82.dp)
-                .drawBehind {
-                    // Frosted glass: translucent base + soft edge highlight.
-                    drawRoundRect(
-                        color = scheme.surface.copy(alpha = 0.82f),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx()),
-                    )
-                    drawRoundRect(
-                        color = Color.White.copy(alpha = 0.06f),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx()),
-                    )
-                }
-                .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)), shape)
                 .clip(shape)
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -466,12 +561,8 @@ private fun AppleNavItem(
     val pressed by interaction.collectIsPressedAsState()
 
     val springy = spring<androidx.compose.ui.unit.Dp>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-    val pillSize by animateDpAsState(if (selected) 48.dp else 40.dp, animationSpec = springy)
-    val iconScale by animateDpAsState(if (selected) 25.dp else 20.dp, animationSpec = springy)
-    val pillColor by androidx.compose.animation.animateColorAsState(
-        if (selected) scheme.primary.copy(alpha = 0.16f) else Color.Transparent,
-        animationSpec = tween(220),
-    )
+    val pillSize by animateDpAsState(if (selected) 44.dp else 38.dp, animationSpec = springy)
+    val iconScale by animateDpAsState(if (selected) 23.dp else 20.dp, animationSpec = springy)
     val iconTint by androidx.compose.animation.animateColorAsState(
         if (selected) scheme.primary else scheme.onSurfaceVariant,
         animationSpec = tween(220),
@@ -486,7 +577,7 @@ private fun AppleNavItem(
             modifier = Modifier
                 .size(pillSize)
                 .clip(CircleShape)
-                .background(pillColor)
+                .background(Color.Transparent)
                 .scale(pressScale)
                 .clickable(
                     interactionSource = interaction,
@@ -504,7 +595,7 @@ private fun AppleNavItem(
         }
         Text(
             tab.label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelSmall,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = iconTint,
             maxLines = 1,

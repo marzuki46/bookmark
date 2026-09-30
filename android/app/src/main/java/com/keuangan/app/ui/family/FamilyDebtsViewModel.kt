@@ -27,16 +27,34 @@ data class DebtForm(
 data class FamilyDebtsUiState(
     val loading: Boolean = true,
     val saving: Boolean = false,
+    val allItems: List<FamilyDebtDto> = emptyList(),
+    val search: String = "",
     val typeFilter: String? = null,
     val statusFilter: String? = null,
-    val items: List<FamilyDebtDto> = emptyList(),
     val error: String? = null,
     val formError: String? = null,
     val actionMessage: String? = null,
     val form: DebtForm? = null,
     val paymentDebt: FamilyDebtDto? = null,
     val paymentAmount: String = "",
-)
+) {
+    /**
+     * Visible rows after the type / status / search chips. Filtering is done in
+     * memory (the list is small) so switching a chip is instant and works
+     * offline. statusFilter: null = semua, "open" = belum lunas, "settled" = lunas.
+     */
+    val items: List<FamilyDebtDto>
+        get() = allItems
+            .filter { debt ->
+                (typeFilter == null || debt.type == typeFilter) &&
+                    (statusFilter == null || (statusFilter == "settled") == (debt.status == "settled")) &&
+                    (search.isBlank() || debt.name.contains(search.trim(), ignoreCase = true))
+            }
+            .sortedWith(
+                compareByDescending<FamilyDebtDto> { it.status != "settled" }
+                    .thenBy { it.dueDate ?: "" },
+            )
+}
 
 class FamilyDebtsViewModel(private val repository: KeuanganRepository) : ViewModel() {
 
@@ -47,34 +65,50 @@ class FamilyDebtsViewModel(private val repository: KeuanganRepository) : ViewMod
 
     fun load(familyId: Int) {
         activeFamilyId = familyId
-        _state.update { it.copy(loading = it.items.isEmpty(), error = null) }
+        _state.update { it.copy(loading = it.allItems.isEmpty(), error = null) }
         viewModelScope.launch {
-            val filters = _state.value
-            val result = repository.debts(familyId, filters.statusFilter, filters.typeFilter)
-            val items = when (result) {
-                is ApiResult.Ok -> result.value.sortedWith(
-                    compareByDescending<FamilyDebtDto> { it.status != "settled" }
-                        .thenBy { it.dueDate ?: "" },
-                )
-                is ApiResult.Err -> {
-                    _state.update { it.copy(loading = false, error = result.message) }
-                    emptyList()
+            when (val result = repository.debts(familyId)) {
+                is ApiResult.Ok -> _state.update {
+                    it.copy(loading = false, allItems = result.value, error = null)
                 }
-            }
-            _state.update {
-                it.copy(loading = false, items = items, error = null)
+                is ApiResult.Err -> _state.update {
+                    it.copy(loading = false, error = result.message)
+                }
             }
         }
     }
 
     fun setTypeFilter(type: String?) {
-        _state.update { it.copy(typeFilter = type) }
-        activeFamilyId?.let(::load)
+        _state.update { it.copy(typeFilter = if (it.typeFilter == type) null else type) }
     }
 
     fun setStatusFilter(status: String?) {
-        _state.update { it.copy(statusFilter = status) }
-        activeFamilyId?.let(::load)
+        _state.update { it.copy(statusFilter = if (it.statusFilter == status) null else status) }
+    }
+
+    fun onSearchChange(value: String) {
+        _state.update { it.copy(search = value) }
+    }
+
+    fun clearFilters() {
+        _state.update { it.copy(typeFilter = null, statusFilter = null, search = "") }
+    }
+
+    /**
+     * Drops the chip filters but keeps whatever is in the search box — the
+     * "Hapus" next to the active-filter summary should not also wipe typing.
+     */
+    fun clearFiltersKeepSearch() {
+        _state.update { it.copy(typeFilter = null, statusFilter = null) }
+    }
+
+    /**
+     * Sets both filters outright, for the filter sheet's Terapkan button.
+     * Unlike [setTypeFilter] this does not toggle: re-picking the value already
+     * selected has to keep it selected.
+     */
+    fun applyFilters(type: String?, status: String?) {
+        _state.update { it.copy(typeFilter = type, statusFilter = status) }
     }
 
     fun openCreate() {

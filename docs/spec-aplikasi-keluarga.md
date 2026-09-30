@@ -1,6 +1,6 @@
 # Spec: Aplikasi Keuangan Keluarga (Android) + AI Insight Otomatis
 
-Status: draft untuk implementasi
+Status: baseline produk untuk implementasi
 Tanggal: 2026-09-28
 
 ## 1. Outcome
@@ -19,9 +19,11 @@ Sebuah aplikasi Android untuk mengelola keuangan rumah tangga, dengan:
 
 | Actor | Keterangan |
 |---|---|
-| Anggota keluarga | Suami atau istri. Satu akun = satu orang. |
-| Kepala keluarga | Anggota dengan `role = owner`. |
-| Admin perumahan | Mengelola daftar keluarga dipermalinkahan. **Tidak** melihat detail keuangan keluarga. |
+| Anggota keluarga | Satu akun = satu orang yang menjadi anggota satu keluarga. |
+| Kepala keluarga | Pembeli/order pertama; pemilik lisensi dan pengatur anggota serta izin data. |
+| Anggota dewasa | Suami, istri, atau peran dewasa lain yang ditetapkan kepala keluarga. |
+| Anak | Anggota dengan akses terbatas sesuai pengaturan kepala keluarga. |
+| Admin aplikasi | Mengelola banyak keluarga, memantau pengguna/perangkat/lisensi/error, dan dapat melihat data untuk dukungan operasional sesuai audit. |
 | Server | Menyimpan data, menjalankan AI, mengirim notifikasi. |
 
 ## 3. Tenancy (3 lapis)
@@ -33,13 +35,17 @@ Perumahan (housing_complex)
               └── family_transactions (payer = husband | wife | shared)
 ```
 
-**Asumsi yang harus dikonfirmasi:**
+**Keputusan domain:**
 
 - Satu user hanya boleh menjadi anggota **satu** keluarga untuk keperluan app.
   Kemampuan `invite_code` di web tetap dibiarkan, tetapi app tidak pernah
   menawarkan alur "gabung keluarga lain".
-- Admin perumahan hanya melihat data agregat/anonim (jumlah keluarga, jumlah
-  anggota). Tidak ada akses ke nominal, transaksi, atau hutang keluarga.
+- Orang yang melakukan order pertama menjadi kepala keluarga dan pemilik lisensi.
+- Kepala keluarga dapat menetapkan peran anggota sebagai suami, istri, anak, atau anggota lain.
+- Lisensi melekat pada keluarga, bukan pada akun suami/istri secara terpisah.
+- Pembayaran mencatat user pembayar untuk audit, tetapi hak pakai diberikan ke seluruh anggota keluarga.
+- Kepala keluarga dapat membatasi anak dari pemasukan, pengeluaran, hutang, atau detail anggota dewasa. Pembatasan ditegakkan di API, bukan hanya UI.
+- Admin aplikasi memiliki akses operasional yang diaudit untuk memastikan aplikasi berjalan lancar.
 
 ## 4. Scope
 
@@ -101,6 +107,15 @@ Creating a perumahan assigns a family to it.
   untukcicilan; `paid_amount` tidak boleh melebihi `amount`.
 - AC4.5 CRUD anggaran dan target.
 - AC4.6 `GET /api/families/summary` untuk health score keluarga.
+- AC4.7 Semua laporan, transaksi, hutang, target, dan anggaran mengikuti izin anggota yang sedang login.
+- AC4.8 Kepala keluarga dapat mengubah izin visibilitas anggota.
+
+### FR4A — Lisensi keluarga
+
+- AC4A.1 Subscription memiliki `family_id`; satu keluarga memiliki satu entitlement aktif.
+- AC4A.2 Semua anggota keluarga melihat status lisensi keluarga yang sama.
+- AC4A.3 Pembayaran menyimpan `user_id` sebagai pembayar dan `family_id` sebagai pemilik manfaat.
+- AC4A.4 Admin dapat mengelola lisensi dari halaman detail keluarga.
 
 ### FR5 — Sumber pemasukan
 
@@ -138,6 +153,16 @@ Creating a perumahan assigns a family to it.
 - AC8.4 Layar hutang, anggaran, target, sumber pemasukan.
 - AC8.5 Notifikasi lokal saat insight masuk, dengan deep link ke dashboard.
 - AC8.6 Empty state yang informatif di setiap layar.
+- AC8.7 Navigasi utama selalu menampilkan label yang jelas.
+- AC8.8 Layar langganan menampilkan pemilik lisensi keluarga, status, tanggal berakhir, dan catatan update.
+- AC8.9 Update aplikasi menampilkan versi, tanggal, fitur baru, perbaikan bug, keamanan, dan status wajib/disarankan.
+
+### FR9 — Admin aplikasi
+
+- AC9.1 Dashboard admin memiliki Manajemen Keluarga sebagai pusat navigasi pelanggan.
+- AC9.2 Detail keluarga memiliki tab Ringkasan, Anggota, Laporan, Lisensi, Perangkat, dan Aktivitas.
+- AC9.3 Admin dapat melihat status aktif user/perangkat, error aplikasi, dan kesehatan API.
+- AC9.4 Akses admin ke data keluarga dicatat dalam activity log.
 
 ## 6. Data Changes
 
@@ -150,6 +175,10 @@ Creating a perumahan assigns a family to it.
 | `family_insights` | baru |
 | `income_sources` | baru |
 | `family_transactions` | + `income_source_id` (nullable) |
+| `subscriptions` | + `family_id` (nullable saat expand; backfill dari owner) |
+| `subscription_payments` | + `family_id` (nullable saat expand) |
+| `family_members` | + visibility permission fields atau permission JSON yang tervalidasi |
+| `app_releases` | + release notes terstruktur dan mandatory flag |
 
 Semua nullable/nullable-safe. Tidak ada data yang dihapus.
 
@@ -159,10 +188,28 @@ Semua nullable/nullable-safe. Tidak ada data yang dihapus.
   cukup; bila tidak, pakai `Hash::check` dengan bcrypt untuk paranoid.
 - Rate limit login by kode.
 - Semua endpoint keluarga memverifikasi keanggotaan lewat `family_members`.
+- Semua endpoint keluarga memverifikasi visibility permission setelah membership.
+- Kode keluarga/login dibuat dengan CSPRNG, disimpan hash, di-rate-limit, dan dapat dirotasi.
+- Endpoint `/api/*` tidak boleh dilayani cache CDN.
+- ID keluarga dari client tidak pernah menjadi bukti kepemilikan.
 - API key AI tidak pernah dikirim ke client.
 - FCM service account hanya dari env/secret manager.
 
-## 8. Increments
+## 8. Database & Performance
+
+- Index tenant utama: `(family_id, date)`, `(family_id, type, date)`, `(family_id, status)`, dan `(family_id, user_id)`.
+- Membership memiliki unique constraint untuk satu user dalam satu keluarga.
+- Query laporan wajib membatasi tenant dan rentang tanggal sebelum agregasi.
+- Migration produksi memakai expand-and-contract; tidak menghapus kolom lama pada deployment pertama.
+
+## 9. Release Notes & Updates
+
+- Setiap release memiliki `version_code`, `version_name`, `released_at`, `notes`, dan `is_mandatory`.
+- Catatan rilis dibagi menjadi fitur baru, perbaikan bug, keamanan, performa, dan perubahan UI.
+- Update opsional menampilkan notifikasi berulang secara wajar.
+- Update wajib memblokir akses setelah grace period sampai APK berhasil diperbarui.
+
+## 10. Increments
 
 1. **I1** Holmes + `app_login_code` + login by kode + tes.
 2. **I2** Device registration + endpoint keluarga dasar.
@@ -171,7 +218,7 @@ Semua nullable/nullable-safe. Tidak ada data yang dihapus.
 5. **I5** Android: login kode, redesign, layar baru.
 6. **I6** Android: notifikasi (FCM + polling fallback).
 
-## 9. Risiko
+## 11. Risiko
 
 - Migration pada tabel yang sudah berisi data produksi → wajib `nullable` + expand-first.
 - Biaya API AI: 1 keluarga = 1 + jumlah anggota panggilan per minggu. Untuk 100

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\AppErrorLog;
+use App\Models\AppRelease;
 use App\Models\Family;
 use App\Models\FamilyDebt;
 use App\Models\FamilyMember;
@@ -129,6 +130,85 @@ final class AppOpsApiTest extends TestCase
         $this->get($response->json('data.download_url'))
             ->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.android.package-archive');
+    }
+
+    public function test_release_notes_can_be_filled_in_after_upload(): void
+    {
+        Storage::fake('local');
+        $admin = $this->owner;
+        $admin->update(['is_admin' => true]);
+
+        $apk = UploadedFile::fake()->create('app.apk', 2048);
+        $apk->mimeType('application/vnd.android.package-archive');
+
+        $this->actingAs($admin)->post(route('keuangan.aplikasi.store'), [
+            'apk' => $apk,
+            'version_code' => 24,
+            'version_name' => '3.1.0',
+            'notes' => '',
+        ])->assertRedirect(route('keuangan.aplikasi'));
+
+        $release = AppRelease::where('version_code', 24)->firstOrFail();
+        $this->assertNull($release->notes);
+
+        // With no notes stored the endpoint still returns a string, because the
+        // Android DTO is a non-null String; an empty value is the "nothing to
+        // show" signal there.
+        $this->getJson('/api/app/updates?current_version_code=23')
+            ->assertOk()
+            ->assertJsonPath('data.notes', '');
+
+        $this->actingAs($admin)->from(route('keuangan.aplikasi'))
+            ->patch(route('keuangan.aplikasi.update', $release), [
+                '_release_id' => $release->id,
+                'version_name' => '3.1.1',
+                'notes' => 'Catatan rilis diisi belakangan',
+                'is_mandatory' => '1',
+            ])->assertRedirect(route('keuangan.aplikasi'));
+
+        $release->refresh();
+        $this->assertSame('3.1.1', $release->version_name);
+        $this->assertSame('Catatan rilis diisi belakangan', $release->notes);
+        $this->assertTrue($release->is_mandatory);
+        // The binary identity must survive an edit, or the updater's checksum
+        // verification would break.
+        $this->assertSame(24, $release->version_code);
+        Storage::disk('local')->assertExists('apk/keuangan-3.1.0-24.apk');
+
+        $this->getJson('/api/app/updates?current_version_code=23')
+            ->assertOk()
+            ->assertJsonPath('data.notes', 'Catatan rilis diisi belakangan')
+            ->assertJsonPath('data.latest_version_name', '3.1.1')
+            ->assertJsonPath('data.is_mandatory', true);
+
+        // Clearing the textarea must go back to "no notes".
+        $this->actingAs($admin)->patch(route('keuangan.aplikasi.update', $release), [
+            'version_name' => '3.1.1',
+            'notes' => '',
+        ]);
+
+        $this->assertNull($release->fresh()->notes);
+    }
+
+    public function test_release_notes_reject_overlong_text(): void
+    {
+        $admin = $this->owner;
+        $admin->update(['is_admin' => true]);
+        $release = AppRelease::create([
+            'version_code' => 24,
+            'version_name' => '3.1.0',
+            'file_path' => 'apk/x.apk',
+            'file_size' => 1,
+        ]);
+
+        $this->actingAs($admin)->from(route('keuangan.aplikasi'))
+            ->patch(route('keuangan.aplikasi.update', $release), [
+                'version_name' => '3.1.0',
+                'notes' => str_repeat('a', 5001),
+            ])->assertRedirect(route('keuangan.aplikasi'))
+            ->assertSessionHasErrors('notes');
+
+        $this->assertNull($release->fresh()->notes);
     }
 
     // ─── Crash reporting ───

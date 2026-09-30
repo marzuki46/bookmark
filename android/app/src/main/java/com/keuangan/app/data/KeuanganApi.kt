@@ -97,6 +97,11 @@ interface KeuanganApi {
     @POST("api/subscription/charge")
     suspend fun charge(@Body body: ChargeRequest): ChargeResponse
 
+    // Kang Cuan message templates (server only stores templates; scheduling,
+    // history and deletion live on the device).
+    @GET("api/app/affirmations")
+    suspend fun affirmations(): AffirmationListResponse
+
     // --- Family ---
 
     @GET("api/families")
@@ -135,6 +140,9 @@ interface KeuanganApi {
 
     @GET("api/families/{family}/summary")
     suspend fun familySummary(@Path("family") familyId: Int): FamilySummaryResponse
+
+    @GET("api/families/{family}/forecast")
+    suspend fun familyForecast(@Path("family") familyId: Int): FamilyForecastResponse
 
     // Kang Cuan — the family financial advisor ("Pendamping Keuangan").
 

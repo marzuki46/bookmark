@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 data class TxForm(
     val id: Int? = null,
@@ -35,7 +34,9 @@ data class FamilyTransactionsUiState(
     val search: String = "",
     val typeFilter: String? = null,
     val payerFilter: String? = null,
-    val periodFilter: String = "month",
+    /** ISO date range filter; both null = every period. */
+    val fromFilter: String? = null,
+    val toFilter: String? = null,
     val items: List<FamilyTransactionDto> = emptyList(),
     val categories: List<FamilyCategoryDto> = emptyList(),
     val incomeSources: List<IncomeSourceDto> = emptyList(),
@@ -68,13 +69,12 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
             val catsDeferred = async { repository.familyCategories(familyId).getOrNull().orEmpty() }
             val sourcesDeferred = async { repository.incomeSources(familyId).getOrNull().orEmpty() }
             val filters = _state.value
-            val (from, to) = periodDates(filters.periodFilter)
             val transactionsDeferred = async { repository.familyTransactions(
                 familyId = familyId,
                 type = filters.typeFilter,
                 payer = filters.payerFilter,
-                from = from,
-                to = to,
+                from = filters.fromFilter,
+                to = filters.toFilter,
                 query = filters.search.ifBlank { null },
             ) }
             val cats = catsDeferred.await()
@@ -107,27 +107,25 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
 
     fun submitSearch(familyId: Int) = load(familyId)
 
-    fun setTypeFilter(type: String?) {
-        _state.update { it.copy(typeFilter = type) }
+    /**
+     * Applies every filter dimension at once and reloads the list a single
+     * time. The UI edits a local draft inside the filter sheet and only calls
+     * this when the user confirms, so toggling chips never fires N reloads.
+     */
+    fun applyFilters(type: String?, payer: String?, from: String?, to: String?) {
+        _state.update { it.copy(typeFilter = type, payerFilter = payer, fromFilter = from, toFilter = to) }
         activeFamilyId?.let(::load)
     }
 
-    fun setPayerFilter(payer: String?) {
-        _state.update { it.copy(payerFilter = payer) }
-        activeFamilyId?.let(::load)
-    }
+    fun clearFilters() = applyFilters(null, null, null, null)
 
-    fun setPeriodFilter(period: String) {
-        _state.update { it.copy(periodFilter = period) }
-        activeFamilyId?.let(::load)
-    }
-
-    fun openCreate() {
+    fun openCreate(payer: String? = null) {
         _state.update {
             it.copy(
                 form = TxForm(
                     type = it.typeFilter?.takeIf { f -> f == "income" || f == "expense" } ?: "expense",
                     date = todayIso(),
+                    payer = payer ?: "shared",
                 ),
             )
         }
@@ -226,15 +224,4 @@ class FamilyTransactionsViewModel(private val repository: KeuanganRepository) : 
         if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
 
     private fun todayIso(): String = java.time.LocalDate.now().toString()
-
-    private fun periodDates(period: String): Pair<String?, String?> {
-        val today = LocalDate.now()
-        val from = when (period) {
-            "month" -> today.withDayOfMonth(1)
-            "quarter" -> today.minusMonths(2).withDayOfMonth(1)
-            "year" -> today.withDayOfYear(1)
-            else -> null
-        }
-        return from?.toString() to today.toString()
-    }
 }

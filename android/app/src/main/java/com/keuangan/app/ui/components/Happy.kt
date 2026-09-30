@@ -61,6 +61,7 @@ import java.time.ZoneOffset
 fun GradientHeader(
     title: String,
     subtitle: String? = null,
+    collapsed: Boolean = false,
     modifier: Modifier = Modifier,
     trailing: (@Composable () -> Unit)? = null,
 ) {
@@ -72,7 +73,7 @@ fun GradientHeader(
             .statusBarsPadding()
             .clip(RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp))
             .background(appTheme.gradient)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = if (collapsed) 4.dp else 8.dp),
     ) {
         Box(
             Modifier
@@ -88,25 +89,102 @@ fun GradientHeader(
                 .size(28.dp)
                 .background(Color.White.copy(alpha = 0.08f), CircleShape),
         )
-        Column(Modifier.fillMaxWidth(0.82f)) {
+        Column(
+            Modifier
+                .fillMaxWidth(0.82f)
+                .align(Alignment.CenterStart),
+        ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = if (collapsed) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
                 color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (subtitle != null) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.92f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            AnimatedVisibility(visible = !collapsed) {
+                Column {
+                    if (subtitle != null) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.92f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
         }
         trailing?.let { action ->
             Box(Modifier.align(Alignment.CenterEnd)) { action() }
+        }
+    }
+}
+
+/**
+ * String-valued dropdown, for fields that are a closed list of words rather
+ * than a reference to a row the server owns (e.g. religion).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TextChoiceDropdown(
+    label: String,
+    choices: List<String>,
+    selected: String?,
+    onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "Pilih…",
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        OutlinedTextField(
+            value = selected.orEmpty(),
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            placeholder = { Text(placeholder) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            modifier = Modifier
+                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth(),
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Tidak diisi") },
+                onClick = {
+                    onSelect(null)
+                    expanded = false
+                },
+            )
+            choices.forEach { choice ->
+                val checked = choice == selected
+                DropdownMenuItem(
+                    text = { Text(choice) },
+                    trailingIcon = if (checked) {
+                        {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    } else null,
+                    onClick = {
+                        onSelect(choice)
+                        expanded = false
+                    },
+                )
+            }
         }
     }
 }

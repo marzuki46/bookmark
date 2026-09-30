@@ -17,6 +17,15 @@ import kotlinx.coroutines.launch
  */
 class FamilyAppViewModel(private val repository: KeuanganRepository) : ViewModel() {
 
+    /** Id of the logged-in member, used to resolve this user's row in [family]. */
+    val currentUserId: Int? get() = repository.currentUserId
+
+    /**
+     * Display name of the logged-in member, kept as a fallback for when
+     * [currentUserId] could not be matched against [family].
+     */
+    val currentUserName: String? get() = repository.currentUserName
+
     private val _familyId = MutableStateFlow<Int?>(null)
     val familyId: StateFlow<Int?> = _familyId.asStateFlow()
 

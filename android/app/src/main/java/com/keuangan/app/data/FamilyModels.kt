@@ -2,7 +2,6 @@ package com.keuangan.app.data
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 
 /**
  * Contracts for the household ("family") API.
@@ -139,6 +138,62 @@ data class FamilyHealthDto(
 @Serializable
 data class FamilySummaryResponse(val data: FamilyHealthDto = FamilyHealthDto())
 
+/**
+ * One cash-flow window: the current period, the period before it, and the
+ * rupiah / percent movement between the two. income_pct & expense_pct are null
+ * when the previous window had no movement to compare against.
+ */
+@Serializable
+data class ForecastWindowDto(
+    val current: ForecastAmountDto = ForecastAmountDto(),
+    val previous: ForecastAmountDto = ForecastAmountDto(),
+    val delta: ForecastDeltaDto = ForecastDeltaDto(),
+)
+
+@Serializable
+data class ForecastAmountDto(
+    val income: Double = 0.0,
+    val expense: Double = 0.0,
+)
+
+@Serializable
+data class ForecastDeltaDto(
+    @SerialName("income_delta") val incomeDelta: Double = 0.0,
+    @SerialName("income_pct") val incomePct: Double? = null,
+    @SerialName("expense_delta") val expenseDelta: Double = 0.0,
+    @SerialName("expense_pct") val expensePct: Double? = null,
+)
+
+/**
+ * Today / this week / this month, each vs. its previous window.
+ *
+ * Visibility is deliberately NOT on this object: the server returns it as a
+ * sibling `license` key at the top level of the payload, not inside `data`.
+ */
+@Serializable
+data class FamilyForecastDto(
+    val today: ForecastWindowDto = ForecastWindowDto(),
+    val week: ForecastWindowDto = ForecastWindowDto(),
+    val month: ForecastWindowDto = ForecastWindowDto(),
+)
+
+/**
+ * Whether the viewer is allowed to see income / expense figures. When a stream
+ * is hidden the server zeroes its amounts, so the client also needs the flag to
+ * explain the zeros rather than show a misleading "Rp 0".
+ */
+@Serializable
+data class ForecastLicenseDto(
+    @SerialName("income_visible") val incomeVisible: Boolean = true,
+    @SerialName("expense_visible") val expenseVisible: Boolean = true,
+)
+
+@Serializable
+data class FamilyForecastResponse(
+    val data: FamilyForecastDto = FamilyForecastDto(),
+    val license: ForecastLicenseDto = ForecastLicenseDto(),
+)
+
 // --- Kang Cuan: family financial advisor ("Pendamping Keuangan") ---
 
 @Serializable
@@ -187,13 +242,27 @@ data class AdvisorBudgetSuggestionDto(
 )
 
 @Serializable
+data class AdvisorProfileDto(
+    @SerialName("monthly_income") val monthlyIncome: Double? = null,
+    @SerialName("income_type") val incomeType: String? = null,
+    @SerialName("members_count") val membersCount: Int? = null,
+    @SerialName("dependents_count") val dependentsCount: Int? = null,
+    @SerialName("housing_type") val housingType: String? = null,
+    @SerialName("has_protection") val hasProtection: Boolean? = null,
+    @SerialName("uncovered_members") val uncoveredMembers: Int? = null,
+    val priorities: List<String> = emptyList(),
+    @SerialName("monthly_essential_override") val monthlyEssentialOverride: Double? = null,
+    val notes: String? = null,
+)
+
+@Serializable
 data class AdvisorStatusDto(
     val enabled: Boolean = false,
     val accessible: Boolean? = null,
     val message: String? = null,
     val context: AdvisorContextDto? = null,
     val plan: AdvisorPlanDto? = null,
-    val profile: JsonObject = JsonObject(emptyMap()),
+    val profile: AdvisorProfileDto = AdvisorProfileDto(),
 )
 
 @Serializable
@@ -209,10 +278,14 @@ data class AdvisorToggleResponse(val data: AdvisorStatusDto = AdvisorStatusDto()
 data class AdvisorProfileRequest(
     @SerialName("monthly_income") val monthlyIncome: Double? = null,
     @SerialName("income_type") val incomeType: String? = null,
+    @SerialName("members_count") val membersCount: Int? = null,
+    @SerialName("dependents_count") val dependentsCount: Int? = null,
     @SerialName("housing_type") val housingType: String? = null,
     @SerialName("has_protection") val hasProtection: Boolean? = null,
     @SerialName("uncovered_members") val uncoveredMembers: Int? = null,
     val priorities: List<String>? = null,
+    @SerialName("monthly_essential_override") val monthlyEssentialOverride: Double? = null,
+    val notes: String? = null,
 )
 
 // --- Categories ---
@@ -332,9 +405,9 @@ data class FamilyDebtDto(
     @SerialName("interest_rate") val interestRate: Double? = null,
     val installment: Double? = null,
     @SerialName("due_date") val dueDate: String? = null,
-    val notes: String? = null,
+val notes: String? = null,
     val status: String = "open",
-    val priority: String = "medium",
+    val priority: Int? = null,
     @SerialName("is_overdue") val isOverdue: Boolean = false,
 )
 

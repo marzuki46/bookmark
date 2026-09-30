@@ -114,6 +114,7 @@
                                         ['route' => 'keuangan.langganan', 'label' => 'Langganan', 'icon' => 'check', 'active' => request()->routeIs('keuangan.langganan')],
                                         ['route' => 'keuangan.keluarga', 'label' => 'Manajemen Keluarga', 'icon' => 'bar-chart', 'active' => request()->routeIs('keuangan.keluarga*') || request()->routeIs('keuangan.finansial')],
                                         ['route' => 'keuangan.aplikasi-manajemen', 'label' => 'Manajemen Aplikasi', 'icon' => 'globe', 'active' => request()->routeIs('keuangan.aplikasi-manajemen') || request()->routeIs('keuangan.aplikasi') || request()->routeIs('keuangan.log')],
+                                        ['route' => 'keuangan.penyemangat', 'label' => 'Penyemangat', 'icon' => 'sun', 'active' => request()->routeIs('keuangan.penyemangat')],
                                     ]
                                 ],
                                 'system' => [
@@ -186,6 +187,7 @@
                                                             'table' => '<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/>',
                                                             'check' => '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>',
                                                             'wallet' => '<path d="M21 12V7H5a2 2 0 01-2-2 2 2 0 012-2h14v4"/><path d="M3 5v14a2 2 0 002 2h16v-5"/><path d="M18 12a2 2 0 000 4h4v-4z"/>',
+                                                            'sun' => '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>',
                                                         ];
                                                         $iconSvg = $icons[$iconName] ?? $icons['file'];
                                                     @endphp

@@ -134,30 +134,34 @@ class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewM
 
     fun dismissNewMemberCode() = _state.update { it.copy(newMemberCode = null) }
 
-    fun saveProfile(name: String, about: String) {
+    fun saveProfile(name: String, about: String, religion: String? = null) {
         val existing = _state.value.me ?: return
         if (_state.value.saving) return
         val nameInput = name.trim()
         val aboutInput = about.trim()
+        val religionInput = religion?.trim()?.takeIf { it.isNotBlank() }
         if (nameInput.isEmpty()) {
             _state.update { it.copy(actionMessage = "Nama tidak boleh kosong.") }
             return
         }
-        if (nameInput == (existing.name ?: "") && aboutInput == (existing.about ?: "")) {
+        if (nameInput == (existing.name ?: "") && aboutInput == (existing.about ?: "") &&
+            religionInput == (existing.religion?.takeIf { it.isNotBlank() })
+        ) {
             _state.update { it.copy(actionMessage = "Tidak ada perubahan.") }
             return
         }
 
         _state.update { it.copy(saving = true, actionMessage = null) }
         viewModelScope.launch {
-            when (val result = repository.updateProfile(nameInput.ifEmpty { null }, aboutInput.ifEmpty { null })) {
+            when (val result = repository.updateProfile(nameInput.ifEmpty { null }, aboutInput.ifEmpty { null }, religionInput)) {
                 is ApiResult.Ok -> {
                     // Re-fetch only the profile; the family panel is unaffected.
                     val refreshed = repository.currentUser()
                     _state.update {
                         it.copy(
                             saving = false,
-                            me = (refreshed as? ApiResult.Ok)?.value ?: it.me?.copy(name = nameInput, about = aboutInput),
+                            me = (refreshed as? ApiResult.Ok)?.value
+                                ?: it.me?.copy(name = nameInput, about = aboutInput, religion = religionInput),
                             actionMessage = "Profil diperbarui.",
                         )
                     }

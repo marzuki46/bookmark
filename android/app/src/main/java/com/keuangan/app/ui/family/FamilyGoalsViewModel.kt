@@ -25,14 +25,30 @@ data class GoalForm(
 data class FamilyGoalsUiState(
     val loading: Boolean = true,
     val saving: Boolean = false,
-    val items: List<FamilyGoalDto> = emptyList(),
+    val allItems: List<FamilyGoalDto> = emptyList(),
+    val search: String = "",
+    val typeFilter: String? = null,
+    val statusFilter: String? = null,
     val error: String? = null,
     val formError: String? = null,
     val actionMessage: String? = null,
     val form: GoalForm? = null,
     val contributeGoal: FamilyGoalDto? = null,
     val contributeAmount: String = "",
-)
+) {
+    /** Visible rows after the type / status / search chips (client-side). */
+    val items: List<FamilyGoalDto>
+        get() = allItems
+            .filter { goal ->
+                (typeFilter == null || goal.type == typeFilter) &&
+                    (statusFilter == null || goal.status == statusFilter) &&
+                    (search.isBlank() || goal.name.contains(search.trim(), ignoreCase = true))
+            }
+            .sortedWith(
+                compareBy<FamilyGoalDto> { it.status == "completed" }
+                    .thenBy { it.deadline ?: "" },
+            )
+}
 
 class FamilyGoalsViewModel(private val repository: KeuanganRepository) : ViewModel() {
 
@@ -40,17 +56,43 @@ class FamilyGoalsViewModel(private val repository: KeuanganRepository) : ViewMod
     val state: StateFlow<FamilyGoalsUiState> = _state.asStateFlow()
 
     fun load(familyId: Int) {
-        _state.update { it.copy(loading = it.items.isEmpty(), error = null) }
+        _state.update { it.copy(loading = it.allItems.isEmpty(), error = null) }
         viewModelScope.launch {
             when (val result = repository.goals(familyId)) {
                 is ApiResult.Ok -> _state.update {
-                    it.copy(loading = false, items = result.value, error = null)
+                    it.copy(loading = false, allItems = result.value, error = null)
                 }
                 is ApiResult.Err -> _state.update {
                     it.copy(loading = false, error = result.message)
                 }
             }
         }
+    }
+
+    fun setTypeFilter(type: String?) {
+        _state.update { it.copy(typeFilter = if (it.typeFilter == type) null else type) }
+    }
+
+    fun setStatusFilter(status: String?) {
+        _state.update { it.copy(statusFilter = if (it.statusFilter == status) null else status) }
+    }
+
+    fun onSearchChange(value: String) {
+        _state.update { it.copy(search = value) }
+    }
+
+    fun clearFilters() {
+        _state.update { it.copy(typeFilter = null, statusFilter = null, search = "") }
+    }
+
+    /** Drops the filters but keeps the search box content — see Debts' twin. */
+    fun clearFiltersKeepSearch() {
+        _state.update { it.copy(typeFilter = null, statusFilter = null) }
+    }
+
+    /** Sets both filters outright for the filter sheet; no toggle behaviour. */
+    fun applyFilters(type: String?, status: String?) {
+        _state.update { it.copy(typeFilter = type, statusFilter = status) }
     }
 
     fun openCreate() {

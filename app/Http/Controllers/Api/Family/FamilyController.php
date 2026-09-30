@@ -389,8 +389,119 @@ final class FamilyController extends Controller
             'Ringkasan keuangan dibatasi oleh kepala keluarga.'
         );
 
+        $viewer = $this->visibility->member($request->user(), $family);
+
         return response()->json([
-            'data' => $this->ai->healthScore($family),
+            'data' => $this->ai->healthScore($family, $viewer),
+        ]);
+    }
+
+    /**
+     * Personal cash-flow forecast for the dashboard: today / this week / this
+     * month, each paired with its previous window (yesterday / last week / last
+     * month) plus the delta in rupiah and percent. Amounts a member may not see
+     * are zeroed, mirroring the summary endpoint.
+     */
+    public function forecast(Request $request, Family $family): JsonResponse
+    {
+        $this->authorize('view', $family);
+
+        abort_unless(
+            $this->visibility->canView($request->user(), $family, 'income')
+                || $this->visibility->canView($request->user(), $family, 'expense'),
+            403,
+            'Forecast keuangan dibatasi oleh kepala keluarga.'
+        );
+
+        $viewer = $this->visibility->member($request->user(), $family);
+        $incomeVisible = $viewer->role === 'owner' || $viewer->canView('income');
+        $expenseVisible = $viewer->role === 'owner' || $viewer->canView('expense');
+
+        $today = now()->startOfDay();
+        $yesterday = $today->copy()->subDay()->startOfDay();
+        $weekStart = $today->copy()->startOfWeek();
+        $prevWeekStart = $weekStart->copy()->subWeek();
+        $monthStart = $today->copy()->startOfMonth();
+        $prevMonthStart = $monthStart->copy()->subMonthNoOverflow();
+
+        $rows = $this->visibility->scopeTransactions(
+            FamilyTransaction::query(),
+            $request->user(),
+            $family
+        )
+            ->where('family_id', $family->id)
+            ->where('date', '>=', $prevMonthStart->toDateString())
+            ->get(['type', 'amount', 'date']);
+
+        $bucket = fn (string $from, string $to): array => [
+            'income' => (float) $rows
+                ->where('type', 'income')
+                ->filter(fn (FamilyTransaction $tx): bool => substr((string) $tx->date, 0, 10) >= $from && substr((string) $tx->date, 0, 10) <= $to)
+                ->sum('amount'),
+            'expense' => (float) $rows
+                ->where('type', 'expense')
+                ->filter(fn (FamilyTransaction $tx): bool => substr((string) $tx->date, 0, 10) >= $from && substr((string) $tx->date, 0, 10) <= $to)
+                ->sum('amount'),
+        ];
+
+        $todayData = $bucket($today->toDateString(), $today->toDateString());
+        $yesterdayData = $bucket($yesterday->toDateString(), $today->copy()->subDay()->toDateString());
+        $weekData = $bucket($weekStart->toDateString(), $today->toDateString());
+        $prevWeekData = $bucket($prevWeekStart->toDateString(), $weekStart->copy()->subDay()->toDateString());
+        $monthData = $bucket($monthStart->toDateString(), $today->toDateString());
+        $prevMonthData = $bucket($prevMonthStart->toDateString(), $monthStart->copy()->subDay()->toDateString());
+
+        if (! $incomeVisible) {
+            $todayData['income'] = 0.0;
+            $yesterdayData['income'] = 0.0;
+            $weekData['income'] = 0.0;
+            $prevWeekData['income'] = 0.0;
+            $monthData['income'] = 0.0;
+            $prevMonthData['income'] = 0.0;
+        }
+        if (! $expenseVisible) {
+            $todayData['expense'] = 0.0;
+            $yesterdayData['expense'] = 0.0;
+            $weekData['expense'] = 0.0;
+            $prevWeekData['expense'] = 0.0;
+            $monthData['expense'] = 0.0;
+            $prevMonthData['expense'] = 0.0;
+        }
+
+        $delay = fn (array $current, array $previous): array => [
+            'income_delta' => round($current['income'] - $previous['income'], 2),
+            'income_pct' => $previous['income'] > 0
+                ? round(($current['income'] - $previous['income']) / $previous['income'] * 100, 1)
+                : null,
+            'expense_delta' => round($current['expense'] - $previous['expense'], 2),
+            'expense_pct' => $previous['expense'] > 0
+                ? round(($current['expense'] - $previous['expense']) / $previous['expense'] * 100, 1)
+                : null,
+        ];
+
+        $period = function (array $current, array $previous, array $delta): array {
+            $current['income'] = round($current['income'], 2);
+            $current['expense'] = round($current['expense'], 2);
+            $previous['income'] = round($previous['income'], 2);
+            $previous['expense'] = round($previous['expense'], 2);
+
+            return [
+                'current' => $current,
+                'previous' => $previous,
+                'delta' => $delta,
+            ];
+        };
+
+        return response()->json([
+            'data' => [
+                'today' => $period($todayData, $yesterdayData, $delay($todayData, $yesterdayData)),
+                'week' => $period($weekData, $prevWeekData, $delay($weekData, $prevWeekData)),
+                'month' => $period($monthData, $prevMonthData, $delay($monthData, $prevMonthData)),
+            ],
+            'license' => [
+                'income_visible' => $incomeVisible,
+                'expense_visible' => $expenseVisible,
+            ],
         ]);
     }
 

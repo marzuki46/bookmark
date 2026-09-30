@@ -76,6 +76,7 @@ final class TransactionController extends Controller
 
         return $this->withNudge(
             (new FamilyTransactionResource($transaction))->response()->setStatusCode(201),
+            $request,
             $family,
             $transaction
         );
@@ -105,6 +106,7 @@ final class TransactionController extends Controller
 
         return $this->withNudge(
             (new FamilyTransactionResource($transaction->fresh()))->response(),
+            $request,
             $family,
             $transaction
         );
@@ -116,11 +118,18 @@ final class TransactionController extends Controller
      * Evaluated against the saved row specifically, which makes the category
      * just touched the one checked first.
      */
-    private function withNudge(JsonResponse $response, Family $family, FamilyTransaction $transaction): JsonResponse
+    private function withNudge(JsonResponse $response, Request $request, Family $family, FamilyTransaction $transaction): JsonResponse
     {
+        $member = $this->visibility->member($request->user(), $family);
+        $visibleAreas = [
+            'income' => $member->canView('income'),
+            'expense' => $member->canView('expense'),
+            'debts' => $member->canView('debts'),
+        ];
+
         $response->setData([
             'data' => $response->getData(true)['data'] ?? null,
-            'nudge' => $this->nudges->evaluate($family, $transaction),
+            'nudge' => $this->nudges->evaluate($family, $transaction, $visibleAreas),
         ]);
 
         return $response;

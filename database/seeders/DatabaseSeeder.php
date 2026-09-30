@@ -14,6 +14,7 @@ final class DatabaseSeeder extends Seeder
             UserSeeder::class,
             FinancialCategorySeeder::class,
             SubscriptionPlanSeeder::class,
+            AffirmationSeeder::class,
         ]);
     }
 }

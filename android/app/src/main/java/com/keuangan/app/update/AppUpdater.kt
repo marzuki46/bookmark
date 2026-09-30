@@ -97,7 +97,11 @@ object AppUpdater {
         @Suppress("DEPRECATION")
         val oldVersion = if (Build.VERSION.SDK_INT >= 28) installed.longVersionCode else installed.versionCode.toLong()
         if (newVersion <= oldVersion) {
-            throw IOException("Versi di dalam APK tidak lebih baru. Metadata rilis server perlu diperbaiki.")
+            throw IOException(
+                "APK server masih versi ${archive.versionName ?: "tidak diketahui"} ($newVersion), " +
+                    "sedangkan aplikasi ini versi ${installed.versionName ?: "tidak diketahui"} ($oldVersion). " +
+                    "Gunakan APK lokal untuk pemasangan manual atau unggah rilis baru ke server.",
+            )
         }
         val installer = context.packageManager.packageInstaller
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)

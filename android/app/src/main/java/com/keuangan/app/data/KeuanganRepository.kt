@@ -9,7 +9,12 @@ class KeuanganRepository(
     private val api: KeuanganApi,
     private val tokenStore: TokenStore,
     private val offline: OfflineTxStore,
+    private val kangCuan: KangCuanStore,
+    private val familyCache: FamilyCacheStore,
 ) {
+
+    /** Kang Cuan local state (messages, schedule, template cache) for the UI. */
+    val kangCuanStore: KangCuanStore get() = kangCuan
 
     private val _authenticated = MutableStateFlow<Boolean?>(null)
     val authenticated: StateFlow<Boolean?> = _authenticated.asStateFlow()
@@ -25,7 +30,7 @@ class KeuanganRepository(
         apiCall { api.login(LoginRequest(email.trim(), password)) }
     }.fold(
         onSuccess = { response ->
-            tokenStore.save(response.token)
+            tokenStore.saveSession(response.token, response.user?.id, response.user?.name)
             clearFamily()
             _authenticated.value = true
             ApiResult.Ok(Unit)
@@ -51,7 +56,7 @@ class KeuanganRepository(
         apiCall { api.appLogin(AppLoginRequest(code.trim().uppercase(), deviceName)) }
     }.fold(
         onSuccess = { response ->
-            tokenStore.saveSession(response.token, response.user?.id)
+            tokenStore.saveSession(response.token, response.user?.id, response.user?.name)
             clearFamily()
             _authenticated.value = true
             ApiResult.Ok(Unit)
@@ -64,10 +69,16 @@ class KeuanganRepository(
     /** The caller's profile plus entitlement, for the personal menu. */
     suspend fun currentUser(): ApiResult<MeDto> = runCatching {
         apiCall { api.me() }.data
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    }.fold(
+        onSuccess = { me ->
+            kangCuan.saveUserName(me.name?.substringBefore(' ')?.takeIf { it.isNotBlank() })
+            ApiResult.Ok(me)
+        },
+        onFailure = { e -> e.toApiError() },
+    )
 
-    suspend fun updateProfile(name: String?, about: String?): ApiResult<Unit> = runCatching {
-        apiCall { api.updateMe(UpdateMeRequest(name, about)) }
+    suspend fun updateProfile(name: String?, about: String?, religion: String? = null): ApiResult<Unit> = runCatching {
+        apiCall { api.updateMe(UpdateMeRequest(name, about, religion)) }
     }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
 
     suspend fun currentSubscription(): ApiResult<SubscriptionDto> = runCatching {
@@ -89,6 +100,28 @@ class KeuanganRepository(
     /** The signed-in user's id, restored with the token on cold start. */
     val currentUserId: Int?
         get() = tokenStore.userId
+
+    /** The signed-in user's display name, cached from the login response. */
+    val currentUserName: String?
+        get() = tokenStore.userName
+
+    /**
+     * Kang Cuan message templates. The server is the source of truth; the cached
+     * copy keeps the daily alarm working offline. Returns whatever is usable:
+     * fresh templates when online, the last synced copy otherwise.
+     */
+    suspend fun affirmations(): ApiResult<List<AffirmationDto>> = runCatching {
+        apiCall { api.affirmations() }.data
+    }.fold(
+        onSuccess = { list ->
+            kangCuan.storeTemplatesIfNewer(list)
+            ApiResult.Ok(list)
+        },
+        onFailure = { e ->
+            val cached = kangCuan.readTemplates()
+            if (cached.isNotEmpty()) ApiResult.Ok(cached) else e.toApiError()
+        },
+    )
 
     /**
      * Rotates the login code, which also revokes every existing token.
@@ -186,32 +219,73 @@ class KeuanganRepository(
     private suspend fun clearFamily() {
         _family.value = null
         tokenStore.saveFamilyId(null)
+        runCatching { familyCache.clearAll() }
     }
 
-    suspend fun familyDetail(familyId: Int): ApiResult<FamilyDto> = runCatching {
-        val dto = apiCall { api.family(familyId) }.data
-        _family.value = dto
-        tokenStore.saveFamilyId(dto.id)
-        dto
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    suspend fun familyDetail(familyId: Int): ApiResult<FamilyDto> {
+        val remote = runCatching {
+            val dto = apiCall { api.family(familyId) }.data
+            _family.value = dto
+            tokenStore.saveFamilyId(dto.id)
+            dto
+        }
+        if (remote.isSuccess) {
+            val dto = remote.getOrThrow()
+            runCatching { familyCache.write(familyId) { it.copy(detail = dto) } }
+            return ApiResult.Ok(dto)
+        }
+        val cached = runCatching { familyCache.read(familyId).detail }.getOrDefault(null)
+        return if (cached != null) ApiResult.Ok(cached) else remote.exceptionOrNull()!!.toApiError()
+    }
 
     suspend fun setPayerRole(familyId: Int, payerRole: String): ApiResult<PayerRoleResponse> = runCatching {
         apiCall { api.updatePayerRole(familyId, PayerRoleRequest(payerRole)) }
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
-    suspend fun familyHealth(familyId: Int): ApiResult<FamilyHealthDto> = runCatching {
-        apiCall { api.familySummary(familyId) }.data
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    suspend fun familyHealth(familyId: Int): ApiResult<FamilyHealthDto> {
+        val remote = runCatching { apiCall { api.familySummary(familyId) }.data }
+        if (remote.isSuccess) {
+            val dto = remote.getOrThrow()
+            runCatching { familyCache.write(familyId) { it.copy(health = dto) } }
+            return ApiResult.Ok(dto)
+        }
+        val cached = runCatching { familyCache.read(familyId).health }.getOrDefault(null)
+        return if (cached != null) ApiResult.Ok(cached) else remote.exceptionOrNull()!!.toApiError()
+    }
+
+    /**
+     * Today / this week / this month vs. the matching previous windows. The
+     * server owns the arithmetic and visibility masking, so this stays a thin
+     * pass-through — it is cheap enough that caching would only risk showing
+     * yesterday's "hari ini".
+     */
+    suspend fun familyForecast(familyId: Int): ApiResult<FamilyForecastResponse> =
+        runCatching { apiCall { api.familyForecast(familyId) } }
+            .fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
     // --- reminders & trend ---
 
-    suspend fun familyReminders(familyId: Int): ApiResult<List<ReminderDto>> = runCatching {
-        apiCall { api.familyReminders(familyId) }.data
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    suspend fun familyReminders(familyId: Int): ApiResult<List<ReminderDto>> {
+        val remote = runCatching { apiCall { api.familyReminders(familyId) }.data }
+        if (remote.isSuccess) {
+            val list = remote.getOrThrow()
+            runCatching { familyCache.write(familyId) { it.copy(reminders = list) } }
+            return ApiResult.Ok(list)
+        }
+        val cached = runCatching { familyCache.read(familyId).reminders }.getOrDefault(emptyList())
+        return if (cached.isNotEmpty()) ApiResult.Ok(cached) else remote.exceptionOrNull()!!.toApiError()
+    }
 
-    suspend fun familyTrend(familyId: Int, months: Int = 6): ApiResult<List<TrendPointDto>> = runCatching {
-        apiCall { api.familyTrend(familyId, months) }.data
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    suspend fun familyTrend(familyId: Int, months: Int = 6): ApiResult<List<TrendPointDto>> {
+        val remote = runCatching { apiCall { api.familyTrend(familyId, months) }.data }
+        if (remote.isSuccess) {
+            val list = remote.getOrThrow()
+            runCatching { familyCache.write(familyId) { it.copy(trend = list) } }
+            return ApiResult.Ok(list)
+        }
+        val cached = runCatching { familyCache.read(familyId).trend }.getOrDefault(emptyList())
+        return if (cached.isNotEmpty()) ApiResult.Ok(cached) else remote.exceptionOrNull()!!.toApiError()
+    }
 
     // --- insights ---
 
@@ -229,9 +303,29 @@ class KeuanganRepository(
 
     // --- categories ---
 
-    suspend fun familyCategories(familyId: Int, type: String? = null): ApiResult<List<FamilyCategoryDto>> = runCatching {
-        apiCall { api.familyCategories(familyId, type) }.data
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    suspend fun familyCategories(familyId: Int, type: String? = null): ApiResult<List<FamilyCategoryDto>> {
+        val remote = runCatching { apiCall { api.familyCategories(familyId, type) }.data }
+        if (remote.isSuccess) {
+            val list = remote.getOrThrow()
+            runCatching {
+                familyCache.write(familyId) { cache ->
+                    val merged = (cache.categories + list)
+                        .distinctBy { it.id }
+                        .sortedWith(compareBy<FamilyCategoryDto> { it.name }.thenBy { it.id })
+                    cache.copy(categories = merged)
+                }
+            }
+            return ApiResult.Ok(list)
+        }
+        val cached = runCatching { familyCache.read(familyId).categories }.getOrDefault(emptyList())
+        if (cached.isEmpty()) return remote.exceptionOrNull()!!.toApiError()
+        val filtered = cached.filter { type == null || it.type == type }
+        return if (filtered.isNotEmpty() || type == null) {
+            ApiResult.Ok(filtered)
+        } else {
+            remote.exceptionOrNull()!!.toApiError()
+        }
+    }
 
     suspend fun createFamilyCategory(familyId: Int, body: FamilyCategoryRequest): ApiResult<FamilyCategoryDto> = runCatching {
         apiCall { api.createFamilyCategory(familyId, body) }.data
@@ -541,9 +635,26 @@ class KeuanganRepository(
 
     // --- debts ---
 
-    suspend fun debts(familyId: Int, status: String? = null, type: String? = null): ApiResult<List<FamilyDebtDto>> = runCatching {
-        apiCall { api.debts(familyId, status, type) }.data
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    suspend fun debts(familyId: Int, status: String? = null, type: String? = null): ApiResult<List<FamilyDebtDto>> {
+        val remote = runCatching { apiCall { api.debts(familyId, status, type) }.data }
+        if (remote.isSuccess) {
+            val list = remote.getOrThrow()
+            runCatching {
+                familyCache.write(familyId) { it.copy(debts = list) }
+            }
+            return ApiResult.Ok(list)
+        }
+        val cached = runCatching { familyCache.read(familyId).debts }.getOrDefault(emptyList())
+        if (cached.isEmpty()) return remote.exceptionOrNull()!!.toApiError()
+        val filtered = cached.filter {
+            (status == null || it.status == status) && (type == null || it.type == type)
+        }
+        return if (filtered.isNotEmpty() || (status == null && type == null)) {
+            ApiResult.Ok(filtered)
+        } else {
+            remote.exceptionOrNull()!!.toApiError()
+        }
+    }
 
     suspend fun saveDebt(
         familyId: Int,
@@ -585,9 +696,22 @@ class KeuanganRepository(
 
     // --- goals ---
 
-    suspend fun goals(familyId: Int, status: String? = null): ApiResult<List<FamilyGoalDto>> = runCatching {
-        apiCall { api.goals(familyId, status) }.data
-    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+    suspend fun goals(familyId: Int, status: String? = null): ApiResult<List<FamilyGoalDto>> {
+        val remote = runCatching { apiCall { api.goals(familyId, status) }.data }
+        if (remote.isSuccess) {
+            val list = remote.getOrThrow()
+            runCatching { familyCache.write(familyId) { it.copy(goals = list) } }
+            return ApiResult.Ok(list)
+        }
+        val cached = runCatching { familyCache.read(familyId).goals }.getOrDefault(emptyList())
+        if (cached.isEmpty()) return remote.exceptionOrNull()!!.toApiError()
+        val filtered = cached.filter { status == null || it.status == status }
+        return if (filtered.isNotEmpty() || status == null) {
+            ApiResult.Ok(filtered)
+        } else {
+            remote.exceptionOrNull()!!.toApiError()
+        }
+    }
 
     suspend fun saveGoal(familyId: Int, body: FamilyGoalRequest, id: Int? = null): ApiResult<FamilyGoalDto> = runCatching {
         if (id == null) {

@@ -320,4 +320,100 @@ final class FamilyAdvisorApiTest extends TestCase
         // 60 base + 20 (savings 25%) - 10 (no emergency fund) - 10 (debt ratio) + 5 (essentials 25%)
         $this->assertSame(65, (int) $data['score']);
     }
+
+    public function test_summary_masks_areas_a_member_cannot_view(): void
+    {
+        FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $this->owner->id,
+            'type' => 'income',
+            'amount' => 8_000_000,
+            'description' => 'Gaji',
+            'date' => now()->startOfMonth()->toDateString(),
+        ]);
+        FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $this->owner->id,
+            'type' => 'expense',
+            'amount' => 2_000_000,
+            'description' => 'Belanja',
+            'date' => now()->startOfMonth()->toDateString(),
+        ]);
+        FamilyDebt::create([
+            'family_id' => $this->family->id,
+            'name' => 'KPR',
+            'type' => 'payable',
+            'amount' => 50_000_000,
+            'installment' => 1_000_000,
+        ]);
+
+        // The child sees expenses but has income and debts hidden.
+        $childMember = FamilyMember::where('family_id', $this->family->id)->where('user_id', $this->child->id)->first();
+        $childMember->update(['visibility' => ['income' => false, 'expense' => true, 'debts' => false]]);
+        Sanctum::actingAs($this->child);
+
+        $data = $this->getJson("/api/families/{$this->family->id}/summary")
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame(0.0, (float) $data['income']);
+        $this->assertSame(2_000_000.0, (float) $data['expense']);
+        $this->assertSame(0.0, (float) $data['total_debt']);
+        $this->assertSame(0.0, (float) $data['planned_debt']);
+        $this->assertSame(0.0, (float) $data['realized_debt_this_month']);
+        $this->assertSame(0.0, (float) $data['uncovered_debt']);
+
+        foreach ($data['recommendations'] as $rec) {
+            $this->assertStringNotContainsString('pemasukan', mb_strtolower($rec), 'Rekomendasi bocorkan pemasukan.');
+            $this->assertStringNotContainsString('hutang', mb_strtolower($rec), 'Rekomendasi bocorkan hutang.');
+        }
+    }
+
+    public function test_summary_is_full_for_the_owner(): void
+    {
+        FamilyTransaction::create([
+            'family_id' => $this->family->id,
+            'user_id' => $this->owner->id,
+            'type' => 'income',
+            'amount' => 8_000_000,
+            'description' => 'Gaji',
+            'date' => now()->startOfMonth()->toDateString(),
+        ]);
+
+        $data = $this->getJson("/api/families/{$this->family->id}/summary")
+            ->assertOk()
+            ->json('data');
+
+        $this->assertSame(8_000_000.0, (float) $data['income']);
+    }
+
+    public function test_nudge_respects_hidden_areas(): void
+    {
+        $this->family->update(['advisor_enabled' => true, 'advisor_profile' => ['monthly_income' => 8_000_000]]);
+
+        FamilyDebt::create([
+            'family_id' => $this->family->id,
+            'name' => 'KPR',
+            'type' => 'payable',
+            'amount' => 50_000_000,
+            'installment' => 1_000_000,
+            'due_date' => now()->startOfDay()->subDay()->toDateString(),
+        ]);
+
+        $ownerNudge = $this->getJson("/api/families/{$this->family->id}/nudge")->json('data');
+        $this->assertNotNull($ownerNudge);
+        $this->assertSame('debt_overdue', $ownerNudge['code']);
+
+        $childMember = FamilyMember::where('family_id', $this->family->id)->where('user_id', $this->child->id)->first();
+        $childMember->update(['visibility' => ['income' => false, 'expense' => true, 'debts' => false]]);
+        Sanctum::actingAs($this->child);
+
+        $childNudge = $this->getJson("/api/families/{$this->family->id}/nudge")->json('data');
+        if ($childNudge !== null) {
+            $this->assertNotSame('debt_overdue', $childNudge['code']);
+            foreach (['pemasukan', 'income', 'hutang'] as $needle) {
+                $this->assertStringNotContainsString($needle, mb_strtolower($childNudge['message']));
+            }
+        }
+    }
 }

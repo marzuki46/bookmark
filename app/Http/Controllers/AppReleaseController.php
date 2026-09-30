@@ -51,7 +51,7 @@ final class AppReleaseController extends Controller
         $release = AppRelease::create([
             'version_code' => (int) $validated['version_code'],
             'version_name' => $validated['version_name'],
-            'notes' => $validated['notes'] ?? null,
+            'notes' => $this->normalizeNotes($validated['notes'] ?? null),
             'is_mandatory' => (bool) ($validated['is_mandatory'] ?? false),
             'file_path' => $path,
             'file_size' => Storage::disk('local')->size($path),
@@ -161,7 +161,7 @@ final class AppReleaseController extends Controller
             $release = AppRelease::create([
                 'version_code' => (int) $data['version_code'],
                 'version_name' => $data['version_name'],
-                'notes' => $data['notes'] ?? null,
+                'notes' => $this->normalizeNotes($data['notes'] ?? null),
                 'is_mandatory' => (bool) ($data['is_mandatory'] ?? false),
                 'file_path' => $finalRelative,
                 'file_size' => filesize($finalPath),
@@ -193,6 +193,40 @@ final class AppReleaseController extends Controller
         $zip->close();
 
         return $valid;
+    }
+
+    /**
+     * Edit the metadata of a release that is already on disk. The APK binary
+     * itself is intentionally not replaceable here — swapping the file would
+     * invalidate the stored sha256/size the updater verifies. version_code is
+     * fixed too, since the in-app updater uses it as the identity of a release.
+     */
+    public function update(Request $request, AppRelease $release): RedirectResponse
+    {
+        $validated = $request->validate([
+            'version_name' => ['required', 'string', 'max:32'],
+            'notes' => ['nullable', 'string', 'max:5000'],
+            'is_mandatory' => ['nullable', 'boolean'],
+        ]);
+
+        $release->update([
+            'version_name' => $validated['version_name'],
+            'notes' => $this->normalizeNotes($validated['notes'] ?? null),
+            'is_mandatory' => (bool) ($validated['is_mandatory'] ?? false),
+        ]);
+
+        return back()->with('status', 'Rilis v'.$release->version_code.' berhasil diperbarui.');
+    }
+
+    /**
+     * An empty textarea means "no notes", not a blank string, so the Android
+     * updater can keep treating null as "nothing to show".
+     */
+    private function normalizeNotes(?string $notes): ?string
+    {
+        $trimmed = trim((string) $notes);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
     public function destroy(AppRelease $release): RedirectResponse

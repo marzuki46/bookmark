@@ -88,10 +88,12 @@ Route::get('/keluarga', [KeuanganController::class, 'userFinances'])->name('kelu
 Route::get('/keluarga/{family}', [KeuanganController::class, 'familyDetail'])->name('keluarga.detail');
         Route::get('/log', [KeuanganController::class, 'logs'])->name('log');
         Route::get('/aplikasi-manajemen', [KeuanganController::class, 'appManager'])->name('aplikasi-manajemen');
+        Route::get('/penyemangat', [KeuanganController::class, 'affirmations'])->name('penyemangat');
         Route::get('/aplikasi', [AppReleaseController::class, 'index'])->name('aplikasi');
         Route::post('/aplikasi', [AppReleaseController::class, 'store'])->name('aplikasi.store');
         Route::post('/aplikasi/chunk', [AppReleaseController::class, 'uploadChunk'])->name('aplikasi.chunk');
         Route::post('/aplikasi/finalize', [AppReleaseController::class, 'finalizeChunked'])->name('aplikasi.finalize');
+        Route::patch('/aplikasi/{release}', [AppReleaseController::class, 'update'])->name('aplikasi.update');
         Route::delete('/aplikasi/{release}', [AppReleaseController::class, 'destroy'])->name('aplikasi.destroy');
     });
     Route::view('/companies', 'pages.companies')->name('companies');

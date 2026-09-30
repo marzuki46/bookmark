@@ -62,6 +62,7 @@ final class FamilyAdvisorController extends Controller
                 'accessible' => true,
                 'context' => $this->advisor->context($family),
                 'plan' => $plan,
+                'profile' => $family->advisor_profile ?? [],
             ],
         ]);
     }

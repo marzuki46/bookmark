@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Models\Family;
 use App\Models\FamilyCategory;
+use App\Models\FamilyDebt;
 use App\Models\FamilyInsight;
 use App\Models\FamilyMember;
 use App\Models\FamilyTransaction;
@@ -140,6 +141,30 @@ final class FamilyInsightTest extends TestCase
         $insights = app(FamilyInsightService::class)->generateForFamily($this->family, force: true);
 
         $this->assertNull($insights->firstWhere('user_id', $this->wife->id)->metrics['personal']['payer_role']);
+    }
+
+    public function test_personal_slice_masks_family_debt_when_the_member_cannot_view_debts(): void
+    {
+        FamilyDebt::create([
+            'family_id' => $this->family->id,
+            'name' => 'KPR',
+            'type' => 'payable',
+            'amount' => 50_000_000,
+            'installment' => 1_000_000,
+        ]);
+        FamilyMember::where('user_id', $this->wife->id)
+            ->update(['visibility' => ['income' => true, 'expense' => true, 'debts' => false]]);
+
+        $insights = app(FamilyInsightService::class)->generateForFamily($this->family, force: true);
+
+        $husband = $insights->firstWhere('user_id', $this->husband->id);
+        $wife = $insights->firstWhere('user_id', $this->wife->id);
+
+        $this->assertSame(50_000_000.0, (float) $husband->metrics['personal']['family_debt']);
+        $this->assertTrue($husband->metrics['personal']['has_debt_visibility']);
+        $this->assertSame(0.0, (float) $wife->metrics['personal']['family_debt']);
+        $this->assertFalse($wife->metrics['personal']['has_debt_visibility']);
+        $this->assertStringNotContainsString('Hutang', $wife->message);
     }
 
     public function test_message_is_clamped_to_the_column_limit(): void

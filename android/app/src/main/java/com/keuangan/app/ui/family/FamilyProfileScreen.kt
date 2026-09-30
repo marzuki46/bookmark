@@ -63,12 +63,23 @@ import android.widget.Toast
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.keuangan.app.data.FamilyMemberDto
 import com.keuangan.app.ui.components.GradientHeader
+import com.keuangan.app.ui.components.TextChoiceDropdown
 import com.keuangan.app.ui.formatFullDate
 import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
 import com.keuangan.app.util.QrCode
+
+/** Closed list so Kang Cuan's greetings can stay religiously neutral. */
+private val RELIGION_OPTIONS = listOf(
+    "Islam",
+    "Kristen",
+    "Katolik",
+    "Hindu",
+    "Buddha",
+    "Konghucu",
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -166,6 +177,7 @@ fun FamilyProfileScreen(
                         name = me.name ?: "Akun #${me.id}",
                         email = me.email,
                         about = me.about,
+                        religion = me.religion,
                         saving = state.saving,
                         onSave = viewModel::saveProfile,
                     )
@@ -655,12 +667,14 @@ private fun ProfileCard(
     name: String,
     email: String?,
     about: String?,
+    religion: String?,
     saving: Boolean,
-    onSave: (name: String, about: String) -> Unit,
+    onSave: (name: String, about: String, religion: String?) -> Unit,
 ) {
     var editing by rememberSaveable { mutableStateOf(false) }
     var draftName by rememberSaveable(name) { mutableStateOf(name) }
     var draftAbout by rememberSaveable(about) { mutableStateOf(about ?: "") }
+    var draftReligion by rememberSaveable(religion) { mutableStateOf(religion ?: "") }
 
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -688,6 +702,14 @@ private fun ProfileCard(
                 Spacer(Modifier.height(10.dp))
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }
+            (religion ?: "").takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Agama: $it",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 
@@ -713,13 +735,20 @@ private fun ProfileCard(
                         minLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    TextChoiceDropdown(
+                        label = "Agama (opsional, untuk sapaan Kang Cuan yang netral)",
+                        choices = RELIGION_OPTIONS,
+                        selected = draftReligion.takeIf { it.isNotBlank() },
+                        onSelect = { draftReligion = it.orEmpty() },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             },
             confirmButton = {
                 TextButton(
                     enabled = !saving,
                     onClick = {
-                        onSave(draftName, draftAbout)
+                        onSave(draftName, draftAbout, draftReligion)
                         editing = false
                     },
                 ) { Text("Simpan") }

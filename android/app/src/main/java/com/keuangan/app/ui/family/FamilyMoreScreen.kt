@@ -19,24 +19,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Animation
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.rounded.Check
@@ -66,6 +72,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.foundation.text.KeyboardOptions
@@ -77,6 +84,7 @@ import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.AppearanceController
 import com.keuangan.app.ui.theme.AppLockController
 import com.keuangan.app.ui.theme.AppThemes
+import com.keuangan.app.ui.theme.KangCuanFloatController
 import com.keuangan.app.ui.theme.MotionStyle
 import com.keuangan.app.ui.theme.ThemeController
 
@@ -97,12 +105,16 @@ private data class MenuGroup(
 fun FamilyMoreScreen(
     familyId: Int,
     viewModel: FamilyMoreViewModel,
+    currentUserIsOwner: Boolean,
     onOpenBudgets: () -> Unit,
     onOpenCategories: () -> Unit,
     onOpenIncomeSources: () -> Unit,
     onOpenTrend: () -> Unit,
     onOpenProfile: () -> Unit,
     onOpenSubscription: () -> Unit,
+    onOpenKangCuan: () -> Unit,
+    onOpenAdvisorProfile: () -> Unit,
+    onOpenHppCalculator: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -137,11 +149,23 @@ fun FamilyMoreScreen(
                 MenuItem("Ukuran tulisan", AppearanceController.textSizeLabel(), Icons.Filled.FormatSize, { showTextSizePicker = true }),
                 MenuItem("Kunci aplikasi", if (AppLockController.enabled.value) "Aktif" else "Nonaktif", Icons.Filled.Lock, { showLockPicker = true }),
             )),
+MenuGroup("Kang Cuan", listOf(
+                MenuItem("Pesan dari Kang Cuan", "Jadwal alarm & pesan tersimpan di HP", Icons.Filled.NotificationsActive, onOpenKangCuan),
+                MenuItem(
+                    "Model Kang Cuan",
+                    if (KangCuanFloatController.visible.value) "Avatar melayang di Ringkasan: Aktif" else "Avatar melayang di Ringkasan: Nonaktif",
+                    Icons.Filled.ChildCare,
+                    { KangCuanFloatController.setVisible(context, !KangCuanFloatController.visible.value) },
+                ),
+            )),
             MenuGroup("Keluarga & Aplikasi", listOf(
                 MenuItem("Izin notifikasi", notificationRowSubtitle(context), Icons.Filled.NotificationsActive, { openNotificationSettings(context) }),
                 MenuItem("Langganan", "Status paket & pembayaran", Icons.Filled.WorkspacePremium, onOpenSubscription),
                 MenuItem("Keluarga & Akun", "Anggota, peran, kode login & barcode", Icons.Filled.Group, onOpenProfile),
                 MenuItem("Periksa Pembaruan", "Versi ${BuildConfig.VERSION_NAME} · pasang versi baru", Icons.Filled.SystemUpdate, viewModel::checkUpdates),
+            )),
+MenuGroup("Tools Penunjang Cuan", listOf(
+                MenuItem("Kalkulator HPP", "Hitung HPP & harga jual yang masuk akal", Icons.Filled.Calculate, onOpenHppCalculator),
             )),
             MenuGroup("Bantuan", listOf(
                 MenuItem("Tentang Kang Cuan", "Privasi, keamanan & bantuan", Icons.Filled.Info, { showAbout = true }),
@@ -167,14 +191,16 @@ fun FamilyMoreScreen(
                     }
                 }
             }
-            item {
+item {
                 AdvisorCard(
                     enabled = state.advisor?.enabled ?: false,
                     accessible = state.advisor?.accessible,
                     message = state.advisor?.message,
                     loading = state.advisorLoading,
                     toggling = state.advisorToggling,
+                    canEditProfile = currentUserIsOwner,
                     onToggle = { viewModel.setAdvisorEnabled(familyId, it) },
+                    onEditProfile = onOpenAdvisorProfile,
                 )
             }
             items(menuGroups, key = { it.title }) { group ->
@@ -452,22 +478,37 @@ if (state.checkingUpdate) {
                 onDismissRequest = {
                     if (!state.downloading) viewModel.dismissUpdates()
                 },
-                title = { Text(if (state.downloading) "Memperbaruiâ€¦" else "Versi baru tersedia") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                title = { Text(if (state.downloading) "Memperbarui..." else "Versi baru tersedia") },
+text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             "Kang Cuan ${update.latestVersionName}",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
                             if (update.isMandatory) "Update wajib untuk melanjutkan penggunaan aplikasi." else "Update disarankan agar fitur dan keamanan tetap terbaru.",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = if (update.isMandatory) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = if (update.isMandatory) FontWeight.SemiBold else FontWeight.Normal,
                         )
                         if (update.notes.isNotBlank()) {
-                            Text(update.notes, style = MaterialTheme.typography.bodyMedium)
+                            // Release notes can be a long changelog, so cap the
+                            // height and let it scroll. Without this the dialog
+                            // grows past the bottom of the screen.
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 160.dp)
+                                    .verticalScroll(rememberScrollState()),
+                            ) {
+                                Text(
+                                    update.notes,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    lineHeight = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                         if (update.downloadUrl.isBlank()) {
                             Card(colors = CardDefaults.cardColors(containerColor = Amber100)) {
@@ -487,7 +528,7 @@ if (state.checkingUpdate) {
                                     .clip(CircleShape),
                             )
                             Text(
-                                "Mengunduh ${(state.installProgress * 100).toInt()}% â€¦",
+                                "Mengunduh ${(state.installProgress * 100).toInt()}% ...",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -575,7 +616,9 @@ private fun AdvisorCard(
     message: String?,
     loading: Boolean,
     toggling: Boolean,
+    canEditProfile: Boolean,
     onToggle: (Boolean) -> Unit,
+    onEditProfile: () -> Unit,
 ) {
     Card(
         colors = CardDefaults.cardColors(
@@ -596,7 +639,7 @@ private fun AdvisorCard(
                 Spacer(Modifier.size(2.dp))
                 Text(
                     when {
-                        loading -> "Mengecek statusâ€¦"
+                        loading -> "Mengecek status..."
                         message != null && !enabled -> message
                         enabled && accessible == false -> message.orEmpty()
                         enabled -> {
@@ -621,6 +664,37 @@ private fun AdvisorCard(
                 androidx.compose.material3.Switch(
                     checked = enabled,
                     onCheckedChange = onToggle,
+                )
+            }
+        }
+        if (canEditProfile) {
+            androidx.compose.material3.HorizontalDivider(
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onEditProfile)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Filled.Settings,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(10.dp))
+                Text(
+                    "Profil & pengaturan",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f),
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

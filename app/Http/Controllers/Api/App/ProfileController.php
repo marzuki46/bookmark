@@ -26,6 +26,7 @@ final class ProfileController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'about' => $user->about,
+                'religion' => $user->religion,
                 'is_admin' => (bool) $user->is_admin,
                 'setup_completed' => (bool) $user->setup_completed,
                 'subscription' => $subscription ? [
@@ -52,6 +53,7 @@ final class ProfileController extends Controller
         $user->fill([
             'name' => $data['name'] ?? $user->name,
             'about' => array_key_exists('about', $data) ? ($data['about'] ?: null) : $user->about,
+            'religion' => array_key_exists('religion', $data) ? ($data['religion'] ?: null) : $user->religion,
         ])->save();
 
         activity('profile')->causedBy($user)->log('Profil diubah dari aplikasi');
@@ -64,13 +66,14 @@ final class ProfileController extends Controller
      */
     private function validated(Request $request): array
     {
-        if ($request->missing(['name', 'about']) && ! $request->json()->has('about')) {
-            throw ValidationException::withMessages(['name' => 'Minimal isi nama atau about.']);
+        if ($request->missing(['name', 'about', 'religion']) && ! $request->json()->has('about') && ! $request->json()->has('religion')) {
+            throw ValidationException::withMessages(['name' => 'Minimal isi nama, about, atau agama.']);
         }
 
         return $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'about' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'religion' => ['sometimes', 'nullable', 'string', 'max:30'],
         ]);
     }
 }

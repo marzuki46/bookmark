@@ -66,7 +66,7 @@ final class FamilyInsightService
                 continue;
             }
 
-            $slice = $this->personalSlice($family, $member->user_id);
+            $slice = $this->personalSlice($family, $member);
 
             [$personal] = $this->persist(
                 $family,
@@ -161,7 +161,16 @@ final class FamilyInsightService
             return;
         }
 
-        $users = $family->members()->with('user')->get()->pluck('user')->filter();
+        // The shared note carries the whole household's numbers, so only
+        // members allowed to see every area receive it. Their personal notes
+        // already reflect their own visibility.
+        $users = $family->members()
+            ->with('user')
+            ->get()
+            ->filter(fn (FamilyMember $member): bool => $member->user !== null
+                && ($member->role === 'owner'
+                    || ($member->canView('income') && $member->canView('expense') && $member->canView('debts'))))
+            ->pluck('user');
 
         if ($users->isEmpty()) {
             return;
@@ -219,12 +228,17 @@ final class FamilyInsightService
             default => 'anggota keluarga yang perannya belum ditentukan',
         };
 
+        // The debt line is only built when the member may see the debts area.
+        $debtLine = $slice['has_debt_visibility']
+            ? sprintf("Hutang aktif keluarga %s\n", $this->rp($slice['family_debt']))
+            : '';
+
         $prompt = sprintf(
             "Data keuangan %s bulan ini:\n"
             ."Peran: %s\n"
             ."Pengeluaran pribadi %s (terbesar: %s)\n"
             ."Pemasukan tercatat %s\n"
-            ."Hutang aktif keluarga %s\n\n"
+            .$debtLine
             .'Tulis SATU pesan singkat (maks 160 karakter) untuk %s. '
             .'Personal tapi tidak menyalahkan. Kalau kondisinya bagus, katakan juga. '
             .'Jangan bullet, jangan basa-basi.',
@@ -233,7 +247,6 @@ final class FamilyInsightService
             $this->rp($slice['expense']),
             $slice['top_category'] ?? 'belum ada',
             $this->rp($slice['income']),
-            $this->rp($slice['family_debt']),
             $first
         );
 
@@ -250,10 +263,11 @@ final class FamilyInsightService
      * Month-to-date figures for a single member, using the payer column so the
      * husband and wife see their own behaviour rather than a shared total.
      *
-     * @return array{expense: float, income: float, family_debt: float, top_category: ?string, payer_role: ?string, tone: string, has_entries: bool}
+     * @return array{expense: float, income: float, family_debt: float, has_debt_visibility: bool, top_category: ?string, payer_role: ?string, tone: string, has_entries: bool}
      */
-    private function personalSlice(Family $family, int $userId): array
+    private function personalSlice(Family $family, FamilyMember $member): array
     {
+        $userId = $member->user_id;
         $now = now();
         $period = [$now->copy()->startOfMonth(), $now];
 
@@ -282,10 +296,15 @@ final class FamilyInsightService
             ?->category
             ?->name;
 
-        $familyDebt = (float) FamilyDebt::forFamily($family->id)
-            ->where('type', 'payable')
-            ->where('status', '!=', 'settled')
-            ->sum('amount');
+        // A member who may not view the debts area must not have the household
+        // total leaked through their own note.
+        $hasDebtVisibility = $member->role === 'owner' || $member->canView('debts');
+        $familyDebt = $hasDebtVisibility
+            ? (float) FamilyDebt::forFamily($family->id)
+                ->where('type', 'payable')
+                ->where('status', '!=', 'settled')
+                ->sum('amount')
+            : 0.0;
 
         $tone = match (true) {
             $expense > 0 && $income > 0 && $expense > $income => 'warning',
@@ -297,6 +316,7 @@ final class FamilyInsightService
             'expense' => $expense,
             'income' => $income,
             'family_debt' => $familyDebt,
+            'has_debt_visibility' => $hasDebtVisibility,
             'top_category' => $topCategory,
             'payer_role' => $payerRole,
             'tone' => $tone,

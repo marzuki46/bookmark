@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Models\Family;
 use App\Models\FamilyDebt;
 use App\Models\FamilyGoal;
+use App\Models\FamilyMember;
 use App\Models\FamilyTransaction;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -47,9 +48,18 @@ final class FamilyAIService
      * raw total expense, and debt installments are only scored on the share
      * still unpaid this month — payments already recorded as expenses are not
      * counted twice.
+     *
+     * When a member is passed, the numeric fields for areas that member cannot
+     * view are zeroed and recommendations mentioning those areas are dropped,
+     * so a restricted member never receives hidden amounts through the summary.
      */
-    public function healthScore(Family $family): array
+    public function healthScore(Family $family, ?FamilyMember $viewer = null): array
     {
+        $hiddenAreas = $this->hiddenAreasFor($viewer);
+        $incomeVisible = ! in_array('income', $hiddenAreas, true);
+        $expenseVisible = ! in_array('expense', $hiddenAreas, true);
+        $debtsVisible = ! in_array('debts', $hiddenAreas, true);
+
         $income = (float) FamilyTransaction::forFamily($family->id)
             ->where('type', 'income')->where('date', '>=', now()->startOfMonth())->sum('amount');
         $expense = (float) FamilyTransaction::forFamily($family->id)
@@ -77,8 +87,8 @@ final class FamilyAIService
                 'score' => 0,
                 'grade' => 'Belum cukup data',
                 'insufficient_data' => true,
-                'income' => $income,
-                'expense' => $expense,
+                'income' => $incomeVisible ? $income : 0.0,
+                'expense' => $expenseVisible ? $expense : 0.0,
                 'savings' => 0.0,
                 'essential_monthly' => 0.0,
                 'emergency_current' => 0.0,
@@ -163,22 +173,34 @@ final class FamilyAIService
             $totalDebt,
             $uncoveredObligation,
             $realizedThisMonth,
+            $hiddenAreas,
         );
+
+        // Zero every numeric field whose area this member may not see, so a
+        // restricted member cannot reconstruct hidden amounts from the summary.
+        $maskedIncome = $incomeVisible ? $income : 0.0;
+        $maskedExpense = $expenseVisible ? $expense : 0.0;
+        $maskedDebt = $debtsVisible
+            ? ['total_debt' => $totalDebt, 'planned' => $plannedInstallment, 'realized' => $realizedThisMonth, 'uncovered' => $uncoveredObligation]
+            : ['total_debt' => 0.0, 'planned' => 0.0, 'realized' => 0.0, 'uncovered' => 0.0];
+        $maskedEmergency = $expenseVisible
+            ? ['current' => $emergencyCurrent, 'target' => $emergencyTarget]
+            : ['current' => 0.0, 'target' => 0.0];
 
         return [
             'score' => $score,
             'grade' => $score >= 80 ? 'Sangat Sehat' : ($score >= 60 ? 'Cukup Sehat' : ($score >= 40 ? 'Perlu Perhatian' : 'Kritis')),
             'insufficient_data' => false,
-            'income' => $income,
-            'expense' => $expense,
-            'savings' => $income - $expense,
-            'essential_monthly' => round($essentialMonthly, 2),
-            'emergency_current' => $emergencyCurrent,
-            'emergency_target' => $emergencyTarget,
-            'total_debt' => $totalDebt,
-            'planned_debt' => $plannedInstallment,
-            'realized_debt_this_month' => $realizedThisMonth,
-            'uncovered_debt' => $uncoveredObligation,
+            'income' => $maskedIncome,
+            'expense' => $maskedExpense,
+            'savings' => ($incomeVisible && $expenseVisible) ? $income - $expense : 0.0,
+            'essential_monthly' => $expenseVisible ? round($essentialMonthly, 2) : 0.0,
+            'emergency_current' => $maskedEmergency['current'],
+            'emergency_target' => $maskedEmergency['target'],
+            'total_debt' => $maskedDebt['total_debt'],
+            'planned_debt' => $maskedDebt['planned'],
+            'realized_debt_this_month' => $maskedDebt['realized'],
+            'uncovered_debt' => $maskedDebt['uncovered'],
             'recommendations' => $recommendations,
         ];
     }
@@ -302,8 +324,29 @@ Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris
         float $totalDebt,
         float $uncoveredObligation,
         float $realizedThisMonth,
+        array $hiddenAreas = [],
     ): array {
         $recs = [];
+
+        // Skipped blocks leave no trace of areas this member cannot see.
+        $canIncome = ! in_array('income', $hiddenAreas, true);
+        $canExpense = ! in_array('expense', $hiddenAreas, true);
+        $canDebts = ! in_array('debts', $hiddenAreas, true);
+
+        if (in_array('expense', $hiddenAreas, true)) {
+            $emergencyTarget = 0.0;
+            $emergencyCurrent = 0.0;
+        }
+
+        if (! $canIncome) {
+            $income = 0.0;
+        }
+
+        if (! $canDebts) {
+            $totalDebt = 0.0;
+            $uncoveredObligation = 0.0;
+            $realizedThisMonth = 0.0;
+        }
 
         if ($emergencyTarget > 0 && $emergencyCurrent < $emergencyTarget) {
             $recs[] = 'Prioritaskan dana darurat: sisihkan '.round(max(0, $emergencyTarget - $emergencyCurrent), 0).' lagi (target 3x pengeluaran bulanan).';
@@ -314,7 +357,7 @@ Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris
             if ($savingsRate < 10) {
                 $recs[] = 'Tingkatkan tabungan ke minimal 10-20% dari pemasukan; evaluasi pengeluaran non-esensial.';
             }
-        } elseif ($expense > 0) {
+        } elseif ($expense > 0 && $canIncome) {
             $recs[] = 'Bulan ini tercatat pengeluaran tanpa pemasukan — pastikan pencatatan pemasukan lengkap.';
         }
 
@@ -349,5 +392,21 @@ Beri 3-4 saran prioritas dalam Bahasa Indonesia. Format: setiap saran satu baris
         }
 
         return $recs;
+    }
+
+    /**
+     * Which of the summary's value areas a member is not allowed to see.
+     * The owner and any member without an explicit restriction see everything.
+     */
+    private function hiddenAreasFor(?FamilyMember $viewer): array
+    {
+        if ($viewer === null || $viewer->role === 'owner') {
+            return [];
+        }
+
+        return array_values(array_filter(
+            ['income', 'expense', 'debts'],
+            fn (string $area): bool => ! $viewer->canView($area)
+        ));
     }
 }

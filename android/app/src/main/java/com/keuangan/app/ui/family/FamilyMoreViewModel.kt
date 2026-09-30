@@ -26,6 +26,8 @@ data class FamilyMoreUiState(
     val advisor: AdvisorStatusDto? = null,
     val advisorLoading: Boolean = false,
     val advisorToggling: Boolean = false,
+    val advisorSavingProfile: Boolean = false,
+    val advisorProfileSaved: Boolean = false,
     val advisorError: String? = null,
 )
 
@@ -120,6 +122,25 @@ class FamilyMoreViewModel(private val repository: KeuanganRepository) : ViewMode
                 }
                 is ApiResult.Err -> _state.update {
                     it.copy(advisorToggling = false, advisorError = result.message)
+                }
+            }
+        }
+    }
+
+    fun saveAdvisorProfile(familyId: Int, body: AdvisorProfileRequest) {
+        if (_state.value.advisorSavingProfile) return
+        _state.update { it.copy(advisorSavingProfile = true, advisorProfileSaved = false, advisorError = null) }
+        viewModelScope.launch {
+            when (val result = repository.saveAdvisorProfile(familyId, body)) {
+                is ApiResult.Ok -> _state.update {
+                    it.copy(
+                        advisorSavingProfile = false,
+                        advisorProfileSaved = true,
+                        advisor = it.advisor?.copy(profile = result.value.profile) ?: result.value,
+                    )
+                }
+                is ApiResult.Err -> _state.update {
+                    it.copy(advisorSavingProfile = false, advisorError = result.message)
                 }
             }
         }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\App\AffirmationController;
 use App\Http\Controllers\Api\App\AppErrorController;
 use App\Http\Controllers\Api\App\AppUpdateController;
 use App\Http\Controllers\Api\App\CodeAuthController;
@@ -58,6 +59,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me', [ProfileController::class, 'me']);
     Route::match(['put', 'patch'], '/me', [ProfileController::class, 'update']);
 
+    // Kang Cuan message templates (server only stores templates; scheduling,
+    // history and deletion live on the device).
+    Route::get('/app/affirmations', [AffirmationController::class, 'index']);
+
     // Paid plans & purchases (Midtrans Snap).
     Route::get('/subscription', [SubscriptionPlanController::class, 'current']);
     Route::get('/subscription/plans', [SubscriptionPlanController::class, 'index']);
@@ -75,6 +80,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/families', [FamilyController::class, 'index']);
     Route::get('/families/{family}', [FamilyController::class, 'show']);
     Route::get('/families/{family}/summary', [FamilyController::class, 'summary']);
+    Route::get('/families/{family}/forecast', [FamilyController::class, 'forecast']);
     Route::match(['put', 'patch'], '/families/{family}/me', [FamilyController::class, 'updateMyProfile']);
 
     Route::prefix('families/{family}')->group(function (): void {

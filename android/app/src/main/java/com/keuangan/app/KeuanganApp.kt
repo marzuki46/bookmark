@@ -8,9 +8,13 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.keuangan.app.data.ApiClient
 import com.keuangan.app.data.Connectivity
+import com.keuangan.app.data.FamilyCacheStore
 import com.keuangan.app.data.KeuanganRepository
+import com.keuangan.app.data.KangCuanStore
 import com.keuangan.app.data.OfflineTxStore
 import com.keuangan.app.data.TokenStore
+import com.keuangan.app.reminder.KangCuanAlarmReceiver
+import com.keuangan.app.reminder.KangCuanScheduler
 import com.keuangan.app.reminder.ReminderWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,9 +44,20 @@ class KeuanganApp : Application() {
             ApiClient.create(tokenStore),
             tokenStore,
             OfflineTxStore(this),
+            KangCuanStore(this),
+            FamilyCacheStore(this),
         )
         observeRecovery()
         scheduleReminders()
+        armKangCuanAlarms()
+    }
+
+    /** Re-arms the Kang Cuan alarms whenever the app is opened with a session. */
+    private fun armKangCuanAlarms() {
+        appScope.launch {
+            if (tokenStore.token == null) return@launch
+            KangCuanScheduler.scheduleAll(this@KeuanganApp, KangCuanStore(this@KeuanganApp))
+        }
     }
 
     /**

@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Lets the notification from the download manager install the APK. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -39,6 +41,16 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.keuangan.app.ACTION_INSTALL" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".reminder.KangCuanAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.keuangan.app.ACTION_KANG_CUAN_FIRE" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
     </application>

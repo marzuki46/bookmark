@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Family;
 use App\Http\Controllers\Controller;
 use App\Models\Family;
 use App\Models\FamilyInsight;
+use App\Models\FamilyMember;
 use App\Services\FamilyVisibilityService;
 use App\Services\NudgeService;
 use Illuminate\Http\JsonResponse;
@@ -30,13 +31,20 @@ final class InsightController extends Controller
         $this->authorize('view', $family);
 
         $user = $request->user();
+        $member = $this->visibility->member($user, $family);
         $canSeeIncome = $this->visibility->canView($user, $family, 'income');
         $canSeeExpenses = $this->visibility->canView($user, $family, 'expense');
+        $visibleAreas = $this->visibleAreas($member);
 
-        $familyInsight = $family->insights()
-            ->where('scope', 'family')
-            ->orderByDesc('week_key')
-            ->first();
+        // The shared family note is built from the whole household's numbers.
+        // A member who is not allowed to see all of them must not receive it;
+        // their personal note (built from their own rows) is unaffected.
+        $familyInsight = $this->hasFullVisibility($member)
+            ? $family->insights()
+                ->where('scope', 'family')
+                ->orderByDesc('week_key')
+                ->first()
+            : null;
 
         $personalInsight = FamilyInsight::query()
             ->where('family_id', $family->id)
@@ -49,7 +57,7 @@ final class InsightController extends Controller
             'data' => [
                 'family' => $this->present($familyInsight),
                 'personal' => $this->present($personalInsight),
-                'nudge' => ($canSeeIncome || $canSeeExpenses) ? $this->nudges->evaluate($family) : null,
+                'nudge' => ($canSeeIncome || $canSeeExpenses) ? $this->nudges->evaluate($family, null, $visibleAreas) : null,
                 'income_by_source' => $canSeeIncome ? $this->nudges->incomeBySource($family) : [],
                 'week_key' => now()->format('o-\WW'),
                 'days_left_this_month' => $this->nudges->daysLeftThisMonth(),
@@ -87,7 +95,9 @@ final class InsightController extends Controller
     {
         $this->authorize('view', $family);
 
-        return response()->json(['data' => $this->nudges->evaluate($family)]);
+        $member = $this->visibility->member($request->user(), $family);
+
+        return response()->json(['data' => $this->nudges->evaluate($family, null, $this->visibleAreas($member))]);
     }
 
     private function present(?FamilyInsight $insight): ?array
@@ -106,5 +116,27 @@ final class InsightController extends Controller
             'generated_at' => $insight->created_at?->toIso8601String(),
             'read_at' => $insight->read_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * The visibility areas a member may feed into rules, as a bool map.
+     */
+    private function visibleAreas(FamilyMember $member): array
+    {
+        return [
+            'income' => $member->canView('income'),
+            'expense' => $member->canView('expense'),
+            'debts' => $member->canView('debts'),
+        ];
+    }
+
+    /**
+     * Whether a member may receive the shared household note, which is
+     * generated from every area at once. The owner always qualifies.
+     */
+    private function hasFullVisibility(FamilyMember $member): bool
+    {
+        return $member->role === 'owner'
+            || ($member->canView('income') && $member->canView('expense') && $member->canView('debts'));
     }
 }

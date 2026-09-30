@@ -85,12 +85,52 @@
                             </td>
                             <td class="px-5 py-2.5 text-[var(--text-tertiary)]">{{ $release->created_at->format('d M Y H:i') }}</td>
                             <td class="px-5 py-2.5 whitespace-nowrap">
+                                <button type="button" class="btn-secondary !py-1 !px-2 text-xs js-toggle-notes" data-target="notes-{{ $release->id }}"
+                                        aria-expanded="false">Edit</button>
                                 <a href="{{ route('app-release.download', $release) }}" class="btn-secondary !py-1 !px-2 text-xs">Unduh</a>
                                 <form action="{{ route('keuangan.aplikasi.destroy', $release) }}" method="POST" class="inline"
                                       onsubmit="return confirm('Hapus rilis v{{ $release->version_name }}?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn-secondary !py-1 !px-2 text-xs text-red-600">Hapus</button>
+                                </form>
+                            </td>
+                        </tr>
+                        <tr id="notes-{{ $release->id }}" class="{{ old('_release_id') == $release->id ? '' : 'hidden' }} border-b border-[var(--color-border)] bg-slate-50/60">
+                            <td colspan="7" class="px-5 py-4">
+                                <form action="{{ route('keuangan.aplikasi.update', $release) }}" method="POST" class="space-y-3">
+                                    @csrf
+                                    @method('PATCH')
+                                    <input type="hidden" name="_release_id" value="{{ $release->id }}">
+                                    <div class="grid gap-3 sm:grid-cols-3">
+                                        <div>
+                                            <label class="wp-form-label">Versi Nama</label>
+                                            <input type="text" name="version_name" required maxlength="32"
+                                                   value="{{ old('version_name', $release->version_name) }}" class="wp-form-input">
+                                        </div>
+                                        <div class="sm:col-span-2 flex items-end pb-2">
+                                            <label class="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                                                <input type="checkbox" name="is_mandatory" value="1"
+                                                       @checked(old('is_mandatory', $release->is_mandatory))
+                                                       class="rounded border-[var(--color-border)]">
+                                                Wajib update (untuk perbaikan keamanan kritis)
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="wp-form-label">Catatan Rilis</label>
+                                        <textarea name="notes" rows="3" maxlength="5000"
+                                                  placeholder="Apa yang baru? Ditampilkan di layar Periksa Pembaruan"
+                                                  class="wp-form-input">{{ old('notes', $release->notes) }}</textarea>
+                                        <p class="mt-1 text-xs text-[var(--text-tertiary)]">
+                                            Berkas APK dan Kode Versi tidak bisa diubah setelah diunggah. Mengganti berkas akan membuat SHA-256 tidak cocok.
+                                        </p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button type="submit" class="btn-primary !py-1.5 !px-3 text-xs">Simpan Catatan</button>
+                                        <button type="button" class="btn-secondary !py-1.5 !px-3 text-xs js-toggle-notes"
+                                                data-target="notes-{{ $release->id }}">Batal</button>
+                                    </div>
                                 </form>
                             </td>
                         </tr>
@@ -109,6 +149,26 @@
 
 <script>
     (() => {
+        // Edit rows: one open at a time keeps the table from jumping around.
+        document.querySelectorAll('.js-toggle-notes').forEach((button) => {
+            button.addEventListener('click', () => {
+                const row = document.getElementById(button.dataset.target);
+                if (!row) return;
+                const willOpen = row.classList.contains('hidden');
+                document.querySelectorAll('tr[id^="notes-"]').forEach((other) => other.classList.add('hidden'));
+                document.querySelectorAll('.js-toggle-notes[data-target]').forEach((other) => other.setAttribute('aria-expanded', 'false'));
+                if (willOpen) {
+                    row.classList.remove('hidden');
+                    button.setAttribute('aria-expanded', 'true');
+                    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    row.querySelector('textarea')?.focus();
+                }
+            });
+        });
+
+        // A failed save re-renders with errors and old input; the matching row
+        // is already open because its class checks old('_release_id').
+
         const form = document.getElementById('apk-upload-form');
         if (!form || !window.XMLHttpRequest) return;
 

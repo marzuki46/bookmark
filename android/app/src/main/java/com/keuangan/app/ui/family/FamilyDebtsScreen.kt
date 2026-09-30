@@ -1,5 +1,8 @@
 package com.keuangan.app.ui.family
 
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,18 +11,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -35,13 +41,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +66,7 @@ import com.keuangan.app.data.FamilyDebtDto
 import com.keuangan.app.ui.components.DateField
 import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.components.KangCuanTipCard
+import com.keuangan.app.ui.components.StickySearchBar
 import com.keuangan.app.ui.formatShortDate
 import com.keuangan.app.ui.formatRupiah
 import com.keuangan.app.ui.theme.Amber100
@@ -63,7 +74,7 @@ import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.Red600
 import com.keuangan.app.ui.theme.Teal700
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun FamilyDebtsScreen(
     familyId: Int,
@@ -71,85 +82,110 @@ fun FamilyDebtsScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var pendingDelete by remember { mutableStateOf<FamilyDebtDto?>(null) }
+    var showFilters by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val headerGone by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
 
     LaunchedEffect(familyId) {
         viewModel.load(familyId)
     }
 
     Scaffold(
-        topBar = {
-            GradientHeader(
-                title = "Hutang & Piutang",
-                subtitle = "Pantau tagihan, tetap tenang dan teratur",
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(onClick = viewModel::openCreate) {
                 Icon(Icons.Filled.Add, contentDescription = "Tambah hutang/piutang")
             }
         },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
     ) { padding ->
-        Column(
+        LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
+            contentPadding = PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            FlowRow(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                DebtsFilterChip("Utang", state.typeFilter == "payable") { viewModel.setTypeFilter("payable") }
-                DebtsFilterChip("Piutang", state.typeFilter == "receivable") { viewModel.setTypeFilter("receivable") }
-                DebtsFilterChip("Belum lunas", state.statusFilter == null) { viewModel.setStatusFilter(null) }
-                DebtsFilterChip("Lunas", state.statusFilter == "settled") { viewModel.setStatusFilter("settled") }
+            item {
+                GradientHeader(
+                    title = "Hutang & Piutang",
+                    subtitle = "Pantau tagihan, tetap tenang dan teratur",
+                )
             }
-            Spacer(Modifier.height(8.dp))
+
+            stickyHeader {
+                StickySearchBar(
+                    query = state.search,
+                    onQueryChange = viewModel::onSearchChange,
+                    placeholder = "Cari hutang/piutang",
+                    headerGone = headerGone,
+                    onOpenFilters = { showFilters = true },
+                    activeFilterCount = activeDebtsFilterCount(state),
+                    filterSummary = activeDebtsFilterSummary(state),
+                    onClearFilters = viewModel::clearFiltersKeepSearch,
+                )
+            }
 
             state.actionMessage?.let { message ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Amber100),
-                ) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
-                        Text(
-                            "✅  $message",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        IconButton(onClick = viewModel::dismissMessage, modifier = Modifier.size(28.dp)) {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = "Tutup",
-                                modifier = Modifier.size(16.dp),
-                                tint = Amber600,
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Amber100),
+                    ) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+                            Text(
+                                "✅  $message",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f),
                             )
+                            IconButton(onClick = viewModel::dismissMessage, modifier = Modifier.size(28.dp)) {
+                                Icon(
+                                    Icons.Filled.Close,
+                                    contentDescription = "Tutup",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = Amber600,
+                                )
+                            }
                         }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
             }
 
             when {
-                state.loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                state.loading -> item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
-                state.error != null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                state.error != null -> item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                    }
                 }
-                state.items.isEmpty() -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "Belum ada catatan hutang",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                state.allItems.isEmpty() -> item {
+                    Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            "Belum ada catatan hutang",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(state.items, key = { it.id }) { debt ->
+                state.items.isEmpty() -> item {
+                    Box(
+                        Modifier.fillParentMaxWidth().padding(24.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "Tidak ada yang cocok dengan pencarian/filter",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                else -> items(state.items, key = { it.id }) { debt ->
+                    Box(Modifier.padding(horizontal = 16.dp)) {
                         DebtCard(
                             debt = debt,
                             onEdit = { viewModel.openEdit(debt) },
@@ -157,8 +193,12 @@ fun FamilyDebtsScreen(
                             onPay = { viewModel.openPayment(debt) },
                         )
                     }
-                    item {
-                        Spacer(Modifier.height(2.dp))
+                }
+            }
+
+            if (!state.loading && state.error == null && state.items.isNotEmpty()) {
+                item {
+                    Box(Modifier.padding(horizontal = 16.dp)) {
                         KangCuanTipCard(
                             message = "Bayar cicilan yang bunganya paling tinggi lebih dulu (strategi avalanche). Setiap pembayaran yang dicatat mengurangi beban bulan depan.",
                         )
@@ -166,6 +206,18 @@ fun FamilyDebtsScreen(
                 }
             }
         }
+    }
+
+    if (showFilters) {
+        DebtsFilterSheet(
+            type = state.typeFilter,
+            status = state.statusFilter,
+            onDismiss = { showFilters = false },
+            onApply = { type, status ->
+                viewModel.applyFilters(type, status)
+                showFilters = false
+            },
+        )
     }
 
     state.form?.let { form ->
@@ -220,10 +272,86 @@ fun debtStatusLabel(debt: FamilyDebtDto): String = when {
 }
 
 @Composable
-private fun DebtsFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+internal fun DebtsFilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
     M3FilterChip(selected = selected, onClick = onClick, label = { Text(label) })
 }
 
+private fun activeDebtsFilterCount(state: FamilyDebtsUiState): Int {
+    var count = 0
+    if (state.typeFilter != null) count++
+    if (state.statusFilter != null) count++
+    return count
+}
+
+private fun activeDebtsFilterSummary(state: FamilyDebtsUiState): String? {
+    val parts = buildList {
+        state.typeFilter?.let { add(debtTypeLabel(it)) }
+        state.statusFilter?.let { add(if (it == "settled") "Lunas" else "Belum Lunas") }
+    }
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" • ")
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DebtsFilterSheet(
+    type: String?,
+    status: String?,
+    onDismiss: () -> Unit,
+    onApply: (type: String?, status: String?) -> Unit,
+) {
+    var selectedType by remember { mutableStateOf(type) }
+    var selectedStatus by remember { mutableStateOf(status) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Text(
+                "Filter hutang & piutang",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(14.dp))
+
+            Text("Jenis", style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DebtsFilterChip("Semua", selectedType == null) { selectedType = null }
+                DebtsFilterChip("Hutang", selectedType == "payable") { selectedType = "payable" }
+                DebtsFilterChip("Piutang", selectedType == "receivable") { selectedType = "receivable" }
+            }
+
+            Spacer(Modifier.height(14.dp))
+            Text("Status", style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DebtsFilterChip("Semua", selectedStatus == null) { selectedStatus = null }
+                DebtsFilterChip("Belum Lunas", selectedStatus == "open") { selectedStatus = "open" }
+                DebtsFilterChip("Lunas", selectedStatus == "settled") { selectedStatus = "settled" }
+            }
+
+            Spacer(Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                ) { Text("Batal") }
+                Button(
+                    onClick = { onApply(selectedType, selectedStatus) },
+                    modifier = Modifier.weight(1f),
+                ) { Text("Terapkan") }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun DebtCard(
     debt: FamilyDebtDto,
@@ -240,7 +368,12 @@ private fun DebtCard(
             containerColor = if (settled) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onEdit,
+                onLongClick = onDelete,
+            ),
     ) {
         Column(Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -282,23 +415,20 @@ private fun DebtCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                IconButton(onClick = onPay, enabled = !settled) {
+                IconButton(onClick = onPay, enabled = !settled, modifier = Modifier.size(36.dp)) {
                     Icon(
                         Icons.Filled.Payment,
                         contentDescription = "Bayar",
                         tint = if (settled) MaterialTheme.colorScheme.onSurfaceVariant else Amber600,
+                        modifier = Modifier.size(20.dp),
                     )
                 }
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Filled.Edit, contentDescription = "Ubah")
-                }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            Icons.Filled.Delete,
-                            contentDescription = "Hapus",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(19.dp),
-                        )
+                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Filled.Edit,
+                        contentDescription = "Ubah",
+                        modifier = Modifier.size(16.dp),
+                    )
                 }
             }
             Spacer(Modifier.height(6.dp))

@@ -200,6 +200,7 @@ data class MeDto(
     val name: String? = null,
     val email: String? = null,
     val about: String? = null,
+    val religion: String? = null,
     @SerialName("is_admin") @Serializable(with = IntBooleanSerializer::class)
     val isAdmin: Boolean = false,
     @SerialName("setup_completed") @Serializable(with = IntBooleanSerializer::class)
@@ -214,6 +215,7 @@ data class MeResponse(val data: MeDto)
 data class UpdateMeRequest(
     val name: String? = null,
     val about: String? = null,
+    val religion: String? = null,
 )
 
 @Serializable
@@ -247,3 +249,20 @@ data class ChargeResponse(
     val provider: String? = null,
     val reference: String? = null,
 )
+
+// --- Kang Cuan: message templates from the server ---
+//
+// The server only stores templates; the phone decides when to fire a
+// notification (like an alarm) and picks a random template per slot so the
+// wording always feels fresh.
+
+@Serializable
+data class AffirmationDto(
+    val id: Int,
+    val slot: String, // "pagi" | "malam" | "bulanan"
+    val variant: String? = null, // for "malam": pengeluaran-luas | pemasukan-luas | kosong
+    val content: String,
+)
+
+@Serializable
+data class AffirmationListResponse(val data: List<AffirmationDto> = emptyList())

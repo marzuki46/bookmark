@@ -57,8 +57,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.keuangan.app.data.FamilyDto
+import com.keuangan.app.data.FamilyForecastDto
 import com.keuangan.app.data.FamilyGoalDto
 import com.keuangan.app.data.FamilyHealthDto
+import com.keuangan.app.data.ForecastLicenseDto
+import com.keuangan.app.data.ForecastWindowDto
 import com.keuangan.app.data.InsightDto
 import com.keuangan.app.data.IncomeBySourceDto
 import com.keuangan.app.data.NudgeDto
@@ -68,6 +71,7 @@ import com.keuangan.app.ui.theme.Amber100
 import com.keuangan.app.ui.theme.Amber600
 import com.keuangan.app.ui.theme.AppThemes
 import com.keuangan.app.ui.theme.Red600
+import com.keuangan.app.ui.theme.Teal100
 import com.keuangan.app.ui.theme.Teal700
 import com.keuangan.app.ui.theme.ThemeController
 import java.text.SimpleDateFormat
@@ -84,6 +88,7 @@ import java.util.Locale
 fun FamilyDashboardScreen(
     familyId: Int,
     family: FamilyDto?,
+    memberName: String?,
     viewModel: FamilyDashboardViewModel,
     onOpenTransactions: () -> Unit = {},
     onOpenBudgets: () -> Unit = {},
@@ -125,20 +130,10 @@ fun FamilyDashboardScreen(
                 item {
                     HeroHeader(
                         familyName = family?.name ?: "Keluarga",
+                        memberName = memberName,
                         health = health,
                         refreshing = state.refreshing,
                         onRefresh = { viewModel.refresh(familyId) },
-                    )
-                }
-                item {
-                    FeatureGrid(
-                        onTransactions = onOpenTransactions,
-                        onBudgets = onOpenBudgets,
-                        onDebts = onOpenDebts,
-                        onGoals = onOpenGoals,
-                        onTrend = onOpenTrend,
-                        onProfile = onOpenProfile,
-                        onMore = onOpenMore,
                     )
                 }
                 item {
@@ -149,6 +144,29 @@ fun FamilyDashboardScreen(
                         onOpenGoals = onOpenGoals,
                     )
                 }
+            }
+
+            // Forecast and the prayer card are independent of the health score,
+            // so they live outside its block: a failed /summary call must not
+            // take the cash-flow outlook down with it.
+            state.forecast?.let { forecast ->
+                item { SectionTitle("Laporan kamu hari ini") }
+                item { ForecastStrip(forecast.data, forecast.license) }
+            }
+            if (java.time.LocalTime.now().hour >= 18) {
+                item { EveningPrayerCard() }
+            }
+
+            item {
+                FeatureGrid(
+                    onTransactions = onOpenTransactions,
+                    onBudgets = onOpenBudgets,
+                    onDebts = onOpenDebts,
+                    onGoals = onOpenGoals,
+                    onTrend = onOpenTrend,
+                    onProfile = onOpenProfile,
+                    onMore = onOpenMore,
+                )
             }
 
             state.nudge?.let { nudge ->
@@ -188,6 +206,19 @@ fun FamilyDashboardScreen(
     }
 }
 
+/** "Selamat pagi kak Budi" — first name only, time-of-day aware. */
+private fun greetingFor(memberName: String?): String {
+    val hour = java.time.LocalTime.now().hour
+    val period = when (hour) {
+        in 0..10 -> "pagi"
+        in 11..14 -> "siang"
+        in 15..17 -> "sore"
+        else -> "malam"
+    }
+    val firstName = memberName?.trim()?.substringBefore(' ')?.takeIf { it.isNotBlank() }
+    return if (firstName != null) "Selamat $period kak $firstName" else "Selamat $period"
+}
+
 @Composable
 private fun LoadingRow() {
     Box(Modifier.fillMaxWidth().padding(vertical = 48.dp), contentAlignment = Alignment.Center) {
@@ -212,6 +243,7 @@ private fun SectionTitle(text: String) {
 @Composable
 private fun HeroHeader(
     familyName: String,
+    memberName: String?,
     health: FamilyHealthDto,
     refreshing: Boolean,
     onRefresh: () -> Unit,
@@ -260,15 +292,16 @@ private fun HeroHeader(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            "Soal cuan, urusan Kang Cuan",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = mutedOn,
-                        )
-                        Text(
-                            familyName,
+                            greetingFor(memberName),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = contentOn,
+                            maxLines = 1,
+                        )
+                        Text(
+                            "Soal cuan, urusan Kang Cuan · $familyName",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = mutedOn,
                             maxLines = 1,
                         )
                     }
@@ -383,17 +416,19 @@ private fun Tile(tile: FeatureTile, modifier: Modifier = Modifier) {
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         shape = RoundedCornerShape(16.dp),
     ) {
-        // A fixed-ish height keeps both rows even, and the label is allowed two
-        // lines on narrow phones so "Anggaran" is never cut in half.
+        // A fixed height keeps both rows even, and the label is allowed two
+        // lines on narrow phones so "Anggaran" is never cut in half. Content is
+        // centred on both axes so the badge never reads as pinned to a corner.
         Column(
-            Modifier
+            modifier = Modifier
                 .height(96.dp)
-                .padding(horizontal = 8.dp, vertical = 10.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             Box(
                 Modifier
-                    .size(34.dp)
+                    .size(38.dp)
                     .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
@@ -401,10 +436,10 @@ private fun Tile(tile: FeatureTile, modifier: Modifier = Modifier) {
                     tile.icon,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(22.dp),
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 tile.title,
                 style = MaterialTheme.typography.labelMedium,
@@ -653,4 +688,214 @@ private fun formatSignedFull(value: Double): String = if (value >= 0) {
     "Rp ${formatCompact(value)}"
 } else {
     "-Rp ${formatCompact(kotlin.math.abs(value))}"
+}
+
+/**
+ * Today / this week / this month, each shown next to the matching previous
+ * window so the reader sees direction, not just a number. Null pct means the
+ * previous window was empty, so we say so instead of printing a bogus 0%.
+ *
+ * Layout: today gets a full-width hero because it is the number people open
+ * the app for; week and month share one row underneath. Three equal columns
+ * used to squeeze rupiah figures into ~110dp each and wrap mid-amount.
+ */
+@Composable
+private fun ForecastStrip(forecast: FamilyForecastDto, license: ForecastLicenseDto) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        ForecastCard(
+            modifier = Modifier.fillMaxWidth(),
+            label = "Hari ini",
+            netCaption = "Sisa kas hari ini",
+            window = forecast.today,
+            license = license,
+            emphasised = true,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            ForecastCard(
+                modifier = Modifier.weight(1f),
+                label = "Minggu ini",
+                netCaption = "Sisa minggu ini",
+                window = forecast.week,
+                license = license,
+                emphasised = false,
+            )
+            ForecastCard(
+                modifier = Modifier.weight(1f),
+                label = "Bulan ini",
+                netCaption = "Sisa bulan ini",
+                window = forecast.month,
+                license = license,
+                emphasised = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ForecastCard(
+    modifier: Modifier,
+    label: String,
+    netCaption: String,
+    window: ForecastWindowDto,
+    license: ForecastLicenseDto,
+    emphasised: Boolean,
+) {
+    // Net is only meaningful when both streams are visible: the server zeroes a
+    // hidden stream, so subtracting it would print a confident wrong number.
+    val netKnown = license.incomeVisible && license.expenseVisible
+    val net = window.current.income - window.current.expense
+
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = if (emphasised) Teal100 else MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (emphasised) 0.dp else 1.dp),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        netCaption,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (netKnown) {
+                    Text(
+                        formatRupiah(net),
+                        style = if (emphasised) {
+                            MaterialTheme.typography.headlineSmall
+                        } else {
+                            MaterialTheme.typography.titleMedium
+                        },
+                        fontWeight = FontWeight.Bold,
+                        color = if (net >= 0) Teal700 else Red600,
+                        textAlign = TextAlign.End,
+                    )
+                } else {
+                    Text(
+                        "Tidak terlihat",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.End,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.material3.HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+            Spacer(Modifier.height(10.dp))
+
+            ForecastLine(
+                caption = "Masuk",
+                amount = window.current.income,
+                delta = window.delta.incomeDelta,
+                pct = window.delta.incomePct,
+                visible = license.incomeVisible,
+                goodWhenUp = true,
+            )
+            ForecastLine(
+                caption = "Keluar",
+                amount = window.current.expense,
+                delta = window.delta.expenseDelta,
+                pct = window.delta.expensePct,
+                visible = license.expenseVisible,
+                goodWhenUp = false,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ForecastLine(
+    caption: String,
+    amount: Double,
+    delta: Double,
+    pct: Double?,
+    visible: Boolean,
+    goodWhenUp: Boolean,
+) {
+    Column(Modifier.padding(bottom = 8.dp)) {
+        Text(
+            caption,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            if (visible) formatRupiah(amount) else "—",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        if (!visible) {
+            Text(
+                "Disembunyikan",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return
+        }
+        val better = if (goodWhenUp) delta >= 0 else delta <= 0
+        val tint = when {
+            delta == 0.0 -> MaterialTheme.colorScheme.onSurfaceVariant
+            better -> Teal700
+            else -> Red600
+        }
+        Text(
+            buildString {
+                append(if (delta >= 0) "+" else "-")
+                append(formatRupiah(kotlin.math.abs(delta)))
+                if (pct != null) append(" (${if (pct >= 0) "+" else "−"}${formatPct(pct)})")
+            },
+            style = MaterialTheme.typography.labelSmall,
+            color = tint,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+/** "12,5%" — one decimal, but never a trailing ".0". */
+private fun formatPct(pct: Double): String {
+    val rounded = kotlin.math.round(pct * 10.0) / 10.0
+    return if (rounded == rounded.toLong().toDouble()) {
+        "${rounded.toLong()}%"
+    } else {
+        "${"%.1f".format(java.util.Locale("id", "ID"), rounded)}%"
+    }
+}
+
+@Composable
+private fun EveningPrayerCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Amber100),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text(
+                "Doa malam",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Amber600,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Semoga apa yang sudah dikeluarkan hari ini segera berbuah hasil. Besok, apa pun rencanamu, sisihkan dulu sedikit untuk ditabung sebelum pengeluaran lain.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
 }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
@@ -60,6 +61,10 @@ fun FamilySubscriptionScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val redirect by viewModel.pendingRedirect.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.load()
+    }
 
     // Hand a paid redirect (or a generic checkout link) over to a browser.
     val context = LocalContext.current
@@ -152,12 +157,49 @@ Scaffold(
                     StatusBanner(
                         active = state.subscription?.active == true,
                         planName = state.subscription?.planName,
+                        startsAt = state.subscription?.startsAt,
                         expiresAt = state.subscription?.expiresAt,
+                        provider = state.subscription?.provider,
                         onRefresh = viewModel::refresh,
                     )
                 }
 
-                if (state.plans.isEmpty()) {
+                val sub = state.subscription
+                val lifetimeOwned = sub?.active == true && sub.expiresAt == null
+                val daysLeft = sub?.expiresAt?.let { daysUntil(it) }
+                val expiringSoon = sub?.active == true && daysLeft != null && daysLeft < 30
+
+                if (lifetimeOwned) {
+                    item {
+                        MembershipCard(
+                            plan = state.plans.firstOrNull { it.slug == sub.planSlug },
+                            subscription = sub,
+                        )
+                    }
+                }
+
+                if (expiringSoon) {
+                    item { RenewalNotice(daysLeft!!) }
+                }
+
+                // Lifetime holders have nothing left to buy; an expiring licence
+                // should not push a monthly plan that would only renew for a
+                // month, so those two cases get a narrowed plan list.
+                val visiblePlans = when {
+                    lifetimeOwned -> emptyList()
+                    expiringSoon -> state.plans.filter { it.durationType == "yearly" || it.durationType == "lifetime" }
+                    else -> state.plans
+                }
+
+                if (lifetimeOwned) {
+                    item {
+                        Text(
+                            "Paket seumur hidup aktif. Semua fitur terbuka tanpa batas waktu — tidak ada yang perlu dibeli lagi.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else if (visiblePlans.isEmpty()) {
                     item {
                         Text(
                             "Belum ada paket yang bisa dibeli.",
@@ -166,6 +208,23 @@ Scaffold(
                         )
                     }
                 } else {
+                    if (sub?.active == true) {
+                        item {
+                            MembershipCard(
+                                plan = state.plans.firstOrNull { it.slug == sub.planSlug },
+                                subscription = sub,
+                            )
+                        }
+                    }
+                    if (expiringSoon) {
+                        item {
+                            Text(
+                                "Masa aktif tinggal ${daysLeft} hari. Pilih paket tahunan atau seumur hidup agar tidak perlu perpanjangan tiap bulan.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Amber600,
+                            )
+                        }
+                    }
                     item {
                         Text(
                             "Pilih paket",
@@ -173,7 +232,7 @@ Scaffold(
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
-                    items(state.plans, key = { it.id }) { plan ->
+                    items(visiblePlans, key = { it.id }) { plan ->
                         PlanRow(
                             plan = plan,
                             charging = state.charging == plan.id,
@@ -194,19 +253,59 @@ Scaffold(
     }
 }
 
+/** Whole days until [value]; negative once it has passed, null if unparseable. */
+private fun daysUntil(value: String): Long? = runCatching {
+    Duration.between(Instant.now(), Instant.parse(value)).toDays()
+}.getOrNull()
+
+@Composable
+private fun RenewalNotice(daysLeft: Long) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Amber100),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.WarningAmber,
+                    contentDescription = null,
+                    tint = Amber600,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    "Masa aktif hampir habis",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Amber600,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                if (daysLeft < 0) {
+                    "Lisensi ini sudah lewat tanggal. Perpanjang sekarang agar data keluarga dan fitur premium tidak terputus."
+                } else if (daysLeft == 0L) {
+                    "Lisensi berakhir hari ini. Perpanjang sekarang agar data keluarga dan fitur premium tidak terputus."
+                } else {
+                    "Sisa ${daysLeft} hari lagi. Perpanjang sekarang agar data keluarga dan fitur premium tidak terputus."
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+    }
+}
+
 @Composable
 private fun StatusBanner(
     active: Boolean,
     planName: String?,
+    startsAt: String?,
     expiresAt: String?,
+    provider: String?,
     onRefresh: () -> Unit,
 ) {
     val (bg, fg) = if (active) Teal100 to Teal700 else Amber100 to Amber600
-    val daysRemaining = expiresAt?.let { value ->
-        runCatching {
-            Duration.between(Instant.now(), Instant.parse(value)).toDays()
-        }.getOrNull()
-    }
+    val daysRemaining = expiresAt?.let(::daysUntil)
     val expiringSoon = active && daysRemaining != null && daysRemaining in 0..3
     Card(colors = CardDefaults.cardColors(containerColor = bg), modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -250,6 +349,55 @@ private fun StatusBanner(
                     contentDescription = "Muat ulang",
                     tint = fg,
                     modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Full membership details for an existing active plan, with the plan text. */
+@Composable
+private fun MembershipCard(
+    plan: PlanDto?,
+    subscription: com.keuangan.app.data.SubscriptionDto,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                "Keanggotaan Kamu",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                (subscription.planName ?: plan?.name) ?: "Paket aktif",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Teal700,
+            )
+            plan?.description?.takeIf { it.isNotBlank() }?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.height(10.dp))
+            val rows = buildList {
+                subscription.startsAt?.let { add("Mulai" to formatFullDate(it)) }
+                subscription.expiresAt?.let { add("Berlaku sampai" to formatFullDate(it)) }
+                add("Status" to "Aktif")
+                subscription.provider?.takeIf { it.isNotBlank() }?.let {
+                    add("Metode pembayaran" to it)
+                }
+            }
+            rows.forEach { (label, value) ->
+                if (label != rows.first().first) Spacer(Modifier.height(4.dp))
+                Text(
+                    "$label: $value",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

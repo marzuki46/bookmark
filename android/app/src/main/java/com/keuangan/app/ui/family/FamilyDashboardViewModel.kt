@@ -3,6 +3,7 @@ package com.keuangan.app.ui.family
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keuangan.app.data.ApiResult
+import com.keuangan.app.data.FamilyForecastResponse
 import com.keuangan.app.data.FamilyGoalDto
 import com.keuangan.app.data.FamilyHealthDto
 import com.keuangan.app.data.InsightDto
@@ -26,6 +27,7 @@ data class FamilyDashboardUiState(
     val nudge: NudgeDto? = null,
     val incomeBySource: List<IncomeBySourceDto> = emptyList(),
     val goals: List<FamilyGoalDto> = emptyList(),
+    val forecast: FamilyForecastResponse? = null,
 )
 
 /**
@@ -66,11 +68,17 @@ class FamilyDashboardViewModel(private val repository: KeuanganRepository) : Vie
                     when (result) { is ApiResult.Ok -> result.value; is ApiResult.Err -> emptyList() }
                 }
             }
+            val forecastDeferred = async {
+                repository.familyForecast(familyId).let { result ->
+                    when (result) { is ApiResult.Ok -> result.value; is ApiResult.Err -> null }
+                }
+            }
             val snapshot = snapshotDeferred.await()
             val health = healthDeferred.await()
             val nudge = nudgeDeferred.await()
             val incomeBySource = incomeDeferred.await()
             val goals = goalsDeferred.await()
+            val forecast = forecastDeferred.await()
 
             _state.update {
                 it.copy(
@@ -81,6 +89,7 @@ class FamilyDashboardViewModel(private val repository: KeuanganRepository) : Vie
                     nudge = nudge,
                     incomeBySource = incomeBySource,
                     goals = goals,
+                    forecast = forecast,
                 )
             }
         }

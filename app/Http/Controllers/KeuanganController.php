@@ -46,6 +46,11 @@ final class KeuanganController extends Controller
         return view('pages.keuangan-logs');
     }
 
+    public function affirmations(): View
+    {
+        return view('pages.keuangan-affirmations');
+    }
+
     public function appManager(Request $request): View
     {
         $activeTab = match ($request->query('tab')) {

@@ -28,16 +28,22 @@ final class NudgeService
     ];
 
     /**
+     * @param array<string, bool>|null $visibleAreas only these visibility areas
+     *                                  (income/expense/debts) are allowed to feed
+     *                                  a nudge; null means the caller may see all.
+     *
      * @return array{tone: string, message: string, code: string}|null
      */
-    public function evaluate(Family $family, ?FamilyTransaction $justSaved = null): ?array
+    public function evaluate(Family $family, ?FamilyTransaction $justSaved = null, ?array $visibleAreas = null): ?array
     {
+        $canSee = fn (string $area): bool => $visibleAreas === null || ($visibleAreas[$area] ?? false);
+
         $candidates = array_filter([
-            $this->categoryBudgetRule($family, $justSaved),
-            $this->projectionRule($family),
-            $this->noIncomeRule($family),
-            $this->overdueDebtRule($family),
-            $this->savingsRateRule($family),
+            $canSee('expense') ? $this->categoryBudgetRule($family, $justSaved) : null,
+            $canSee('income') && $canSee('expense') ? $this->projectionRule($family) : null,
+            $canSee('income') ? $this->noIncomeRule($family) : null,
+            $canSee('debts') ? $this->overdueDebtRule($family) : null,
+            $canSee('income') && $canSee('expense') ? $this->savingsRateRule($family) : null,
         ]);
 
         if ($candidates === []) {
