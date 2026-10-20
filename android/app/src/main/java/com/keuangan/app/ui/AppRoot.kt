@@ -44,11 +44,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Balance
-import androidx.compose.material.icons.filled.Flag
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.rounded.AccountBalanceWallet
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.ReceiptLong
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -173,11 +173,11 @@ private data class Tab(
 )
 
 private val TABS = listOf(
-    Tab(Routes.HOME, "Ringkasan", Icons.Filled.Home),
-    Tab(Routes.TRANSACTIONS, "Transaksi", Icons.AutoMirrored.Filled.ReceiptLong),
-    Tab(Routes.DEBTS, "Utang", Icons.Filled.Balance),
-    Tab(Routes.GOALS, "Target", Icons.Filled.Flag),
-    Tab(Routes.MORE, "Lainnya", Icons.Filled.GridView),
+    Tab(Routes.HOME, "Ringkasan", Icons.Rounded.Home),
+    Tab(Routes.TRANSACTIONS, "Transaksi", Icons.Rounded.ReceiptLong),
+    Tab(Routes.DEBTS, "Utang", Icons.Rounded.AccountBalanceWallet),
+    Tab(Routes.GOALS, "Target", Icons.Rounded.Flag),
+    Tab(Routes.MORE, "Lainnya", Icons.Rounded.GridView),
 )
 
 private const val KEY_ASKED_NOTIFICATIONS = "asked_notifications"
@@ -518,12 +518,12 @@ private fun AppleNavBar(
         Box(
             modifier = Modifier
                 .offset(x = indicatorOffset, y = 6.dp)
-                .size(width = itemWidth, height = 70.dp)
+                .size(width = itemWidth, height = 64.dp)
                 .clip(RoundedCornerShape(22.dp))
                 .background(scheme.primary.copy(alpha = 0.14f))
                 .drawBehind {
                     val wave = Path().apply {
-                        val base = size.height - 8.dp.toPx()
+                    val base = size.height - 7.dp.toPx()
                         moveTo(0f, base)
                         quadraticTo(size.width * 0.25f, base - 9.dp.toPx(), size.width * 0.5f, base)
                         quadraticTo(size.width * 0.75f, base + 9.dp.toPx(), size.width, base)
@@ -538,7 +538,7 @@ private fun AppleNavBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(82.dp)
+                .height(76.dp)
                 .clip(shape)
                 .padding(horizontal = 6.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -568,8 +568,8 @@ private fun AppleNavItem(
     val pressed by interaction.collectIsPressedAsState()
 
     val springy = spring<androidx.compose.ui.unit.Dp>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-    val pillSize by animateDpAsState(if (selected) 44.dp else 38.dp, animationSpec = springy)
-    val iconScale by animateDpAsState(if (selected) 23.dp else 20.dp, animationSpec = springy)
+    val pillSize by animateDpAsState(if (selected) 38.dp else 34.dp, animationSpec = springy)
+    val iconScale by animateDpAsState(if (selected) 21.dp else 19.dp, animationSpec = springy)
     val iconTint by androidx.compose.animation.animateColorAsState(
         if (selected) scheme.primary else scheme.onSurfaceVariant,
         animationSpec = tween(220),
@@ -608,7 +608,7 @@ private fun AppleNavItem(
             maxLines = 1,
             softWrap = false,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 3.dp),
+            modifier = Modifier.padding(top = 1.dp),
         )
     }
 }

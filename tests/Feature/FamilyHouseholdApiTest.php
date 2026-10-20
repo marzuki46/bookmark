@@ -331,6 +331,32 @@ final class FamilyHouseholdApiTest extends TestCase
         $this->assertSame($this->husband->id, $response->json('data.recorded_by.id'));
     }
 
+    public function test_wife_cannot_post_as_shared_after_owner_assigns_wife_role(): void
+    {
+        FamilyMember::where('family_id', $this->family->id)
+            ->where('user_id', $this->wife->id)
+            ->update(['payer_role' => 'wife']);
+        Sanctum::actingAs($this->wife);
+
+        $this->postJson("/api/families/{$this->family->id}/transactions", [
+            'type' => 'expense',
+            'amount' => 125_000,
+            'description' => 'Belanja istri',
+            'date' => now()->toDateString(),
+            'payer' => 'shared',
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'Anggota dengan peran istri hanya dapat mencatat transaksi sebagai istri.');
+
+        $response = $this->postJson("/api/families/{$this->family->id}/transactions", [
+            'type' => 'expense',
+            'amount' => 125_000,
+            'description' => 'Belanja istri',
+            'date' => now()->toDateString(),
+        ])->assertCreated();
+
+        $this->assertSame('wife', $response->json('data.payer'));
+    }
+
     public function test_income_source_is_stripped_from_expense_rows(): void
     {
         $source = $this->postJson("/api/families/{$this->family->id}/income-sources", [

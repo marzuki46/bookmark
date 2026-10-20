@@ -67,6 +67,7 @@ final class TransactionController extends Controller
         }
 
         $data = $this->validated($request, $family);
+        $data = $this->applyMemberPayerRule($request, $family, $data);
 
         $transaction = $family->transactions()->create(
             $data + ['user_id' => $request->user()->id]
@@ -100,6 +101,7 @@ final class TransactionController extends Controller
         $this->ensureBelongsToFamily($transaction, $family);
 
         $data = $this->validated($request, $family, partial: true, currentType: $transaction->type);
+        $data = $this->applyMemberPayerRule($request, $family, $data, partial: true);
 
         $transaction->update($data);
         $transaction->load(['category:id,name,type', 'incomeSource:id,name,type', 'user:id,name']);
@@ -178,6 +180,44 @@ final class TransactionController extends Controller
         if ($type !== 'income') {
             $data['income_source_id'] = null;
         }
+
+        return $data;
+    }
+
+    /**
+     * A member assigned as wife may only record rows for the wife. In
+     * particular, an owner assigning that role must also remove the ability to
+     * post as the household/shared account; this is enforced server-side so an
+     * old APK or a crafted request cannot bypass the UI.
+     *
+     * Owners and members without a payer role retain the existing shared,
+     * husband, and wife choices. A missing payer from an older client is
+     * normalized to the assigned role instead of falling through to the
+     * database default of shared.
+     *
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function applyMemberPayerRule(
+        Request $request,
+        Family $family,
+        array $data,
+        bool $partial = false,
+    ): array {
+        $member = $this->visibility->member($request->user(), $family);
+        if ($member->payer_role !== 'wife') {
+            return $data;
+        }
+
+        if ($partial && ! array_key_exists('payer', $data)) {
+            return $data;
+        }
+
+        if (($data['payer'] ?? null) !== null && $data['payer'] !== 'wife') {
+            abort(422, 'Anggota dengan peran istri hanya dapat mencatat transaksi sebagai istri.');
+        }
+
+        $data['payer'] = 'wife';
 
         return $data;
     }

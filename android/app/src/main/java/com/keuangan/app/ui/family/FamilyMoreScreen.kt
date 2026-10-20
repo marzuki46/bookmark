@@ -168,7 +168,7 @@ MenuGroup("Kang Cuan", listOf(
                 MenuItem("Izin notifikasi", notificationRowSubtitle(context), Icons.Filled.NotificationsActive, { openNotificationSettings(context) }),
                 MenuItem("Langganan", "Status paket & pembayaran", Icons.Filled.WorkspacePremium, onOpenSubscription),
                 MenuItem("Keluarga & Akun", "Anggota, peran, kode login & barcode", Icons.Filled.Group, onOpenProfile),
-                MenuItem("Periksa Pembaruan", "Versi ${BuildConfig.VERSION_NAME} · pasang versi baru", Icons.Filled.SystemUpdate, viewModel::checkUpdates),
+                MenuItem("Periksa Pembaruan", "Cek versi terbaru dan pembaruan aplikasi", Icons.Filled.SystemUpdate, viewModel::checkUpdates),
             )),
 MenuGroup("Tools Penunjang Cuan", listOf(
                 MenuItem("Kalkulator HPP", "Hitung HPP & harga jual yang masuk akal", Icons.Filled.Calculate, onOpenHppCalculator),
@@ -476,8 +476,13 @@ if (state.checkingUpdate) {
         if (!update.updateAvailable) {
             AlertDialog(
                 onDismissRequest = viewModel::dismissUpdates,
-                title = { Text("Aplikasi terbaru") },
-                text = { Text("Kamu sudah memakai Kang Cuan versi ${BuildConfig.VERSION_NAME}. Tidak ada pembaruan.") },
+                title = { Text("Versi terbaru") },
+                text = {
+                    Text(
+                        "Kamu sudah memakai Kang Cuan versi ${BuildConfig.VERSION_NAME} terbaru. " +
+                            "Saat ini belum ada pembaruan aplikasi.",
+                    )
+                },
                 confirmButton = { TextButton(onClick = viewModel::dismissUpdates) { Text("Tutup") } },
             )
         } else {
@@ -485,16 +490,20 @@ if (state.checkingUpdate) {
                 onDismissRequest = {
                     if (!state.downloading) viewModel.dismissUpdates()
                 },
-                title = { Text(if (state.downloading) "Memperbarui..." else "Versi baru tersedia") },
+                title = { Text(if (state.downloading) "Memperbarui..." else "Versi terbaru tersedia") },
 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            "Kang Cuan ${update.latestVersionName}",
+                            "Kang Cuan versi ${update.latestVersionName}",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            if (update.isMandatory) "Update wajib untuk melanjutkan penggunaan aplikasi." else "Update disarankan agar fitur dan keamanan tetap terbaru.",
+                            if (update.isMandatory) {
+                                "Versi ini wajib diperbarui untuk melanjutkan penggunaan aplikasi."
+                            } else {
+                                "Versi terbaru tersedia. Perbarui aplikasi untuk mendapatkan perubahan terbaru."
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = if (update.isMandatory) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = if (update.isMandatory) FontWeight.SemiBold else FontWeight.Normal,
