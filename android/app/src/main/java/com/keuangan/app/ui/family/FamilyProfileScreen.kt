@@ -38,6 +38,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -99,6 +101,7 @@ fun FamilyProfileScreen(
     var showAddMember by remember { mutableStateOf(false) }
     var showQr by remember { mutableStateOf(false) }
     var memberName by rememberSaveable { mutableStateOf("") }
+    var memberEmail by rememberSaveable { mutableStateOf("") }
     var memberRole by rememberSaveable { mutableStateOf<String?>(null) }
     var editingMember by remember { mutableStateOf<FamilyMemberDto?>(null) }
     var deletingMember by remember { mutableStateOf<FamilyMemberDto?>(null) }
@@ -114,6 +117,7 @@ fun FamilyProfileScreen(
             return
         }
         memberName = ""
+        memberEmail = ""
         memberRole = when {
             family.members.none { it.payerRole == "husband" } -> "husband"
             family.members.none { it.payerRole == "wife" } -> "wife"
@@ -414,14 +418,16 @@ fun FamilyProfileScreen(
     if (showAddMember) {
         AddMemberDialog(
             adding = state.addingMember,
-            name = memberName,
+                name = memberName,
+                email = memberEmail,
             role = memberRole,
-            onNameChange = { memberName = it },
+                onNameChange = { memberName = it },
+                onEmailChange = { memberEmail = it },
             onRoleChange = { memberRole = it },
             onDismiss = { if (!state.addingMember) showAddMember = false },
             onConfirm = {
                 showAddMember = false
-                viewModel.addMember(familyId, memberName, memberRole)
+                viewModel.addMember(familyId, memberName, memberEmail, memberRole)
             },
         )
     }
@@ -505,8 +511,10 @@ fun FamilyProfileScreen(
 private fun AddMemberDialog(
     adding: Boolean,
     name: String,
+    email: String,
     role: String?,
     onNameChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
     onRoleChange: (String?) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
@@ -516,11 +524,21 @@ private fun AddMemberDialog(
         title = { Text("Tambah anggota") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
+            OutlinedTextField(
+                value = name,
                     onValueChange = onNameChange,
                     label = { Text("Nama anggota") },
                     singleLine = true,
+                    enabled = !adding,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email anggota") },
+                    placeholder = { Text("contoh@email.com") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     enabled = !adding,
                     modifier = Modifier.fillMaxWidth(),
                 )

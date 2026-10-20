@@ -789,8 +789,8 @@ class KeuanganRepository(
         apiCall { api.familyLoginCode(familyId) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
-    suspend fun addFamilyMember(familyId: Int, name: String, payerRole: String?): ApiResult<NewFamilyMemberDto> = runCatching {
-        apiCall { api.createFamilyMember(familyId, FamilyMemberRequest(name.trim(), payerRole)) }.data
+    suspend fun addFamilyMember(familyId: Int, name: String, email: String?, payerRole: String?): ApiResult<NewFamilyMemberDto> = runCatching {
+        apiCall { api.createFamilyMember(familyId, FamilyMemberRequest(name.trim(), payerRole, email = email)) }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
     suspend fun updateFamilyMember(

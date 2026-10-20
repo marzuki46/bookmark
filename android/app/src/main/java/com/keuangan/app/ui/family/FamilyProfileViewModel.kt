@@ -72,7 +72,7 @@ class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewM
         }
     }
 
-    fun addMember(familyId: Int, name: String, payerRole: String?) {
+    fun addMember(familyId: Int, name: String, email: String, payerRole: String?) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) {
             _state.update { it.copy(actionMessage = "Nama anggota tidak boleh kosong.") }
@@ -81,7 +81,7 @@ class FamilyProfileViewModel(private val repository: KeuanganRepository) : ViewM
         if (_state.value.addingMember) return
         _state.update { it.copy(addingMember = true, actionMessage = null) }
         viewModelScope.launch {
-            when (val result = repository.addFamilyMember(familyId, trimmed, payerRole)) {
+            when (val result = repository.addFamilyMember(familyId, trimmed, email.trim().ifBlank { null }, payerRole)) {
                 is ApiResult.Ok -> {
                     _state.update {
                         it.copy(
