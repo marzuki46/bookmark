@@ -34,12 +34,12 @@
             </div>
             <div class="rounded-lg bg-teal-50 border border-teal-200 px-4 py-2 text-right">
                 <p class="text-xs text-teal-700">Bulan ini</p>
-                <p class="text-2xl font-bold text-teal-800">{{ number_format($downloadsThisMonth) }}</p>
+                <p class="text-2xl font-bold text-teal-800">{{ number_format($downloadsThisMonth ?? 0) }}</p>
                 <p class="text-xs text-teal-700">download</p>
             </div>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            @foreach($downloadMonths as $month)
+            @foreach($downloadMonths ?? [] as $month)
                 <div class="rounded-lg border border-[var(--color-border)] p-3">
                     <p class="text-xs text-[var(--text-tertiary)]">{{ $month['label'] }}</p>
                     <p class="text-xl font-bold text-[var(--text-primary)] mt-1">{{ number_format($month['count']) }}</p>

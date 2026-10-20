@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\AppRelease;
+use App\Models\ApkDownload;
 use App\Models\Family;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\View\View;
 
 final class KeuanganController extends Controller
@@ -63,9 +65,23 @@ final class KeuanganController extends Controller
             default => 'lisensi',
         };
 
+        $downloadMonths = collect(range(0, 11))->map(function (int $monthsAgo): array {
+            $start = now()->startOfMonth()->subMonths($monthsAgo);
+            $end = $start->copy()->endOfMonth();
+
+            return [
+                'label' => $start->translatedFormat('F Y'),
+                'count' => Schema::hasTable('apk_downloads')
+                    ? ApkDownload::query()->whereBetween('downloaded_at', [$start, $end])->count()
+                    : 0,
+            ];
+        });
+
         return view('pages.keuangan-aplikasi-manajemen', [
             'activeTab' => $activeTab,
             'releases' => AppRelease::query()->orderByDesc('version_code')->limit(20)->get(),
+            'downloadMonths' => $downloadMonths,
+            'downloadsThisMonth' => $downloadMonths->first()['count'],
         ]);
     }
 }

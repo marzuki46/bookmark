@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -27,7 +28,9 @@ final class AppReleaseController extends Controller
 
             return [
                 'label' => $start->translatedFormat('F Y'),
-                'count' => ApkDownload::query()->whereBetween('downloaded_at', [$start, $end])->count(),
+                'count' => Schema::hasTable('apk_downloads')
+                    ? ApkDownload::query()->whereBetween('downloaded_at', [$start, $end])->count()
+                    : 0,
             ];
         });
 
