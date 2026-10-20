@@ -23,6 +23,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'));
 
+Route::middleware('throttle:20,1')->get('/apk/download/latest', [AppReleaseController::class, 'downloadLatest'])
+    ->name('app-release.latest');
 Route::middleware('throttle:20,1')->get('/apk/download/{release}', [AppReleaseController::class, 'download'])
     ->name('app-release.download');
 Route::get('/payments/duitku/return', fn () => redirect('/keuangan/langganan'))

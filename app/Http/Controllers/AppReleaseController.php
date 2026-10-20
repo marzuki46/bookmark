@@ -266,4 +266,15 @@ final class AppReleaseController extends Controller
             ]
         );
     }
+
+    /**
+     * Permanent public installer URL. The QR code and shared link point here;
+     * every new release automatically becomes the file served by this route.
+     */
+    public function downloadLatest(): StreamedResponse
+    {
+        $release = AppRelease::query()->orderByDesc('version_code')->firstOrFail();
+
+        return $this->download($release);
+    }
 }

@@ -132,6 +132,25 @@ final class AppOpsApiTest extends TestCase
             ->assertHeader('Content-Type', 'application/vnd.android.package-archive');
     }
 
+    public function test_permanent_latest_download_url_serves_highest_release(): void
+    {
+        Storage::fake('local');
+        $releasePath = 'apk/keuangan-3.2.0-25.apk';
+        Storage::disk('local')->put($releasePath, 'fake-apk');
+        AppRelease::create([
+            'version_code' => 25,
+            'version_name' => '3.2.0',
+            'file_path' => $releasePath,
+            'file_size' => 8,
+            'sha256' => hash('sha256', 'fake-apk'),
+        ]);
+
+        $this->get(route('app-release.latest'))
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.android.package-archive')
+            ->assertHeader('Content-Disposition', 'attachment; filename=keuangan-v25.apk');
+    }
+
     public function test_release_notes_can_be_filled_in_after_upload(): void
     {
         Storage::fake('local');

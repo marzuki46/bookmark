@@ -4,6 +4,28 @@
         <p class="text-sm text-[var(--text-tertiary)] mt-1">Unggah APK di sini. App akan mendeteksi rilis baru lewat menu "Periksa Pembaruan" (model Play Store: unduh langsung lalu pasang).</p>
     </div>
 
+    @php
+        $permanentDownloadUrl = route('app-release.latest');
+        $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&data='.urlencode($permanentDownloadUrl);
+    @endphp
+    <div class="grid gap-5 md:grid-cols-[1fr_auto] items-center bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
+        <div class="space-y-3">
+            <div>
+                <h2 class="text-lg font-semibold text-[var(--text-primary)]">Link & QRIS download aplikasi</h2>
+                <p class="text-sm text-[var(--text-tertiary)] mt-1">Gunakan link dan QR ini untuk dibagikan. Keduanya tetap sama; setelah APK baru diunggah, link otomatis mengunduh versi terbaru.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <code id="permanent-apk-url" class="rounded-lg bg-[var(--color-bg)] border border-[var(--color-border)] px-3 py-2 text-sm break-all">{{ $permanentDownloadUrl }}</code>
+                <button type="button" class="btn-secondary !py-2 !px-3 text-sm" id="copy-permanent-apk-url">Salin link</button>
+            </div>
+            <p class="text-xs text-[var(--text-tertiary)]">Jangan membagikan URL yang mengandung ID rilis seperti <code>/apk/download/23</code>; gunakan URL permanen di atas.</p>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+            <img src="{{ $qrUrl }}" alt="QR download aplikasi Kang Cuan" width="180" height="180" class="rounded-xl border border-[var(--color-border)] bg-white p-2">
+            <a href="{{ $qrUrl }}" target="_blank" rel="noopener" class="text-xs text-indigo-600 hover:underline">Buka QR ukuran besar</a>
+        </div>
+    </div>
+
     @if (session('status'))
         <div class="rounded-xl px-4 py-3 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">{{ session('status') }}</div>
     @endif
@@ -149,6 +171,18 @@
 
 <script>
     (() => {
+        const copyButton = document.getElementById('copy-permanent-apk-url');
+        const permanentUrl = document.getElementById('permanent-apk-url');
+        copyButton?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(permanentUrl?.textContent?.trim() || '');
+                copyButton.textContent = 'Link tersalin';
+                setTimeout(() => { copyButton.textContent = 'Salin link'; }, 1800);
+            } catch (_) {
+                copyButton.textContent = 'Salin manual';
+            }
+        });
+
         // Edit rows: one open at a time keeps the table from jumping around.
         document.querySelectorAll('.js-toggle-notes').forEach((button) => {
             button.addEventListener('click', () => {
