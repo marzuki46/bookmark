@@ -568,7 +568,9 @@ private fun AppleNavItem(
     val pressed by interaction.collectIsPressedAsState()
 
     val springy = spring<androidx.compose.ui.unit.Dp>(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow)
-    val pillSize by animateDpAsState(if (selected) 38.dp else 34.dp, animationSpec = springy)
+    // Keep the touch target visually compact: the previous 38dp pill left a
+    // large optical gap between the icon glyph and its label.
+    val pillSize by animateDpAsState(if (selected) 32.dp else 30.dp, animationSpec = springy)
     val iconScale by animateDpAsState(if (selected) 21.dp else 19.dp, animationSpec = springy)
     val iconTint by androidx.compose.animation.animateColorAsState(
         if (selected) scheme.primary else scheme.onSurfaceVariant,
@@ -608,7 +610,7 @@ private fun AppleNavItem(
             maxLines = 1,
             softWrap = false,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 1.dp),
+            modifier = Modifier.padding(top = 0.dp),
         )
     }
 }
