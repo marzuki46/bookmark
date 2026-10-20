@@ -6,6 +6,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use App\Models\SystemSetting;
 
 final class AIService
 {
@@ -22,18 +23,18 @@ final class AIService
         $this->userId = $userId ?? auth()->id() ?? 0;
         $settings = $this->loadUserSettings();
 
-        $this->apiUrl = $settings['api_url'] ?? config('services.ai.api_url', 'https://api.openai.com/v1');
-        $this->apiKey = $settings['api_key'] ?? config('services.ai.api_key', '');
-        $this->model = $settings['model'] ?? config('services.ai.model', 'gpt-4o-mini');
+        $this->apiUrl = $settings['api_url'] ?? SystemSetting::query()->where('key', 'ai.api_url')->value('value') ?? config('services.ai.api_url', 'https://api.openai.com/v1');
+        $this->apiKey = $settings['api_key'] ?? SystemSetting::query()->where('key', 'ai.api_key')->value('value') ?? config('services.ai.api_key', '');
+        $this->model = $settings['model'] ?? SystemSetting::query()->where('key', 'ai.model')->value('value') ?? config('services.ai.model', 'gpt-4o-mini');
     }
 
     public function initializeForUser(int $userId): void
     {
         $this->userId = $userId;
         $settings = $this->loadUserSettings();
-        $this->apiUrl = $settings['api_url'] ?? config('services.ai.api_url', 'https://api.openai.com/v1');
-        $this->apiKey = $settings['api_key'] ?? config('services.ai.api_key', '');
-        $this->model = $settings['model'] ?? config('services.ai.model', 'gpt-4o-mini');
+        $this->apiUrl = $settings['api_url'] ?? SystemSetting::query()->where('key', 'ai.api_url')->value('value') ?? config('services.ai.api_url', 'https://api.openai.com/v1');
+        $this->apiKey = $settings['api_key'] ?? SystemSetting::query()->where('key', 'ai.api_key')->value('value') ?? config('services.ai.api_key', '');
+        $this->model = $settings['model'] ?? SystemSetting::query()->where('key', 'ai.model')->value('value') ?? config('services.ai.model', 'gpt-4o-mini');
     }
 
     public function isConfigured(): bool

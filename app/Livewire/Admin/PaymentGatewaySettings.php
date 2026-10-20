@@ -51,7 +51,7 @@ final class PaymentGatewaySettings extends Component
     public function save(GatewaySettings $settings): void
     {
         $data = $this->validate([
-            'provider' => ['required', 'in:midtrans,duitku'],
+            'provider' => ['required', 'in:manual,midtrans,duitku'],
             'duitkuMerchantCode' => ['nullable', 'string', 'max:50'],
             'duitkuApiKey' => ['nullable', 'string', 'max:255'],
             'duitkuProduction' => ['boolean'],

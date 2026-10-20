@@ -254,20 +254,21 @@ Scaffold(
                         PlanRow(
                             plan = plan,
                             charging = state.charging == plan.id,
-                            enabled = state.charging == null,
+                            enabled = state.charging == null && state.manualPayment?.paymentMode != "manual",
                             onCharge = { viewModel.charge(plan.id) },
                         )
                     }
                     item {
                         Text(
-                            "Pembayaran dibuka di browser melalui gateway yang aktif. Setelah selesai, tekan muat ulang untuk mengambil status dan masa aktif terbaru dari server.",
+                            if (state.manualPayment?.paymentMode == "manual") "Pembayaran manual aktif. Gunakan detail transfer bank/QRIS di bawah, lalu kirim bukti kepada admin untuk diverifikasi." else "Pembayaran dibuka di browser melalui gateway yang aktif. Setelah selesai, tekan muat ulang untuk mengambil status dan masa aktif terbaru dari server.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
-                state.manualPayment?.takeIf {
+                 state.manualPayment?.takeIf {
+                     it.paymentMode == "manual" &&
                     it.bankName.isNotBlank() || it.qrisImageUrl.isNotBlank() || it.instructions.isNotBlank()
                 }?.let { manual ->
                     item { ManualPaymentCard(manual) }

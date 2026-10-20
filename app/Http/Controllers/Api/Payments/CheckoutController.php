@@ -39,6 +39,11 @@ final class CheckoutController extends Controller
         }
 
         $user = $request->user();
+        if ($this->gatewaySettings->provider() === 'manual') {
+            return response()->json([
+                'message' => 'Pembayaran manual aktif. Silakan transfer bank atau QRIS, lalu kirim bukti kepada admin untuk verifikasi.',
+            ], 422);
+        }
         $family = $user->family();
         $orderId = MidtransService::newOrderId($user);
 

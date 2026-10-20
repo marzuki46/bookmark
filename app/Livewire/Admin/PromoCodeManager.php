@@ -6,6 +6,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\PromoCode;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Crypt;
 use Livewire\Component;
 
 final class PromoCodeManager extends Component
@@ -34,6 +35,7 @@ final class PromoCodeManager extends Component
         PromoCode::query()->create([
             'name' => $data['name'],
             'code_hash' => hash('sha256', $plainCode),
+            'code_encrypted' => Crypt::encryptString($plainCode),
             'duration_days' => (int) $data['durationDays'],
             'max_redemptions' => $data['maxRedemptions'] === '' ? null : (int) $data['maxRedemptions'],
             'starts_at' => $data['startsAt'] ?: null,

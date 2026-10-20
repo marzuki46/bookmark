@@ -4,6 +4,23 @@
         <p class="text-sm text-[var(--text-tertiary)] mt-1">Provider dan model AI yang tersedia untuk fitur aplikasi. API key tidak pernah ditampilkan.</p>
     </div>
 
+    @if($statusMessage)
+        <div class="rounded-xl px-4 py-3 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">{{ $statusMessage }}</div>
+    @endif
+
+    <form wire:submit="save" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
+        <div>
+            <h3 class="font-semibold text-[var(--text-primary)]">Konfigurasi 9Router</h3>
+            <p class="text-xs text-[var(--text-tertiary)] mt-1">Gunakan domain 9Router milikmu dengan endpoint OpenAI-compatible, misalnya <code>https://domainmu.com/v1</code>.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="wp-form-label">API URL</label><input type="url" wire:model="apiUrl" class="wp-form-input" placeholder="https://domainmu.com/v1">@error('apiUrl') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror</div>
+            <div><label class="wp-form-label">Model</label><input type="text" wire:model="model" class="wp-form-input" placeholder="openai/gpt-4o-mini">@error('model') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror</div>
+        </div>
+        <div><label class="wp-form-label">API Key</label><input type="password" wire:model="apiKey" class="wp-form-input" autocomplete="new-password" placeholder="{{ $apiKeyConfigured ? 'Tersimpan, isi hanya jika mengganti' : 'Masukkan API key' }}"></div>
+        <button class="btn-primary" type="submit">Simpan konfigurasi AI</button>
+    </form>
+
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5">
             <p class="text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Ringkasan bookmark</p>

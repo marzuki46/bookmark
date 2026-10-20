@@ -54,6 +54,8 @@ final class SubscriptionPlanController extends Controller
 
     public function manualPayment(PaymentGatewaySettings $settings): JsonResponse
     {
-        return response()->json(['data' => $settings->manualPayment()]);
+        return response()->json(['data' => array_merge($settings->manualPayment(), [
+            'payment_mode' => $settings->provider(),
+        ])]);
     }
 }
