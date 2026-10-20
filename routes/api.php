@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\Payments\CheckoutController;
 use App\Http\Controllers\Api\Payments\DuitkuWebhookController;
 use App\Http\Controllers\Api\Payments\MidtransWebhookController;
 use App\Http\Controllers\Api\Payments\SubscriptionPlanController;
+use App\Http\Controllers\Api\Payments\PromoCodeController;
 use App\Http\Controllers\Api\TokenController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -68,7 +69,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/subscription/plans', [SubscriptionPlanController::class, 'index']);
     Route::get('/subscription/manual-payment', [SubscriptionPlanController::class, 'manualPayment']);
     Route::post('/subscription/charge', [CheckoutController::class, 'charge'])
-        ->middleware('throttle:10,1,checkout');
+        ->middleware('throttle:10,1,checkout')
+        ->name('subscription.charge');
+    Route::post('/subscription/redeem-promo', [PromoCodeController::class, 'redeem'])
+        ->middleware('throttle:10,1,promo-redeem');
 
     Route::post('/app/login-code/rotate', [CodeAuthController::class, 'rotate']);
 

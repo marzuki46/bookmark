@@ -99,6 +99,10 @@ class KeuanganRepository(
         apiCall { api.manualPayment() }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
+    suspend fun redeemPromo(code: String): ApiResult<Unit> = runCatching {
+        apiCall { api.redeemPromo(RedeemPromoRequest(code)) }
+    }.fold(onSuccess = { ApiResult.Ok(Unit) }, onFailure = { e -> e.toApiError() })
+
     /**
      * Starts a Midtrans purchase. The returned redirect URL opens the Snap
      * payment page in the external browser; the webhook activates the plan.

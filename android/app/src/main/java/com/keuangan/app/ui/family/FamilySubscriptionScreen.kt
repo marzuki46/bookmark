@@ -31,6 +31,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -172,6 +173,15 @@ Scaffold(
                     )
                 }
 
+                item {
+                    PromoCodeCard(
+                        code = state.promoCode,
+                        redeeming = state.redeemingPromo,
+                        onCodeChange = viewModel::updatePromoCode,
+                        onRedeem = viewModel::redeemPromo,
+                    )
+                }
+
                 val sub = state.subscription
                 val lifetimeOwned = sub?.active == true && sub.expiresAt == null
                 val daysLeft = sub?.expiresAt?.let { daysUntil(it) }
@@ -290,6 +300,34 @@ private fun ManualPaymentCard(payment: ManualPaymentDto) {
                 OutlinedButton(onClick = {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/${payment.whatsapp}")))
                 }) { Text("Kirim bukti ke WhatsApp admin") }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PromoCodeCard(
+    code: String,
+    redeeming: Boolean,
+    onCodeChange: (String) -> Unit,
+    onRedeem: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Punya kode promo?", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text("Masukkan kode promo dari admin atau chat WhatsApp. Satu akun hanya dapat memakai kode yang sama satu kali.", style = MaterialTheme.typography.bodySmall)
+            OutlinedTextField(
+                value = code,
+                onValueChange = onCodeChange,
+                label = { Text("Kode promo") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Button(onClick = onRedeem, enabled = code.isNotBlank() && !redeeming) {
+                Text(if (redeeming) "Memeriksa..." else "Gunakan kode promo")
             }
         }
     }

@@ -15,6 +15,7 @@
                 'rilis' => ['label' => 'Rilis Aplikasi', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'rilis'])],
                 'lisensi' => ['label' => 'Manajemen Lisensi', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'lisensi'])],
                 'pembayaran' => ['label' => 'Pembayaran', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'pembayaran'])],
+                'promo' => ['label' => 'Promo', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'promo'])],
                 'ai' => ['label' => 'AI Sistem Hub', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'ai'])],
                 'log' => ['label' => 'Log Akses', 'url' => route('keuangan.aplikasi-manajemen', ['tab' => 'log'])],
             ];
@@ -35,6 +36,8 @@
         <livewire:admin.license-manager />
     @elseif($activeTab === 'pembayaran')
         <livewire:admin.payment-gateway-settings />
+    @elseif($activeTab === 'promo')
+        <livewire:admin.promo-code-manager />
     @elseif($activeTab === 'ai')
         <livewire:admin.ai-system-overview />
     @else

@@ -274,6 +274,9 @@ data class ManualPaymentDto(
 data class ManualPaymentResponse(val data: ManualPaymentDto = ManualPaymentDto())
 
 @Serializable
+data class RedeemPromoRequest(val code: String)
+
+@Serializable
 data class ChargeRequest(@SerialName("plan_id") val planId: Int)
 
 @Serializable

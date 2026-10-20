@@ -100,6 +100,9 @@ interface KeuanganApi {
     @GET("api/subscription/manual-payment")
     suspend fun manualPayment(): ManualPaymentResponse
 
+    @POST("api/subscription/redeem-promo")
+    suspend fun redeemPromo(@Body body: RedeemPromoRequest): MessageResponse
+
     @POST("api/subscription/charge")
     suspend fun charge(@Body body: ChargeRequest): ChargeResponse
 

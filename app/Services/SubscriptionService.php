@@ -18,6 +18,11 @@ final class SubscriptionService
 {
     public function activate(User $user, SubscriptionPlan $plan, ?string $orderId = null, string $provider = 'manual'): Subscription
     {
+        return $this->activateForDays($user, $plan, $plan->duration_days, $provider, $orderId);
+    }
+
+    public function activateForDays(User $user, SubscriptionPlan $plan, ?int $days, string $provider = 'manual', ?string $orderId = null): Subscription
+    {
         $family = $user->family();
         $current = ($family
             ? Subscription::query()->where('family_id', $family->id)
@@ -36,16 +41,14 @@ final class SubscriptionService
             $user->subscriptions()->where('status', 'active')->update(['status' => 'cancelled']);
         }
 
-        $expiresAt = match ($plan->duration_type) {
-            'lifetime' => null,
-            'yearly' => $base->copy()->addYear(),
-            'monthly' => $base->copy()->addMonth(),
-            default => $base->copy()->addMonth(),
-        };
-
-        if ($plan->duration_days) {
-            $expiresAt = $base->copy()->addDays($plan->duration_days);
-        }
+        $expiresAt = $days !== null
+            ? $base->copy()->addDays($days)
+            : match ($plan->duration_type) {
+                'lifetime' => null,
+                'yearly' => $base->copy()->addYear(),
+                'monthly' => $base->copy()->addMonth(),
+                default => $base->copy()->addMonth(),
+            };
 
         $subscription = Subscription::query()->create([
             'user_id' => $user->id,

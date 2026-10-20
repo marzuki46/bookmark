@@ -22,6 +22,8 @@ data class FamilySubscriptionUiState(
     /** The plan id currently starting a checkout; null when idle. */
     val charging: Int? = null,
     val message: String? = null,
+    val redeemingPromo: Boolean = false,
+    val promoCode: String = "",
 )
 
 class FamilySubscriptionViewModel(private val repository: KeuanganRepository) : ViewModel() {
@@ -76,6 +78,23 @@ class FamilySubscriptionViewModel(private val repository: KeuanganRepository) : 
                 is ApiResult.Err -> _state.update {
                     it.copy(charging = null, error = result.message)
                 }
+            }
+        }
+    }
+
+    fun updatePromoCode(value: String) = _state.update { it.copy(promoCode = value.uppercase()) }
+
+    fun redeemPromo() {
+        val code = _state.value.promoCode.trim()
+        if (code.isBlank() || _state.value.redeemingPromo) return
+        _state.update { it.copy(redeemingPromo = true, error = null, message = null) }
+        viewModelScope.launch {
+            when (val result = repository.redeemPromo(code)) {
+                is ApiResult.Ok -> {
+                    _state.update { it.copy(redeemingPromo = false, promoCode = "", message = result.let { "Kode promo berhasil digunakan. Langganan gratis sudah aktif." }) }
+                    refresh()
+                }
+                is ApiResult.Err -> _state.update { it.copy(redeemingPromo = false, error = result.message) }
             }
         }
     }
