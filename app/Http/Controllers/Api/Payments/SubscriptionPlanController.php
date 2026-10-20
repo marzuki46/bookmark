@@ -15,7 +15,7 @@ final class SubscriptionPlanController extends Controller
     /**
      * Sellable plans, for the Android "Langganan" screen.
      */
-    public function index(): JsonResponse
+    public function index(Request $request, PaymentGatewaySettings $settings): JsonResponse
     {
         $plans = SubscriptionPlan::query()
             ->where('is_active', true)
@@ -29,6 +29,7 @@ final class SubscriptionPlanController extends Controller
                 'duration_type' => $plan->duration_type,
                 'duration_label' => $plan->durationLabel(),
                 'price' => $plan->price,
+                'manual_payment_amount' => $settings->manualAmount($request->user(), $plan),
             ]);
 
         return response()->json(['data' => $plans]);
@@ -52,10 +53,11 @@ final class SubscriptionPlanController extends Controller
         ]]);
     }
 
-    public function manualPayment(PaymentGatewaySettings $settings): JsonResponse
+    public function manualPayment(Request $request, PaymentGatewaySettings $settings): JsonResponse
     {
         return response()->json(['data' => array_merge($settings->manualPayment(), [
             'payment_mode' => $settings->provider(),
+            'payment_id' => $settings->manualPaymentId($request->user()),
         ])]);
     }
 }

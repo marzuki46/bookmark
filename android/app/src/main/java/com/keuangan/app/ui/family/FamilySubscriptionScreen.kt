@@ -255,12 +255,13 @@ Scaffold(
                             plan = plan,
                             charging = state.charging == plan.id,
                             enabled = state.charging == null && state.manualPayment?.paymentMode != "manual",
+                            manualMode = state.manualPayment?.paymentMode == "manual",
                             onCharge = { viewModel.charge(plan.id) },
                         )
                     }
                     item {
                         Text(
-                            if (state.manualPayment?.paymentMode == "manual") "Pembayaran manual aktif. Gunakan detail transfer bank/QRIS di bawah, lalu kirim bukti kepada admin untuk diverifikasi." else "Pembayaran dibuka di browser melalui gateway yang aktif. Setelah selesai, tekan muat ulang untuk mengambil status dan masa aktif terbaru dari server.",
+                            if (state.manualPayment?.paymentMode == "manual") "Pembayaran manual aktif. Nominal sudah memiliki penanda unik untuk akun ini. Gunakan detail transfer bank/QRIS di bawah, lalu kirim bukti kepada admin untuk diverifikasi." else "Pembayaran dibuka di browser melalui gateway yang aktif. Setelah selesai, tekan muat ulang untuk mengambil status dan masa aktif terbaru dari server.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -288,6 +289,7 @@ private fun ManualPaymentCard(payment: ManualPaymentDto) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Pembayaran manual", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             Text("Transfer bank atau QRIS. Setelah membayar, kirim bukti ke admin untuk diverifikasi.", style = MaterialTheme.typography.bodySmall)
+            if (payment.paymentId.isNotBlank()) Text("ID pembayaran: ${payment.paymentId}", fontWeight = FontWeight.Bold)
             if (payment.bankName.isNotBlank()) Text("Bank: ${payment.bankName}", fontWeight = FontWeight.SemiBold)
             if (payment.bankAccount.isNotBlank()) Text("Rekening: ${payment.bankAccount}")
             if (payment.accountHolder.isNotBlank()) Text("Atas nama: ${payment.accountHolder}")
@@ -491,6 +493,7 @@ private fun PlanRow(
     charging: Boolean,
     enabled: Boolean,
     onCharge: () -> Unit,
+    manualMode: Boolean,
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -506,7 +509,7 @@ private fun PlanRow(
                     }
                 }
                 Text(
-                    formatRupiah(plan.price),
+                    formatRupiah(if (manualMode && plan.manualPaymentAmount > 0) plan.manualPaymentAmount else plan.price),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Teal700,
@@ -525,7 +528,7 @@ private fun PlanRow(
                 if (charging) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
-                    Text("Bayar sekarang")
+                    Text(if (manualMode) "Lihat instruksi manual" else "Bayar sekarang")
                 }
             }
         }

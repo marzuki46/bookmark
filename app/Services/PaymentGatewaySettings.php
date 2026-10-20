@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\SubscriptionPlan;
+use App\Models\User;
 use App\Models\SystemSetting;
 
 final class PaymentGatewaySettings
@@ -55,5 +57,21 @@ final class PaymentGatewaySettings
             'whatsapp' => $this->get('payment.manual.whatsapp', '') ?: '',
             'instructions' => $this->get('payment.manual.instructions', '') ?: '',
         ];
+    }
+
+    /**
+     * Adds the stable family/user id to the plan price so manual transfers can
+     * be matched without asking the payer for an OTP or a separate invoice.
+     */
+    public function manualAmount(User $user, SubscriptionPlan $plan): int
+    {
+        $identity = $user->family()?->id ?? $user->id;
+
+        return (int) $plan->price + (int) $identity;
+    }
+
+    public function manualPaymentId(User $user): string
+    {
+        return 'KC-'.str_pad((string) ($user->family()?->id ?? $user->id), 6, '0', STR_PAD_LEFT);
     }
 }

@@ -255,6 +255,7 @@ data class PlanDto(
     @SerialName("duration_type") val durationType: String,
     @SerialName("duration_label") val durationLabel: String? = null,
     val price: Double = 0.0,
+    @SerialName("manual_payment_amount") val manualPaymentAmount: Double = 0.0,
 )
 
 @Serializable
@@ -263,6 +264,7 @@ data class PlansResponse(val data: List<PlanDto> = emptyList())
 @Serializable
 data class ManualPaymentDto(
     @SerialName("payment_mode") val paymentMode: String = "midtrans",
+    @SerialName("payment_id") val paymentId: String = "",
     @SerialName("bank_name") val bankName: String = "",
     @SerialName("bank_account") val bankAccount: String = "",
     @SerialName("account_holder") val accountHolder: String = "",

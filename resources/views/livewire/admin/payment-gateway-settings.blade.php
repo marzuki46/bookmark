@@ -1,9 +1,10 @@
 <div class="space-y-6">
     <div>
         <h2 class="text-xl font-bold text-[var(--text-primary)]">Pengaturan Pembayaran</h2>
-        <p class="text-sm text-[var(--text-tertiary)] mt-1">Pilih pembayaran otomatis melalui gateway atau manual melalui transfer bank/QRIS. API key disimpan terenkripsi.</p>
+        <p class="text-sm text-[var(--text-tertiary)] mt-1">Pilih satu metode yang aktif. API key disimpan terenkripsi.</p>
     </div>
 
+    <form wire:submit="save" class="space-y-5">
     @if($statusMessage)
         <div class="rounded-xl px-4 py-3 text-sm {{ $statusType === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
             {{ $statusMessage }}
@@ -11,7 +12,7 @@
 
     @endif
 
-        <div class="border-t border-[var(--color-border)] pt-5 space-y-4">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
             <div>
                 <h3 class="font-semibold text-[var(--text-primary)]">Pembayaran manual</h3>
                 <p class="text-xs text-[var(--text-tertiary)] mt-1">Data ini tampil di aplikasi. Setelah transfer/QRIS, admin mengaktifkan langganan secara manual.</p>
@@ -28,19 +29,25 @@
             <div><label class="wp-form-label">Instruksi pembayaran</label><textarea wire:model="manualInstructions" class="wp-form-input" rows="3" placeholder="Kirim bukti pembayaran ke admin..."></textarea></div>
         </div>
 
-    <form wire:submit="save" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-5">
         <div>
-            <label class="wp-form-label">Gateway aktif</label>
-            <select wire:model="provider" class="wp-form-input">
-                <option value="manual">Manual — transfer bank / QRIS</option>
-                <option value="duitku">Duitku</option>
-                <option value="midtrans">Midtrans (legacy)</option>
-            </select>
+            <label class="wp-form-label">Metode pembayaran aktif</label>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                @foreach([
+                    'manual' => ['title' => 'Manual', 'description' => 'Transfer bank / QRIS, verifikasi admin'],
+                    'duitku' => ['title' => 'Duitku', 'description' => 'Gateway otomatis'],
+                    'midtrans' => ['title' => 'Midtrans', 'description' => 'Gateway otomatis legacy'],
+                ] as $value => $option)
+                    <label class="relative flex cursor-pointer gap-3 rounded-xl border-2 p-4 transition {{ $provider === $value ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100' : 'border-[var(--color-border)]' }}">
+                        <input type="radio" wire:model.live="provider" value="{{ $value }}" class="mt-1 accent-indigo-600">
+                        <span><strong class="block text-sm">{{ $option['title'] }}</strong><span class="block text-xs text-[var(--text-tertiary)] mt-1">{{ $option['description'] }}</span></span>
+                    </label>
+                @endforeach
+            </div>
             <p class="text-xs text-[var(--text-tertiary)] mt-1">Mode saat ini: <strong>{{ $provider === 'manual' ? 'Manual, menunggu verifikasi admin' : 'Gateway otomatis' }}</strong></p>
             @error('provider') <p class="text-xs text-red-600 mt-1">{{ $message }}</p> @enderror
         </div>
 
-        <div class="border-t border-[var(--color-border)] pt-5 space-y-4 {{ $provider === 'manual' ? 'opacity-60' : '' }}">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4 {{ $provider === 'manual' ? 'opacity-60' : '' }}">
             <div>
                 <h3 class="font-semibold text-[var(--text-primary)]">Duitku</h3>
                 <p class="text-xs text-[var(--text-tertiary)] mt-1">Ambil Merchant Code dan API Key dari portal merchant Duitku.</p>
