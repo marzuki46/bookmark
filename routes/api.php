@@ -66,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     // Paid plans & purchases (Midtrans Snap).
     Route::get('/subscription', [SubscriptionPlanController::class, 'current']);
     Route::get('/subscription/plans', [SubscriptionPlanController::class, 'index']);
+    Route::get('/subscription/manual-payment', [SubscriptionPlanController::class, 'manualPayment']);
     Route::post('/subscription/charge', [CheckoutController::class, 'charge'])
         ->middleware('throttle:10,1,checkout');
 

@@ -8,6 +8,23 @@
         <div class="rounded-xl px-4 py-3 text-sm {{ $statusType === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200' }}">
             {{ $statusMessage }}
         </div>
+
+        <div class="border-t border-[var(--color-border)] pt-5 space-y-4">
+            <div>
+                <h3 class="font-semibold text-[var(--text-primary)]">Pembayaran manual</h3>
+                <p class="text-xs text-[var(--text-tertiary)] mt-1">Data ini tampil di aplikasi. Setelah transfer/QRIS, admin mengaktifkan langganan secara manual.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div><label class="wp-form-label">Nama bank</label><input type="text" wire:model="manualBankName" class="wp-form-input"></div>
+                <div><label class="wp-form-label">Nomor rekening</label><input type="text" wire:model="manualBankAccount" class="wp-form-input"></div>
+                <div><label class="wp-form-label">Nama pemilik rekening</label><input type="text" wire:model="manualAccountHolder" class="wp-form-input"></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="wp-form-label">URL gambar QRIS</label><input type="url" wire:model="manualQrisImageUrl" class="wp-form-input" placeholder="https://..."></div>
+                <div><label class="wp-form-label">WhatsApp admin</label><input type="text" wire:model="manualWhatsapp" class="wp-form-input" placeholder="628..."></div>
+            </div>
+            <div><label class="wp-form-label">Instruksi pembayaran</label><textarea wire:model="manualInstructions" class="wp-form-input" rows="3" placeholder="Kirim bukti pembayaran ke admin..."></textarea></div>
+        </div>
     @endif
 
     <form wire:submit="save" class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-5">

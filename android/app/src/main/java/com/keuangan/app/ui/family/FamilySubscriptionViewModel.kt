@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.keuangan.app.data.ApiResult
 import com.keuangan.app.data.KeuanganRepository
+import com.keuangan.app.data.ManualPaymentDto
 import com.keuangan.app.data.PlanDto
 import com.keuangan.app.data.SubscriptionDto
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ data class FamilySubscriptionUiState(
     val error: String? = null,
     val subscription: SubscriptionDto? = null,
     val plans: List<PlanDto> = emptyList(),
+    val manualPayment: ManualPaymentDto? = null,
     /** The plan id currently starting a checkout; null when idle. */
     val charging: Int? = null,
     val message: String? = null,
@@ -40,12 +42,14 @@ class FamilySubscriptionViewModel(private val repository: KeuanganRepository) : 
         viewModelScope.launch {
             val sub = repository.currentSubscription()
             val plans = repository.subscriptionPlans()
+            val manual = repository.manualPayment()
 
             _state.update {
                 it.copy(
                     loading = false,
                     subscription = (sub as? ApiResult.Ok)?.value,
                     plans = (plans as? ApiResult.Ok)?.value.orEmpty(),
+                    manualPayment = (manual as? ApiResult.Ok)?.value,
                     error = listOfNotNull(
                         (sub as? ApiResult.Err)?.message,
                         (plans as? ApiResult.Err)?.message,

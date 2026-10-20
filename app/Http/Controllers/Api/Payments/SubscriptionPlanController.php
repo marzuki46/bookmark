@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\Payments;
 
 use App\Http\Controllers\Controller;
 use App\Models\SubscriptionPlan;
+use App\Services\PaymentGatewaySettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -49,5 +50,10 @@ final class SubscriptionPlanController extends Controller
             'expires_at' => $subscription?->expires_at?->toIso8601String(),
             'provider' => $subscription?->provider,
         ]]);
+    }
+
+    public function manualPayment(PaymentGatewaySettings $settings): JsonResponse
+    {
+        return response()->json(['data' => $settings->manualPayment()]);
     }
 }

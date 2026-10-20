@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.keuangan.app.data.PlanDto
+import com.keuangan.app.data.ManualPaymentDto
 import com.keuangan.app.ui.components.GradientHeader
 import com.keuangan.app.ui.components.collapsingHeader
 import com.keuangan.app.ui.components.rememberHeaderCollapse
@@ -255,6 +256,40 @@ Scaffold(
                         )
                     }
                 }
+
+                state.manualPayment?.takeIf {
+                    it.bankName.isNotBlank() || it.qrisImageUrl.isNotBlank() || it.instructions.isNotBlank()
+                }?.let { manual ->
+                    item { ManualPaymentCard(manual) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ManualPaymentCard(payment: ManualPaymentDto) {
+    val context = LocalContext.current
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Pembayaran manual", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text("Transfer bank atau QRIS. Setelah membayar, kirim bukti ke admin untuk diverifikasi.", style = MaterialTheme.typography.bodySmall)
+            if (payment.bankName.isNotBlank()) Text("Bank: ${payment.bankName}", fontWeight = FontWeight.SemiBold)
+            if (payment.bankAccount.isNotBlank()) Text("Rekening: ${payment.bankAccount}")
+            if (payment.accountHolder.isNotBlank()) Text("Atas nama: ${payment.accountHolder}")
+            if (payment.qrisImageUrl.isNotBlank()) {
+                OutlinedButton(onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(payment.qrisImageUrl)))
+                }) { Text("Buka QRIS") }
+            }
+            if (payment.instructions.isNotBlank()) Text(payment.instructions, style = MaterialTheme.typography.bodySmall)
+            if (payment.whatsapp.isNotBlank()) {
+                OutlinedButton(onClick = {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/${payment.whatsapp}")))
+                }) { Text("Kirim bukti ke WhatsApp admin") }
             }
         }
     }

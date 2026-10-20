@@ -97,6 +97,9 @@ interface KeuanganApi {
     @GET("api/subscription/plans")
     suspend fun plans(): PlansResponse
 
+    @GET("api/subscription/manual-payment")
+    suspend fun manualPayment(): ManualPaymentResponse
+
     @POST("api/subscription/charge")
     suspend fun charge(@Body body: ChargeRequest): ChargeResponse
 

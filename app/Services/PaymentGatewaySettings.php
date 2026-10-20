@@ -44,4 +44,16 @@ final class PaymentGatewaySettings
     {
         return $this->get('payment.duitku.payment_method', (string) config('services.duitku.payment_method', 'VC')) ?: 'VC';
     }
+
+    public function manualPayment(): array
+    {
+        return [
+            'bank_name' => $this->get('payment.manual.bank_name', '') ?: '',
+            'bank_account' => $this->get('payment.manual.bank_account', '') ?: '',
+            'account_holder' => $this->get('payment.manual.account_holder', '') ?: '',
+            'qris_image_url' => $this->get('payment.manual.qris_image_url', '') ?: '',
+            'whatsapp' => $this->get('payment.manual.whatsapp', '') ?: '',
+            'instructions' => $this->get('payment.manual.instructions', '') ?: '',
+        ];
+    }
 }

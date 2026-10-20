@@ -261,6 +261,19 @@ data class PlanDto(
 data class PlansResponse(val data: List<PlanDto> = emptyList())
 
 @Serializable
+data class ManualPaymentDto(
+    @SerialName("bank_name") val bankName: String = "",
+    @SerialName("bank_account") val bankAccount: String = "",
+    @SerialName("account_holder") val accountHolder: String = "",
+    @SerialName("qris_image_url") val qrisImageUrl: String = "",
+    val whatsapp: String = "",
+    val instructions: String = "",
+)
+
+@Serializable
+data class ManualPaymentResponse(val data: ManualPaymentDto = ManualPaymentDto())
+
+@Serializable
 data class ChargeRequest(@SerialName("plan_id") val planId: Int)
 
 @Serializable

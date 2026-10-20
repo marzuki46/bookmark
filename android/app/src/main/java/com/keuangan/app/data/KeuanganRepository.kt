@@ -95,6 +95,10 @@ class KeuanganRepository(
         apiCall { api.plans() }.data
     }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
 
+    suspend fun manualPayment(): ApiResult<ManualPaymentDto> = runCatching {
+        apiCall { api.manualPayment() }.data
+    }.fold(onSuccess = { ApiResult.Ok(it) }, onFailure = { e -> e.toApiError() })
+
     /**
      * Starts a Midtrans purchase. The returned redirect URL opens the Snap
      * payment page in the external browser; the webhook activates the plan.
