@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * An uploaded Android APK release. The newest version_code wins the in-app
@@ -31,5 +32,10 @@ final class AppRelease extends Model
             'is_mandatory' => 'boolean',
             'released_at' => 'datetime',
         ];
+    }
+
+    public function downloads(): HasMany
+    {
+        return $this->hasMany(ApkDownload::class);
     }
 }

@@ -26,6 +26,28 @@
         </div>
     </div>
 
+    <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl p-5 space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold text-[var(--text-primary)]">Statistik download APK</h2>
+                <p class="text-sm text-[var(--text-tertiary)] mt-1">Setiap permintaan download dari link permanen maupun link rilis dicatat.</p>
+            </div>
+            <div class="rounded-lg bg-teal-50 border border-teal-200 px-4 py-2 text-right">
+                <p class="text-xs text-teal-700">Bulan ini</p>
+                <p class="text-2xl font-bold text-teal-800">{{ number_format($downloadsThisMonth) }}</p>
+                <p class="text-xs text-teal-700">download</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            @foreach($downloadMonths as $month)
+                <div class="rounded-lg border border-[var(--color-border)] p-3">
+                    <p class="text-xs text-[var(--text-tertiary)]">{{ $month['label'] }}</p>
+                    <p class="text-xl font-bold text-[var(--text-primary)] mt-1">{{ number_format($month['count']) }}</p>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
     @if (session('status'))
         <div class="rounded-xl px-4 py-3 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200">{{ session('status') }}</div>
     @endif

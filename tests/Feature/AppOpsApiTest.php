@@ -137,7 +137,7 @@ final class AppOpsApiTest extends TestCase
         Storage::fake('local');
         $releasePath = 'apk/keuangan-3.2.0-25.apk';
         Storage::disk('local')->put($releasePath, 'fake-apk');
-        AppRelease::create([
+        $release = AppRelease::create([
             'version_code' => 25,
             'version_name' => '3.2.0',
             'file_path' => $releasePath,
@@ -149,6 +149,10 @@ final class AppOpsApiTest extends TestCase
             ->assertOk()
             ->assertHeader('Content-Type', 'application/vnd.android.package-archive')
             ->assertHeader('Content-Disposition', 'attachment; filename=keuangan-v25.apk');
+
+        $this->assertDatabaseHas('apk_downloads', [
+            'app_release_id' => $release->id,
+        ]);
     }
 
     public function test_release_notes_can_be_filled_in_after_upload(): void

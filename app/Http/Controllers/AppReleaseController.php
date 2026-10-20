@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Models\AppRelease;
+use App\Models\ApkDownload;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,8 +21,20 @@ final class AppReleaseController extends Controller
 
     public function index(): View
     {
+        $months = collect(range(0, 11))->map(function (int $monthsAgo): array {
+            $start = now()->startOfMonth()->subMonths($monthsAgo);
+            $end = $start->copy()->endOfMonth();
+
+            return [
+                'label' => $start->translatedFormat('F Y'),
+                'count' => ApkDownload::query()->whereBetween('downloaded_at', [$start, $end])->count(),
+            ];
+        });
+
         return view('pages.keuangan-app-releases', [
             'releases' => AppRelease::query()->orderByDesc('version_code')->limit(20)->get(),
+            'downloadMonths' => $months,
+            'downloadsThisMonth' => $months->first()['count'],
         ]);
     }
 
@@ -246,6 +259,11 @@ final class AppReleaseController extends Controller
         if (! $disk->exists($release->file_path)) {
             abort(404);
         }
+
+        ApkDownload::query()->create([
+            'app_release_id' => $release->id,
+            'downloaded_at' => now(),
+        ]);
 
         return response()->streamDownload(
             static function () use ($absolute): void {
