@@ -22,6 +22,9 @@ interface KeuanganApi {
     @POST("api/login")
     suspend fun login(@Body body: LoginRequest): LoginResponse
 
+    @POST("api/register")
+    suspend fun register(@Body body: RegisterRequest): LoginResponse
+
     @POST("api/logout")
     suspend fun logout()
 

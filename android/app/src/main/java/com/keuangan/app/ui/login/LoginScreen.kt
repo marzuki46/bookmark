@@ -26,6 +26,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.sp
 fun LoginScreen(
     viewModel: LoginViewModel,
     onLoggedIn: () -> Unit,
+    onUseFamilyCode: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     var passwordVisible by remember { mutableStateOf(false) }
@@ -78,6 +80,19 @@ fun LoginScreen(
             )
             Spacer(Modifier.height(28.dp))
 
+            if (state.registering) {
+                OutlinedTextField(
+                    value = state.name,
+                    onValueChange = viewModel::onNameChange,
+                    label = { Text("Nama") },
+                    singleLine = true,
+                    isError = state.error != null,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+
             OutlinedTextField(
                 value = state.email,
                 onValueChange = viewModel::onEmailChange,
@@ -90,6 +105,23 @@ fun LoginScreen(
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (state.registering) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = state.passwordConfirmation,
+                    onValueChange = viewModel::onPasswordConfirmationChange,
+                    label = { Text("Ulangi password") },
+                    singleLine = true,
+                    isError = state.error != null,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        imeAction = ImeAction.Done,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
@@ -158,8 +190,18 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Text("Masuk")
+                    Text(if (state.registering) "Daftar sekarang" else "Masuk")
                 }
+            }
+
+            TextButton(
+                onClick = viewModel::toggleMode,
+                enabled = !state.loading,
+            ) {
+                Text(if (state.registering) "Sudah punya akun? Masuk" else "Belum punya akun? Daftar di sini")
+            }
+            TextButton(onClick = onUseFamilyCode, enabled = !state.loading) {
+                Text("Masuk memakai kode keluarga")
             }
         }
     }

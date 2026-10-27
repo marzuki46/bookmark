@@ -38,6 +38,18 @@ class KeuanganRepository(
         onFailure = { e -> e.toApiError() },
     )
 
+    suspend fun register(name: String, email: String, password: String, passwordConfirmation: String): ApiResult<Unit> = runCatching {
+        apiCall { api.register(RegisterRequest(name.trim(), email.trim(), password, passwordConfirmation)) }
+    }.fold(
+        onSuccess = { response ->
+            tokenStore.saveSession(response.token, response.user?.id, response.user?.name)
+            clearFamily()
+            _authenticated.value = true
+            ApiResult.Ok(Unit)
+        },
+        onFailure = { e -> e.toApiError() },
+    )
+
     suspend fun logout() {
         runCatching { apiCall { api.logout() } }
         tokenStore.clear()

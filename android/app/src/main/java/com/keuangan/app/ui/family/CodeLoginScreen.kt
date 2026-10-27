@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,6 +55,7 @@ import com.keuangan.app.scan.BarcodeScanActivity
 fun CodeLoginScreen(
     viewModel: CodeLoginViewModel,
     onLoggedIn: () -> Unit,
+    onEmailLogin: () -> Unit,
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
@@ -172,6 +174,9 @@ fun CodeLoginScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            TextButton(onClick = onEmailLogin, enabled = !state.loading) {
+                Text("Daftar atau masuk dengan email")
+            }
         }
     }
 }

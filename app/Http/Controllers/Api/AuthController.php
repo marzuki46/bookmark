@@ -9,10 +9,40 @@ use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 final class AuthController extends Controller
 {
+    public function register(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'min:2', 'max:120'],
+            'email' => ['required', 'email:rfc', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'device_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $user = DB::transaction(function () use ($data): User {
+            return User::query()->create([
+                'name' => trim($data['name']),
+                'email' => strtolower(trim($data['email'])),
+                'password' => Hash::make($data['password']),
+            ]);
+        });
+
+        $token = $user->createToken($data['device_name'] ?? 'android')->plainTextToken;
+
+        return response()->json([
+            'token' => $token,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+            ],
+        ], 201);
+    }
+
     public function login(Request $request): JsonResponse
     {
         $request->validate([

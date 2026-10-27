@@ -86,6 +86,8 @@ import com.keuangan.app.KeuanganApp
 import com.keuangan.app.ui.family.CodeLoginScreen
 import com.keuangan.app.ui.family.CodeLoginViewModel
 import com.keuangan.app.ui.family.FamilyAppViewModel
+import com.keuangan.app.ui.login.LoginScreen
+import com.keuangan.app.ui.login.LoginViewModel
 import com.keuangan.app.ui.family.FamilyBudgetsScreen
 import com.keuangan.app.ui.family.FamilyBudgetsViewModel
 import com.keuangan.app.ui.family.FamilyCategoriesScreen
@@ -192,8 +194,22 @@ fun AppRoot() {
         null -> Unit
 
         false -> {
-            val login: CodeLoginViewModel = viewModel(factory = appFactory())
-            CodeLoginScreen(viewModel = login, onLoggedIn = session::onLoggedIn)
+            var useEmailLogin by remember { mutableStateOf(false) }
+            if (useEmailLogin) {
+                val login: LoginViewModel = viewModel(factory = appFactory())
+                LoginScreen(
+                    viewModel = login,
+                    onLoggedIn = session::onLoggedIn,
+                    onUseFamilyCode = { useEmailLogin = false },
+                )
+            } else {
+                val login: CodeLoginViewModel = viewModel(factory = appFactory())
+                CodeLoginScreen(
+                    viewModel = login,
+                    onLoggedIn = session::onLoggedIn,
+                    onEmailLogin = { useEmailLogin = true },
+                )
+            }
         }
 
         true -> {

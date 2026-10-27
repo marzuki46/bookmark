@@ -31,6 +31,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register'])
+    ->middleware('throttle:5,1,register');
 
 // App login by permanent code (no email/password).
 // The third argument is a counter prefix: without it this route would share a
