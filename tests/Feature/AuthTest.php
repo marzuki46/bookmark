@@ -27,6 +27,8 @@ final class AuthTest extends TestCase
             ->assertJsonStructure(['token', 'user' => ['id', 'name', 'email']]);
 
         $this->assertDatabaseHas('users', ['email' => 'baru@example.com', 'name' => 'Pengguna Baru']);
+        $this->assertDatabaseHas('families', ['owner_user_id' => User::where('email', 'baru@example.com')->value('id')]);
+        $this->assertDatabaseHas('family_members', ['user_id' => User::where('email', 'baru@example.com')->value('id'), 'role' => 'owner']);
         $this->assertTrue(Hash::check('rahasia-kuat', User::where('email', 'baru@example.com')->firstOrFail()->password));
     }
 
