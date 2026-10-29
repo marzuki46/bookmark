@@ -150,6 +150,7 @@ private fun appFactory(): ViewModelProvider.Factory {
         viewModelFactory {
             initializer { SessionViewModel(app.repository) }
             initializer { CodeLoginViewModel(app.repository) }
+            initializer { LoginViewModel(app.repository) }
             initializer { FamilyAppViewModel(app.repository) }
             initializer { FamilyDashboardViewModel(app.repository) }
             initializer { FamilyTransactionsViewModel(app.repository) }
