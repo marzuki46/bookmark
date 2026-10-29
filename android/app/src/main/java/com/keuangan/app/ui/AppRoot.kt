@@ -195,7 +195,7 @@ fun AppRoot() {
         null -> Unit
 
         false -> {
-            var useEmailLogin by remember { mutableStateOf(false) }
+            var useEmailLogin by remember { mutableStateOf(true) }
             if (useEmailLogin) {
                 val login: LoginViewModel = viewModel(factory = appFactory())
                 LoginScreen(
